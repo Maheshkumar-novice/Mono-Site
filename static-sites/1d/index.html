@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Direction Forever - Scrapbook Memories</title>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/navigation.css">
+    <link rel="stylesheet" href="css/sections.css">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Fredoka+One:wght@400&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navigation - Notebook Tab Style -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#home" class="nav-logo">1D Scrapbook</a>
+            <ul class="nav-menu">
+                <li><a href="#home" class="active">Cover</a></li>
+                <li><a href="#members">The Boys</a></li>
+                <li><a href="#gallery">Photos</a></li>
+                <li><a href="#timeline">Timeline</a></li>
+                <li><a href="#discography">Songs</a></li>
+                <li><a href="#fan-zone">Lyrics</a></li>
+                <li><a href="#tribute">💔 Liam</a></li>
+            </ul>
+            <button class="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        <!-- Decorative elements -->
+        <div class="nav-decoration nav-heart">♥</div>
+        <div class="nav-decoration nav-star">★</div>
+    </nav>
+
+    <!-- Hero Section - Scrapbook Cover -->
+    <section id="home" class="hero">
+        <!-- Background Audio -->
+        <video id="bgAudio" class="hero-video" loop playsinline>
+            <source src="assets/backgrounds/night-changes.mp4" type="video/mp4">
+        </video>
+
+        <!-- Audio Play Button -->
+        <button class="audio-play-btn" id="audioPlayBtn" title="Play Music">
+            <span class="play-icon">♫</span>
+        </button>
+
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">One Direction</h1>
+                <p class="hero-subtitle">My favorite band forever and always ♥</p>
+
+                <!-- No interactive buttons needed for static scrapbook -->
+            </div>
+        </div>
+
+        <!-- Decorative stickers scattered around -->
+        <div class="hero-sticker hero-sticker-1">★</div>
+        <div class="hero-sticker hero-sticker-2">♫</div>
+        <div class="hero-sticker hero-sticker-3">♥</div>
+
+        <!-- Floating doodles -->
+        <div class="doodle doodle-heart" style="top: 15%; right: 20%;">♥</div>
+        <div class="doodle doodle-star" style="bottom: 20%; right: 10%;">★</div>
+        <div class="doodle doodle-arrow" style="top: 60%; left: 5%;">→</div>
+    </section>
+
+    <!-- Members Section - Trading Card Collection -->
+    <section id="members" class="members-section">
+        <div class="container">
+            <div class="scrapbook-page members-page">
+                <h2 class="section-title-handwritten">The Incredible Five ★</h2>
+                <p class="section-note">"These boys changed my whole world!" - written in my diary 2012 ♥</p>
+
+                <div class="members-grid">
+                    <!-- Harry -->
+                    <div class="member-card scattered-1">
+                        <div class="pin"></div>
+                        <div class="member-card-header">
+                            <div class="member-avatar-large">
+                                <img src="assets/members/harry-styles.jpg" alt="Harry Styles" class="member-photo">
+                            </div>
+                            <div class="member-name">Harry Styles</div>
+                        </div>
+                        <div class="member-stats-list">
+                            <strong>Born:</strong> Feb 1, 1994<br>
+                            <strong>From:</strong> Holmes Chapel<br>
+                            <strong>Known for:</strong> Curly hair<br>
+                            <strong>Solo hits:</strong> Watermelon Sugar<br>
+                            <strong>Fun fact:</strong> Used to work in a bakery!
+                        </div>
+                        <div class="tape tape-horizontal tape-corner-br"></div>
+                    </div>
+
+                    <!-- Liam -->
+                    <div class="member-card scattered-2">
+                        <div class="pin"></div>
+                        <div class="member-card-header">
+                            <div class="member-avatar-large">
+                                <img src="assets/members/liam-payne.png" alt="Liam Payne" class="member-photo">
+                            </div>
+                            <div class="member-name">Liam Payne</div>
+                        </div>
+                        <div class="member-stats-list">
+                            <strong>Born:</strong> Aug 29, 1993<br>
+                            <strong>From:</strong> Wolverhampton<br>
+                            <strong>Known for:</strong> Strong voice<br>
+                            <strong>Solo hits:</strong> Strip That Down<br>
+                            <strong>Fun fact:</strong> Scared of spoons!
+                        </div>
+                        <div class="tape tape-horizontal tape-corner-tl"></div>
+                    </div>
+
+                    <!-- Louis -->
+                    <div class="member-card scattered-3">
+                        <div class="pin"></div>
+                        <div class="member-card-header">
+                            <div class="member-avatar-large">
+                                <img src="assets/members/louis-tomlinson.jpg" alt="Louis Tomlinson"
+                                    class="member-photo">
+                            </div>
+                            <div class="member-name">Louis Tomlinson</div>
+                        </div>
+                        <div class="member-stats-list">
+                            <strong>Born:</strong> Dec 24, 1991<br>
+                            <strong>From:</strong> Doncaster<br>
+                            <strong>Known for:</strong> Sass master<br>
+                            <strong>Solo hits:</strong> Just Hold On<br>
+                            <strong>Fun fact:</strong> Loves football!
+                        </div>
+                        <div class="tape tape-vertical tape-corner-tr"></div>
+                    </div>
+
+                    <!-- Niall -->
+                    <div class="member-card scattered-4">
+                        <div class="pin"></div>
+                        <div class="member-card-header">
+                            <div class="member-avatar-large">
+                                <img src="assets/members/niall-horan.jpg" alt="Niall Horan" class="member-photo">
+                            </div>
+                            <div class="member-name">Niall Horan</div>
+                        </div>
+                        <div class="member-stats-list">
+                            <strong>Born:</strong> Sep 13, 1993<br>
+                            <strong>From:</strong> Mullingar, Ireland<br>
+                            <strong>Known for:</strong> Guitar skills<br>
+                            <strong>Solo hits:</strong> Slow Hands<br>
+                            <strong>Fun fact:</strong> Can't swim!
+                        </div>
+                        <div class="tape tape-horizontal tape-corner-bl"></div>
+                    </div>
+
+                    <!-- Zayn -->
+                    <div class="member-card scattered-5">
+                        <div class="pin"></div>
+                        <div class="member-card-header">
+                            <div class="member-avatar-large">
+                                <img src="assets/members/zayn-malik.jpg" alt="Zayn Malik" class="member-photo">
+                            </div>
+                            <div class="member-name">Zayn Malik</div>
+                        </div>
+                        <div class="member-stats-list">
+                            <strong>Born:</strong> Jan 12, 1993<br>
+                            <strong>From:</strong> Bradford<br>
+                            <strong>Known for:</strong> High notes<br>
+                            <strong>Solo hits:</strong> Pillowtalk<br>
+                            <strong>Fun fact:</strong> Left in 2015 😢
+                        </div>
+                        <div class="tape tape-vertical tape-corner-br"></div>
+                    </div>
+                </div>
+
+                <!-- Scattered stickers around cards -->
+                <div class="sticker sticker-pink" style="top: 20%; left: 15%;">♥</div>
+                <div class="sticker sticker-blue" style="top: 40%; right: 10%;">★</div>
+                <div class="sticker sticker-green" style="bottom: 30%; left: 20%;">♫</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery Section - Polaroid Memory Wall -->
+    <section id="gallery" class="gallery-section">
+        <div class="container">
+            <div class="scrapbook-page">
+                <h2 class="section-title-handwritten">Photo Memories ♫</h2>
+                <p class="section-note handwritten">Best moments captured forever!</p>
+
+                <div class="polaroid-collage">
+                    <div class="polaroid gallery-polaroid">
+                        <div class="polaroid-image">
+                            <img src="assets/gallery/tribute-wall.jpg" alt="One Direction tribute">
+                        </div>
+                        <div class="polaroid-caption">Fan tribute wall ♥</div>
+                        <div class="tape tape-horizontal tape-corner-tl"></div>
+                    </div>
+
+                    <div class="polaroid gallery-polaroid">
+                        <div class="polaroid-image">
+                            <img src="assets/gallery/concert-fans-01.jpg" alt="One Direction concert fans">
+                        </div>
+                        <div class="polaroid-caption">Concert memories!</div>
+                        <div class="tape tape-vertical tape-corner-tr"></div>
+                    </div>
+
+                    <div class="polaroid gallery-polaroid">
+                        <div class="polaroid-image">
+                            <img src="assets/gallery/concert-fans-02.jpg" alt="One Direction fans">
+                        </div>
+                        <div class="polaroid-caption">Best night ever</div>
+                        <div class="tape tape-horizontal tape-corner-br"></div>
+                    </div>
+
+                    <div class="polaroid gallery-polaroid">
+                        <div class="polaroid-image">
+                            <img src="assets/gallery/concert-show.jpg" alt="One Direction concert">
+                        </div>
+                        <div class="polaroid-caption">Amazing show!</div>
+                        <div class="tape tape-vertical tape-corner-bl"></div>
+                    </div>
+
+                    <div class="polaroid gallery-polaroid">
+                        <div class="polaroid-image">
+                            <img src="assets/gallery/memorial-tribute.jpg" alt="Fan memorial">
+                        </div>
+                        <div class="polaroid-caption">Always in our hearts</div>
+                        <div class="tape tape-horizontal tape-corner-tl"></div>
+                    </div>
+
+                    <div class="polaroid gallery-polaroid">
+                        <div class="polaroid-image">
+                            <img src="assets/gallery/memorial-flowers.jpg" alt="Memorial tribute">
+                        </div>
+                        <div class="polaroid-caption">Forever remembered 😭</div>
+                        <div class="tape tape-vertical tape-corner-br"></div>
+                    </div>
+                </div>
+
+                <!-- Hand-written notes scattered around -->
+                <div class="handwritten doodle"
+                    style="position: absolute; top: 10%; left: 5%; transform: rotate(-5deg);">
+                    "Best concert ever!"
+                </div>
+                <div class="handwritten doodle"
+                    style="position: absolute; bottom: 15%; right: 5%; transform: rotate(3deg);">
+                    "I cried so much ♥"
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Timeline Section - Spiral Notebook -->
+    <section id="timeline" class="timeline-section">
+        <div class="container">
+            <h2 class="section-title-handwritten">Their Amazing Journey ★</h2>
+
+            <div class="timeline-notebook">
+                <!-- Spiral holes -->
+                <div class="spiral-hole"></div>
+                <div class="spiral-hole"></div>
+                <div class="spiral-hole"></div>
+                <div class="spiral-hole"></div>
+                <div class="spiral-hole"></div>
+
+                <div class="timeline-entry">
+                    <div class="timeline-date">2010</div>
+                    <div class="timeline-event">The X Factor Magic ★</div>
+                    <p class="timeline-description">
+                        Five boys auditioned as solo artists but were put together to form the most amazing band ever!
+                        Simon Cowell made the best decision in music history!
+                    </p>
+                    <div class="paperclip"></div>
+                </div>
+
+                <div class="timeline-entry">
+                    <div class="timeline-date">2011</div>
+                    <div class="timeline-event highlighted">Up All Night Era ♫</div>
+                    <p class="timeline-description">
+                        Their debut album broke so many records! "What Makes You Beautiful" was stuck in my head for
+                        months.
+                        I knew every single word to every song!
+                    </p>
+                </div>
+
+                <div class="timeline-entry">
+                    <div class="timeline-date">2012-2015</div>
+                    <div class="timeline-event">World Domination Time!</div>
+                    <p class="timeline-description">
+                        Four more incredible albums: Take Me Home, Midnight Memories, Four, and Made in the A.M.
+                        They toured the whole world and I wished I could follow them everywhere!
+                    </p>
+                    <div class="sticker sticker-pink" style="position: absolute; top: 10px; right: 20px;">♥</div>
+                </div>
+
+                <div class="timeline-entry">
+                    <div class="timeline-date">2016</div>
+                    <div class="timeline-event">Hiatus Heartbreak 💔</div>
+                    <p class="timeline-description">
+                        They decided to take a break to focus on solo careers. I'm still waiting for them to come back
+                        together!
+                        #1DReunion forever and always!
+                    </p>
+                </div>
+
+                <div class="timeline-entry">
+                    <div class="timeline-date">2016-2024</div>
+                    <div class="timeline-event">Solo Journeys ★</div>
+                    <p class="timeline-description">
+                        All the boys found incredible success as solo artists. Harry with his albums and acting,
+                        Liam with "Strip That Down", Louis with his heartfelt songs, Niall with his guitar magic,
+                        and Zayn with his R&B sound. Each one showed their unique talents!
+                    </p>
+                    <div class="sticker sticker-green" style="position: absolute; top: 15px; right: 15px;">♫</div>
+                </div>
+
+                <div class="timeline-entry memorial-entry">
+                    <div class="timeline-date">October 16, 2024</div>
+                    <div class="timeline-event">Forever in Our Hearts 💔</div>
+                    <p class="timeline-description">
+                        We lost our beautiful Liam James Payne. The pain is indescribable. He gave us so much joy,
+                        music, and memories. His voice will live on forever in our hearts. Thank you for everything,
+                        Liam.
+                        You were loved beyond measure. 💔🕊️
+                    </p>
+                    <div class="memorial-flowers"
+                        style="position: absolute; top: 10px; right: 10px; font-size: 1.5rem;">🌹</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Discography Section - Complete Song Collection -->
+    <section id="discography" class="discography-section">
+        <div class="container">
+            <div class="scrapbook-page">
+                <h2 class="section-title-handwritten">Our Complete Song Collection ♫</h2>
+                <p class="section-note">Every single song that made us fall in love with these boys!</p>
+
+                <div class="albums-collection">
+
+                    <!-- Up All Night Album -->
+                    <div class="album-card scattered-1">
+                        <div class="pin"></div>
+                        <div class="album-header">
+                            <h3 class="album-title">Up All Night</h3>
+                            <p class="album-year">2011 • Debut Album</p>
+                        </div>
+                        <div class="tracklist">
+                            <ol>
+                                <li>What Makes You Beautiful</li>
+                                <li>Gotta Be You</li>
+                                <li>One Thing</li>
+                                <li>More Than This</li>
+                                <li>Up All Night</li>
+                                <li>I Wish</li>
+                                <li>Tell Me a Lie</li>
+                                <li>Taken</li>
+                                <li>I Want</li>
+                                <li>Everything About You</li>
+                                <li>Same Mistakes</li>
+                                <li>Save You Tonight</li>
+                                <li>Stole My Heart</li>
+                            </ol>
+                        </div>
+                        <div class="album-note handwritten">Where it all began ♥</div>
+                        <div class="tape tape-horizontal tape-corner-tr"></div>
+                    </div>
+
+                    <!-- Take Me Home Album -->
+                    <div class="album-card scattered-2">
+                        <div class="paperclip"></div>
+                        <div class="album-header">
+                            <h3 class="album-title">Take Me Home</h3>
+                            <p class="album-year">2012 • Second Album</p>
+                        </div>
+                        <div class="tracklist">
+                            <ol>
+                                <li>Live While We're Young</li>
+                                <li>Kiss You</li>
+                                <li>Little Things</li>
+                                <li>C'mon, C'mon</li>
+                                <li>Last First Kiss</li>
+                                <li>Heart Attack</li>
+                                <li>Rock Me</li>
+                                <li>Change My Mind</li>
+                                <li>I Would</li>
+                                <li>Over Again</li>
+                                <li>Back for You</li>
+                                <li>They Don't Know About Us</li>
+                                <li>Summer Love</li>
+                            </ol>
+                        </div>
+                        <div class="album-note handwritten">Perfect sophomore album!</div>
+                        <div class="sticker sticker-pink" style="position: absolute; top: -10px; right: 15px;">♥</div>
+                    </div>
+
+                    <!-- Midnight Memories Album -->
+                    <div class="album-card scattered-3">
+                        <div class="pin"></div>
+                        <div class="album-header">
+                            <h3 class="album-title">Midnight Memories</h3>
+                            <p class="album-year">2013 • Third Album</p>
+                        </div>
+                        <div class="tracklist">
+                            <ol>
+                                <li>Best Song Ever</li>
+                                <li>Story of My Life</li>
+                                <li>Diana</li>
+                                <li>Midnight Memories</li>
+                                <li>You & I</li>
+                                <li>Don't Forget Where You Belong</li>
+                                <li>Strong</li>
+                                <li>Happily</li>
+                                <li>Right Now</li>
+                                <li>Little Black Dress</li>
+                                <li>Through the Dark</li>
+                                <li>Something Great</li>
+                                <li>Little White Lies</li>
+                                <li>Better Than Words</li>
+                            </ol>
+                        </div>
+                        <div class="album-note handwritten">Their most rock album ★</div>
+                        <div class="tape tape-vertical tape-corner-bl"></div>
+                    </div>
+
+                    <!-- Four Album -->
+                    <div class="album-card scattered-4">
+                        <div class="paperclip"></div>
+                        <div class="album-header">
+                            <h3 class="album-title">Four</h3>
+                            <p class="album-year">2014 • Fourth Album</p>
+                        </div>
+                        <div class="tracklist">
+                            <ol>
+                                <li>Steal My Girl</li>
+                                <li>Ready to Run</li>
+                                <li>Where Do Broken Hearts Go</li>
+                                <li>18</li>
+                                <li>Girl Almighty</li>
+                                <li>Fool's Gold</li>
+                                <li>Night Changes</li>
+                                <li>No Control</li>
+                                <li>Fireproof</li>
+                                <li>Spaces</li>
+                                <li>Stockholm Syndrome</li>
+                                <li>Clouds</li>
+                            </ol>
+                        </div>
+                        <div class="album-note handwritten">Zayn's last album with us 💔</div>
+                        <div class="sticker sticker-blue" style="position: absolute; top: 15px; left: -8px;">★</div>
+                    </div>
+
+                    <!-- Made in the A.M. Album -->
+                    <div class="album-card scattered-5">
+                        <div class="pin"></div>
+                        <div class="album-header">
+                            <h3 class="album-title">Made in the A.M.</h3>
+                            <p class="album-year">2015 • Fifth Album (As Four)</p>
+                        </div>
+                        <div class="tracklist">
+                            <ol>
+                                <li>Hey Angel</li>
+                                <li>Drag Me Down</li>
+                                <li>Perfect</li>
+                                <li>Infinity</li>
+                                <li>End of the Day</li>
+                                <li>If I Could Fly</li>
+                                <li>Long Way Down</li>
+                                <li>Never Enough</li>
+                                <li>Olivia</li>
+                                <li>What a Feeling</li>
+                                <li>Love You Goodbye</li>
+                                <li>I Want to Write You a Song</li>
+                                <li>History</li>
+                            </ol>
+                        </div>
+                        <div class="album-note handwritten">The perfect goodbye... for now 😭</div>
+                        <div class="tape tape-horizontal tape-corner-br"></div>
+                    </div>
+
+                    <!-- Special Singles & B-Sides -->
+                    <div class="singles-card scattered-1">
+                        <div class="pin"></div>
+                        <div class="album-header">
+                            <h3 class="album-title">Special Songs & B-Sides</h3>
+                            <p class="album-year">2010-2016 • Bonus Tracks</p>
+                        </div>
+                        <div class="tracklist">
+                            <ul style="list-style: none; padding: 0;">
+                                <li>→ Forever Young (The X Factor)</li>
+                                <li>→ Torn (Acoustic Version)</li>
+                                <li>→ Moments (Bonus Track)</li>
+                                <li>→ Another World (Bonus Track)</li>
+                                <li>→ Stand Up (Bonus Track)</li>
+                                <li>→ Loved You First (Bonus Track)</li>
+                                <li>→ Magic (Bonus Track)</li>
+                                <li>→ Irresistible (Bonus Track)</li>
+                                <li>→ Change Your Ticket (Bonus Track)</li>
+                                <li>→ Illusion (Bonus Track)</li>
+                                <li>→ Once in a Lifetime (Bonus Track)</li>
+                                <li>→ Act My Age (Bonus Track)</li>
+                                <li>→ Just Can't Let Her Go (Bonus Track)</li>
+                                <li>→ Don't Let Me Go (2024 Release)</li>
+                            </ul>
+                        </div>
+                        <div class="album-note handwritten">Hidden gems we cherish!</div>
+                        <div class="sticker sticker-green" style="position: absolute; top: 10px; right: -5px;">♫</div>
+                    </div>
+
+                </div>
+
+                <!-- Scattered doodles and notes -->
+                <div class="handwritten doodle"
+                    style="position: absolute; top: 20%; left: 5%; transform: rotate(-8deg); font-size: 0.9rem;">
+                    "77 incredible songs!"
+                </div>
+                <div class="handwritten doodle"
+                    style="position: absolute; bottom: 25%; right: 8%; transform: rotate(6deg); font-size: 0.8rem;">
+                    "Every single one is perfect ♥"
+                </div>
+                <div class="handwritten doodle"
+                    style="position: absolute; top: 60%; left: 3%; transform: rotate(-12deg); font-size: 0.85rem;">
+                    "5 albums of pure magic ★"
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Song Lyrics Section - Handwritten Pages -->
+    <section id="fan-zone" class="lyrics-section">
+        <div class="container">
+            <div class="scrapbook-page">
+                <h2 class="section-title-handwritten">My Favorite Lyrics ♫</h2>
+                <p class="section-note">Songs that mean everything to me, written from the heart</p>
+
+                <div class="lyrics-pages">
+                    <!-- What Makes You Beautiful -->
+                    <div class="lyrics-page page-1 scattered-1">
+                        <div class="paperclip"></div>
+                        <h3 class="song-title">"What Makes You Beautiful"</h3>
+                        <div class="lyrics-text">
+                            <p class="handwritten">"You're insecure, don't know what for...<br>
+                                You're turning heads when you walk through the door..."<br>
+                                <em>[Favorite lines from the song]</em>
+                            </p>
+                        </div>
+                        <div class="lyrics-note handwritten">First song that made me cry happy tears ♥</div>
+                        <div class="doodle doodle-heart" style="position: absolute; top: 10px; right: 15px;">♥</div>
+                    </div>
+
+                    <!-- Story of My Life -->
+                    <div class="lyrics-page page-2 scattered-2">
+                        <div class="pin"></div>
+                        <h3 class="song-title">"Story of My Life"</h3>
+                        <div class="lyrics-text">
+                            <p class="handwritten">"Written in these walls are the stories...<br>
+                                I leave my heart open but it stays right here..."<br>
+                                <em>[Lines that always get me emotional]</em>
+                            </p>
+                        </div>
+                        <div class="lyrics-note handwritten">This song understands my soul</div>
+                        <div class="highlighted"
+                            style="position: absolute; bottom: 40px; left: 20px; padding: 2px 8px;">
+                            "Always makes me emotional"
+                        </div>
+                    </div>
+
+                    <!-- Night Changes -->
+                    <div class="lyrics-page page-3 scattered-3">
+                        <div class="tape tape-horizontal" style="position: absolute; top: -8px; left: 30px;"></div>
+                        <h3 class="song-title">"Night Changes"</h3>
+                        <div class="lyrics-text">
+                            <p class="handwritten">"Going out tonight, changes into something red...<br>
+                                Everything she never had, she's showing off..."<br>
+                                <em>[About growing up and changing]</em>
+                            </p>
+                        </div>
+                        <div class="lyrics-note handwritten">Growing up with 1D ★</div>
+                        <div class="sticker sticker-blue" style="position: absolute; top: 20px; right: 10px;">★</div>
+                    </div>
+
+                    <!-- Best Song Ever -->
+                    <div class="lyrics-page page-4 scattered-4">
+                        <div class="pin"></div>
+                        <h3 class="song-title">"Best Song Ever"</h3>
+                        <div class="lyrics-text">
+                            <p class="handwritten">"Maybe it's the way she walked...<br>
+                                Straight into my heart and stole it..."<br>
+                                <em>[Pure happiness vibes!]</em>
+                            </p>
+                        </div>
+                        <div class="lyrics-note handwritten">Pure happiness in song form!</div>
+                        <div class="doodle doodle-star" style="position: absolute; bottom: 10px; right: 20px;">★</div>
+                    </div>
+
+                    <!-- Little Things -->
+                    <div class="lyrics-page page-5 scattered-1">
+                        <div class="paperclip"></div>
+                        <h3 class="song-title">"Little Things"</h3>
+                        <div class="lyrics-text">
+                            <p class="handwritten">"You're perfect to me..."<br>
+                                <em>[About accepting yourself and being loved for who you are]</em>
+                            </p>
+                        </div>
+                        <div class="lyrics-note handwritten">This song means self-love ♥</div>
+                        <div class="highlighted"
+                            style="position: absolute; bottom: 40px; left: 20px; padding: 2px 8px;">
+                            "So beautiful"
+                        </div>
+                    </div>
+
+                    <!-- Drag Me Down -->
+                    <div class="lyrics-page page-6 scattered-2">
+                        <div class="tape tape-horizontal" style="position: absolute; top: -8px; left: 30px;"></div>
+                        <h3 class="song-title">"Drag Me Down"</h3>
+                        <div class="lyrics-text">
+                            <p class="handwritten">"All my life you stood by me...<br>
+                                When no one else was ever behind me..."<br>
+                                <em>[About loyalty and support]</em>
+                            </p>
+                        </div>
+                        <div class="lyrics-note handwritten">First song as four ★</div>
+                        <div class="sticker sticker-pink" style="position: absolute; top: 20px; right: 10px;">♥</div>
+                    </div>
+                </div>
+
+                <!-- Scattered doodles around the pages -->
+                <div class="handwritten doodle"
+                    style="position: absolute; top: 15%; right: 8%; transform: rotate(12deg); font-size: 0.9rem;">
+                    "These lyrics are everything ♥"
+                </div>
+                <div class="handwritten doodle"
+                    style="position: absolute; bottom: 20%; left: 5%; transform: rotate(-8deg); font-size: 0.8rem;">
+                    "1D forever ♫"
+                </div>
+                <div class="handwritten doodle"
+                    style="position: absolute; top: 50%; left: 2%; transform: rotate(-15deg); font-size: 0.7rem;">
+                    "My anthem"
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Liam Payne Tribute Section -->
+    <section id="tribute" class="tribute-section">
+        <div class="container">
+            <div class="scrapbook-page">
+                <h2 class="section-title-handwritten">Forever in Our Hearts 💔</h2>
+                <p class="section-note">In loving memory of Liam James Payne (1993-2024)</p>
+
+                <div class="tribute-content">
+                    <div class="memorial-card">
+                        <div class="memorial-photo">
+                            <img src="assets/members/liam-payne.png" alt="Liam Payne">
+                        </div>
+                        <div class="memorial-text">
+                            <h3 class="memorial-name">Liam James Payne</h3>
+                            <p class="memorial-dates">August 29, 1993 - October 16, 2024</p>
+                            <div class="memorial-message handwritten">
+                                <p>"Thank you for the music, the memories, and the joy you brought to millions of hearts
+                                    around the world. Your voice will forever be part of our story."</p>
+                                <p>"Strip That Down will always make us dance. Your solo journey showed us your strength
+                                    and talent."</p>
+                                <p>"You were loved beyond measure. Rest in peace, Liam. 💔"</p>
+                            </div>
+                        </div>
+                        <div class="tape tape-horizontal tape-corner-tl"></div>
+                    </div>
+
+                    <div class="memory-notes">
+                        <div class="sticky-note note-pink memorial-note">
+                            <h4>"One Direction wouldn't have been the same without you"</h4>
+                            <p class="handwritten">Your harmonies, your smile, your kindness - forever remembered</p>
+                            <div class="doodle-note">♥</div>
+                        </div>
+
+                        <div class="sticky-note note-blue memorial-note">
+                            <h4>"Thank you for everything"</h4>
+                            <p class="handwritten">From X-Factor to solo success, you gave us so much beautiful music
+                            </p>
+                            <div class="doodle-note">★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memorial decorations -->
+                <div class="memorial-flowers"
+                    style="position: absolute; top: 20%; right: 5%; font-size: 2rem; color: var(--sticker-pink); opacity: 0.7;">
+                    🌹</div>
+                <div class="memorial-angel"
+                    style="position: absolute; bottom: 15%; left: 8%; font-size: 1.8rem; color: var(--highlight-yellow); opacity: 0.8;">
+                    👼</div>
+                <div class="handwritten doodle"
+                    style="position: absolute; bottom: 10%; right: 10%; transform: rotate(5deg); font-size: 0.9rem; color: var(--ink-red);">
+                    "Always in our hearts ♥"
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer - Back Cover -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>© 2024 One Direction Forever Scrapbook ♥ Made with love by a Directioner</p>
+                <p class="handwritten">Thank you for visiting my scrapbook! 1D forever and always! ★</p>
+
+                <!-- Final decorative elements -->
+                <div class="doodle doodle-heart" style="position: absolute; top: 10px; left: 20px;">♥</div>
+                <div class="doodle doodle-star" style="position: absolute; top: 10px; right: 20px;">★</div>
+                <div class="doodle"
+                    style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 1rem;">
+                    ♫ What makes you beautiful ♫
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Files -->
+    <script src="js/navigation.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/interactions.js"></script>
+
+    <!-- Background Audio Control -->
+    <script>
+        const audioBtn = document.getElementById('audioPlayBtn');
+        const bgAudio = document.getElementById('bgAudio');
+
+        audioBtn.addEventListener('click', () => {
+            if (bgAudio.paused) {
+                bgAudio.play();
+                audioBtn.classList.add('playing');
+                audioBtn.querySelector('.play-icon').textContent = '♪';
+            } else {
+                bgAudio.pause();
+                audioBtn.classList.remove('playing');
+                audioBtn.querySelector('.play-icon').textContent = '♫';
+            }
+        });
+    </script>
+</body>
+
+</html>

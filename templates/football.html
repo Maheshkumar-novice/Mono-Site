@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Football | Maheshkumar{% endblock %}
+
+{% block extra_css %}
+.comp-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.comp-tab {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 150ms ease;
+}
+
+.comp-tab:hover, .comp-tab.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-glow);
+}
+
+.comp-section {
+    display: none;
+}
+
+.comp-section.active {
+    display: block;
+}
+
+.section-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 1.5rem 0 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+}
+
+/* Matches */
+.match-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+}
+
+.match-card:last-child { border-bottom: none; }
+
+.match-teams {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+}
+
+.team-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.team-crest {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.match-score {
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 3rem;
+    text-align: center;
+}
+
+.match-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 5rem;
+    text-align: left;
+}
+
+.match-status {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    min-width: 4rem;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.match-link {
+    font-size: 0.75rem;
+    text-decoration: none;
+    opacity: 0.4;
+    transition: opacity 150ms ease;
+}
+
+.match-link:hover {
+    opacity: 1;
+}
+
+/* Scorers */
+.scorers-table, .standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.scorers-table th, .standings-table th {
+    text-align: left;
+    padding: 0.5rem 0.4rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.scorers-table td, .standings-table td {
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.standings-table .team-col { min-width: 150px; }
+
+.standings-table td:first-child,
+.standings-table th:first-child,
+.scorers-table td:first-child,
+.scorers-table th:first-child {
+    color: var(--text-muted);
+    width: 2rem;
+}
+
+.empty-msg {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem 0;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+    .match-date, .match-status { display: none; }
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Football</h1>
+
+<div class="comp-tabs">
+    {% for code in competition_codes %}
+    <button class="comp-tab{% if loop.first %} active{% endif %}" data-comp="{{ code }}">
+        {{ competition_names.get(code, code) }}
+    </button>
+    {% endfor %}
+</div>
+
+{% for code in competition_codes %}
+<div class="comp-section{% if loop.first %} active{% endif %}" id="comp-{{ code }}">
+
+    <!-- Matches -->
+    <h3 class="section-heading">Recent Matches</h3>
+    {% if matches.get(code) %}
+        {% for match in matches[code] %}
+        <div class="match-card">
+            <div class="match-date">{{ match.display_date }}</div>
+            <div class="match-teams">
+                <div class="team-row">
+                    {% if match.home_team.crest %}
+                    <img src="{{ match.home_team.crest }}" alt="" class="team-crest">
+                    {% endif %}
+                    <span>{{ match.home_team.name }}</span>
+                </div>
+                <div class="team-row">
+                    {% if match.away_team.crest %}
+                    <img src="{{ match.away_team.crest }}" alt="" class="team-crest">
+                    {% endif %}
+                    <span>{{ match.away_team.name }}</span>
+                </div>
+            </div>
+            <div class="match-score">{{ match.score_text }}</div>
+            <div class="match-status">{{ match.status }}</div>
+            <a class="match-link" href="https://www.google.com/search?q={{ match.home_team.name | urlencode }}+vs+{{ match.away_team.name | urlencode }}" target="_blank" rel="noopener noreferrer">&#x1F50D;</a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="empty-msg">No recent matches.</p>
+    {% endif %}
+
+    <!-- Scorers -->
+    <h3 class="section-heading">Top Scorers</h3>
+    {% if scorers.get(code) %}
+    <table class="scorers-table">
+        <thead>
+            <tr><th>#</th><th>Player</th><th>Team</th><th>Goals</th><th>Assists</th></tr>
+        </thead>
+        <tbody>
+            {% for scorer in scorers[code] %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ scorer.player.name if scorer.player else 'N/A' }}</td>
+                <td>{{ scorer.team.name if scorer.team else 'N/A' }}</td>
+                <td>{{ scorer.goals }}</td>
+                <td>{{ scorer.assists if scorer.assists is defined and scorer.assists is not none else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p class="empty-msg">No scorer data available.</p>
+    {% endif %}
+
+    <!-- Standings -->
+    <h3 class="section-heading">Standings</h3>
+    {% if standings.get(code) %}
+    <table class="standings-table">
+        <thead>
+            <tr><th>#</th><th class="team-col">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+        </thead>
+        <tbody>
+            {% for row in standings[code] %}
+            <tr>
+                <td>{{ row.position }}</td>
+                <td class="team-col">{{ row.team.name if row.team else 'N/A' }}</td>
+                <td>{{ row.playedGames }}</td>
+                <td>{{ row.won }}</td>
+                <td>{{ row.draw }}</td>
+                <td>{{ row.lost }}</td>
+                <td>{{ row.goalsFor }}</td>
+                <td>{{ row.goalsAgainst }}</td>
+                <td>{{ row.goalDifference }}</td>
+                <td style="font-weight:600; color:var(--text-primary)">{{ row.points }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p class="empty-msg">No standings data available.</p>
+    {% endif %}
+
+</div>
+{% endfor %}
+
+<script>
+document.querySelectorAll('.comp-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.comp-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.comp-section').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('comp-' + tab.dataset.comp).classList.add('active');
+    });
+});
+</script>
+{% endblock %}

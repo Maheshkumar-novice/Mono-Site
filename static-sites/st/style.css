@@ -1,0 +1,597 @@
+:root {
+    --primary-red: #e71d36;
+    --bg-paper: #fdfcdc;
+    --bg-comic-dark: #0c0c0c;
+    --accent-purple: #b620e0;
+    --border-black: #1a1a1a;
+    --panel-border: 4px solid var(--border-black);
+    --gutter: 20px;
+    --shadow-pop: 8px 8px 0px rgba(0, 0, 0, 0.2);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Comic Neue', cursive;
+    background-color: #222;
+    /* Outside the page background */
+    background-image: radial-gradient(#333 15%, transparent 16%);
+    background-size: 20px 20px;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.comic-page {
+    background-color: var(--bg-paper);
+    width: 100%;
+    max-width: 1000px;
+    padding: var(--gutter);
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(100px, auto);
+    gap: var(--gutter);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    position: relative;
+    /* Vintage paper texture overlay effect can be added here */
+}
+
+/* Base Panel Style */
+.panel {
+    border: var(--panel-border);
+    background: #fff;
+    position: relative;
+    box-shadow: var(--shadow-pop);
+    transition: transform 0.2s ease;
+    overflow: visible;
+}
+
+.panel:hover {
+    transform: scale(1.01) rotate(-0.5deg);
+    z-index: 2;
+}
+
+/* Header */
+.header-panel {
+    grid-column: 1 / -1;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--bg-comic-dark);
+    color: var(--primary-red);
+}
+
+.issue-badge {
+    background: var(--bg-paper);
+    color: var(--border-black);
+    padding: 10px;
+    border: 3px solid var(--border-black);
+    font-family: 'Bangers', cursive;
+    transform: rotate(-3deg);
+    text-align: center;
+}
+
+.issue-number {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--primary-red);
+}
+
+.title-box {
+    text-align: center;
+}
+
+.title-box h1 {
+    font-family: 'Bangers', cursive;
+    font-size: 4rem;
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0 var(--border-black);
+    -webkit-text-stroke: 1px var(--border-black);
+}
+
+.title-box .subtitle {
+    font-weight: bold;
+    color: #fff;
+    letter-spacing: 1px;
+    margin-top: -10px;
+}
+
+.date-box {
+    color: #fff;
+    font-family: 'Bangers', cursive;
+    font-size: 1.5rem;
+    border: 2px solid #fff;
+    padding: 5px 10px;
+}
+
+/* Hero Section */
+.hero-panel {
+    grid-column: 1 / -1;
+    height: 400px;
+    background-color: #333;
+    /* Fallback */
+}
+
+.hero-image-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ddd;
+}
+
+.caption-box {
+    position: absolute;
+    background: #FFD700;
+    /* Yellow caption box */
+    border: 2px solid var(--border-black);
+    padding: 10px;
+    font-weight: bold;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    max-width: 200px;
+    font-family: 'Comic Neue', cursive;
+    text-transform: uppercase;
+}
+
+.caption-box.top-left {
+    top: 20px;
+    left: 20px;
+}
+
+/* Character Grid */
+.character-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--gutter);
+}
+
+.character-panel {
+    height: 300px;
+    background: #eee;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.char-name {
+    background: var(--primary-red);
+    color: white;
+    font-family: 'Bangers', cursive;
+    font-size: 1.5rem;
+    padding: 5px;
+    text-align: center;
+    border-top: 3px solid var(--border-black);
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
+.speech-bubble {
+    position: absolute;
+    top: 20px;
+    left: 10px;
+    background: white;
+    border: 2px solid var(--border-black);
+    border-radius: 50%;
+    padding: 15px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    max-width: 80%;
+    z-index: 5;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 20px;
+    border-width: 10px 10px 0;
+    border-style: solid;
+    border-color: white transparent;
+    display: block;
+    width: 0;
+}
+
+.speech-bubble.right {
+    left: auto;
+    right: 10px;
+}
+
+.speech-bubble.right::after {
+    left: auto;
+    right: 20px;
+}
+
+/* Upside Down Section */
+.upside-down-entry {
+    grid-column: 1 / -1;
+    background: var(--bg-comic-dark);
+    color: var(--accent-purple);
+    padding: 40px;
+    text-align: center;
+    border: var(--panel-border);
+}
+
+.upside-down-entry h2 {
+    font-family: 'Bangers', cursive;
+    font-size: 3rem;
+    margin-bottom: 20px;
+    color: var(--primary-red);
+    /* Stranger things red title here maybe? */
+    text-shadow: 2px 2px 0 var(--accent-purple);
+}
+
+#gate-toggle {
+    background: var(--primary-red);
+    color: white;
+    border: 3px solid white;
+    padding: 15px 30px;
+    font-family: 'Bangers', cursive;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#gate-toggle:hover {
+    background: white;
+    color: var(--primary-red);
+    border-color: var(--primary-red);
+    box-shadow: 0 0 15px var(--primary-red);
+}
+
+.upside-down-content {
+    grid-column: 1 / -1;
+}
+
+.hidden {
+    display: none;
+}
+
+.monster-panel {
+    height: 500px;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scream-text {
+    position: absolute;
+    font-family: 'Bangers', cursive;
+    font-size: 5rem;
+    color: #ff0000;
+    text-shadow: 5px 5px 0 #000;
+    transform: rotate(-10deg);
+    z-index: 100;
+    pointer-events: none;
+    -webkit-text-stroke: 2px white;
+    animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+    0% {
+        transform: translate(1px, 1px) rotate(-10deg);
+    }
+
+    10% {
+        transform: translate(-1px, -2px) rotate(-11deg);
+    }
+
+    20% {
+        transform: translate(-3px, 0px) rotate(-9deg);
+    }
+
+    30% {
+        transform: translate(3px, 2px) rotate(-10deg);
+    }
+
+    40% {
+        transform: translate(1px, -1px) rotate(-11deg);
+    }
+
+    50% {
+        transform: translate(-1px, 2px) rotate(-9deg);
+    }
+
+    60% {
+        transform: translate(-3px, 1px) rotate(-10deg);
+    }
+
+    70% {
+        transform: translate(3px, 1px) rotate(-11deg);
+    }
+
+    80% {
+        transform: translate(-1px, -1px) rotate(-9deg);
+    }
+
+    90% {
+        transform: translate(1px, 2px) rotate(-10deg);
+    }
+
+    100% {
+        transform: translate(1px, -2px) rotate(-11deg);
+    }
+}
+
+/* Footer */
+.footer-panel {
+    grid-column: 1 / -1;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 20px 0;
+}
+
+.footer-box {
+    border: 4px dashed var(--border-black);
+    padding: 20px;
+    text-align: center;
+    background: #fff;
+    transform: rotate(1deg);
+}
+
+.footer-box p {
+    font-family: 'Bangers', cursive;
+    font-size: 2rem;
+}
+
+/* Image Placeholders */
+.image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ccc;
+    color: #666;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Image styles once loaded */
+.panel img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: contrast(110%) saturate(110%);
+    /* Slight pop */
+}
+
+/* Season Titles */
+.issue-title {
+    grid-column: 1 / -1;
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    color: var(--border-black);
+    text-shadow: 2px 2px 0 #fff;
+    margin-top: 20px;
+    background: var(--bg-paper);
+    padding: 10px;
+    border: 3px solid var(--border-black);
+    transform: rotate(-1deg);
+    display: inline-block;
+    justify-self: center;
+    text-transform: uppercase;
+}
+
+.issue-2-title {
+    color: #3b4cca;
+    transform: rotate(1deg);
+}
+
+.issue-3-title {
+    color: #ff00ff;
+    transform: rotate(-1.5deg);
+    text-shadow: 2px 2px 0 #00ffff;
+}
+
+.issue-4-title {
+    color: #900;
+    transform: rotate(0.5deg);
+    font-family: 'Creepster', cursive;
+    letter-spacing: 2px;
+}
+
+.issue-5-title {
+    color: #555;
+    transform: rotate(-0.5deg);
+    border-style: dashed;
+}
+
+
+/* Season Panel Layouts */
+.season-panel {
+    grid-column: 1 / -1;
+    height: 400px;
+    display: flex;
+}
+
+.half-panel {
+    width: 50%;
+    height: 100%;
+    position: relative;
+    border-right: var(--panel-border);
+    overflow: visible;
+}
+
+.half-panel:last-child {
+    border-right: none;
+}
+
+.full-panel-top,
+.full-panel-bottom {
+    width: 100%;
+    height: 50%;
+    position: relative;
+    border-bottom: var(--panel-border);
+    overflow: visible;
+}
+
+.full-panel-bottom {
+    border-bottom: none;
+}
+
+/* Season 3 Specifics (Vertical Stack for Mall) */
+.season-3-panel {
+    display: block;
+}
+
+/* Season 5 Specifics */
+.season-5-panel {
+    display: block;
+    background: #222;
+}
+
+/* Specific text styles for new panels */
+.scream-text.small {
+    font-size: 3rem;
+    color: #ff0000;
+    -webkit-text-stroke: 1px #000;
+}
+
+.caption-box.top-right {
+    top: 20px;
+    right: 20px;
+    left: auto;
+}
+
+.caption-box.bg-black {
+    background: #000;
+    color: #fff;
+    border-color: #fff;
+}
+
+.caption-box.text-red {
+    color: #ff0000;
+}
+
+/* Halftone overlay helper class if needed */
+.halftone-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(circle, #000 2px, transparent 2.5px);
+    background-size: 8px 8px;
+    /* Density of dots */
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Upside Down Mode Overrides */
+body.upside-down-mode {
+    background-image: radial-gradient(#1a1a1a 15%, #000 16%);
+}
+
+body.upside-down-mode .comic-page {
+    background-color: #1a0520;
+    /* Dark purple deep comic bg */
+    filter: sepia(50%) hue-rotate(240deg) saturate(150%);
+}
+
+body.upside-down-mode .panel {
+    border-color: #b620e0;
+    /* Neon purple borders */
+    box-shadow: 8px 8px 0px rgba(182, 32, 224, 0.3);
+}
+
+body.upside-down-mode .speech-bubble {
+    background: #000;
+    color: #fff;
+    border-color: #b620e0;
+}
+
+body.upside-down-mode .speech-bubble::after {
+    border-color: #000 transparent;
+}
+
+/* Wall of Lights Interlude */
+.wall-panel {
+    grid-column: 1 / -1;
+    height: 500px;
+    background: #222;
+}
+
+.wall-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.wall-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.message-input-box {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    z-index: 20;
+}
+
+#wall-input {
+    width: 100%;
+    padding: 10px;
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    font-size: 1.5rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: 2px solid #fff;
+    text-transform: uppercase;
+    text-align: center;
+    outline: none;
+}
+
+#wall-input:focus {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 10px var(--primary-red);
+}
+
+/* Individual Lights (Pseudo-elements or divs injected by JS) */
+.light-bulb {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+    transition: all 0.1s;
+    mix-blend-mode: overlay;
+    opacity: 0;
+}
+
+.light-bulb.active {
+    opacity: 1;
+    background: #fff;
+    box-shadow: 0 0 20px 5px currentColor;
+    z-index: 100;
+}
+
+.light-a {
+    top: 25%;
+    left: 20%;
+    color: #fff;
+}
+
+/* ... positions would need exact calibration, mimicking logical rows */

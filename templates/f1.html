@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}F1 | Maheshkumar{% endblock %}
+
+{% block extra_css %}
+.f1-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.f1-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+}
+
+.f1-card h3 {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+}
+
+.race-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.race-detail {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.section-heading {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 2rem 0 0.75rem;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 0.5rem 0.4rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.data-table td {
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.data-table td:last-child {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.pos-1 { color: #fbbf24 !important; }
+.pos-2 { color: #94a3b8 !important; }
+.pos-3 { color: #d97706 !important; }
+
+/* Results in the card */
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.result-pos {
+    color: var(--text-muted);
+    width: 1.5rem;
+}
+
+.result-driver { flex: 1; }
+
+.result-time {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.empty-msg {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem 0;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+    .f1-grid { grid-template-columns: 1fr; }
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Formula 1</h1>
+
+<!-- Next Race & Last Race cards -->
+<div class="f1-grid">
+    <div class="f1-card">
+        <h3>Next Race</h3>
+        {% if next_race %}
+        <div class="race-name">{{ next_race.raceName }}</div>
+        <div class="race-detail">{{ next_race.Circuit.circuitName if next_race.Circuit else '' }}</div>
+        <div class="race-detail">{{ next_race.date }}{% if next_race.time %} {{ next_race.time }}{% endif %}</div>
+        <div class="race-detail">Round {{ next_race.round }}</div>
+        {% else %}
+        <p class="empty-msg">No upcoming race data.</p>
+        {% endif %}
+    </div>
+
+    <div class="f1-card">
+        <h3>Last Race Result</h3>
+        {% if last_race and last_race.Results %}
+        <div class="race-name">{{ last_race.raceName }}</div>
+        <div class="race-detail" style="margin-bottom:0.5rem">{{ last_race.Circuit.circuitName if last_race.Circuit else '' }}</div>
+        {% for result in last_race.Results[:10] %}
+        <div class="result-row">
+            <span class="result-pos {% if result.position == '1' %}pos-1{% elif result.position == '2' %}pos-2{% elif result.position == '3' %}pos-3{% endif %}">{{ result.position }}</span>
+            <span class="result-driver">{{ result.Driver.givenName + ' ' + result.Driver.familyName if result.Driver else 'N/A' }}</span>
+            <span class="result-time">{{ result.Constructor.name if result.Constructor else '' }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="empty-msg">No last race data.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Driver Standings -->
+<h3 class="section-heading">Driver Standings</h3>
+{% if driver_standings %}
+<table class="data-table">
+    <thead>
+        <tr><th>#</th><th>Driver</th><th>Team</th><th>Pts</th></tr>
+    </thead>
+    <tbody>
+        {% for d in driver_standings %}
+        <tr>
+            <td class="{% if d.position == '1' %}pos-1{% elif d.position == '2' %}pos-2{% elif d.position == '3' %}pos-3{% endif %}">{{ d.position }}</td>
+            <td>{{ d.Driver.givenName + ' ' + d.Driver.familyName if d.Driver else 'N/A' }}</td>
+            <td>{{ d.Constructors[0].name if d.Constructors else 'N/A' }}</td>
+            <td>{{ d.points }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-msg">No driver standings data.</p>
+{% endif %}
+
+<!-- Constructor Standings -->
+<h3 class="section-heading">Constructor Standings</h3>
+{% if constructor_standings %}
+<table class="data-table">
+    <thead>
+        <tr><th>#</th><th>Team</th><th>Wins</th><th>Pts</th></tr>
+    </thead>
+    <tbody>
+        {% for c in constructor_standings %}
+        <tr>
+            <td class="{% if c.position == '1' %}pos-1{% elif c.position == '2' %}pos-2{% elif c.position == '3' %}pos-3{% endif %}">{{ c.position }}</td>
+            <td>{{ c.Constructor.name if c.Constructor else 'N/A' }}</td>
+            <td>{{ c.wins }}</td>
+            <td>{{ c.points }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-msg">No constructor standings data.</p>
+{% endif %}
+
+<!-- Schedule -->
+<h3 class="section-heading">Season Schedule</h3>
+{% if schedule %}
+<table class="data-table">
+    <thead>
+        <tr><th>Rd</th><th>Race</th><th>Circuit</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+        {% for race in schedule %}
+        <tr {% if next_race and race.round == next_race.round %}style="color:var(--accent)"{% endif %}>
+            <td>{{ race.round }}</td>
+            <td>{{ race.raceName }}</td>
+            <td>{{ race.Circuit.circuitName if race.Circuit else '' }}</td>
+            <td>{{ race.date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-msg">No schedule data.</p>
+{% endif %}
+{% endblock %}

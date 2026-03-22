@@ -1,0 +1,16 @@
+[project]
+name = "mono-site"
+version = "1.0.0"
+description = "Monorepo for maheshkumar.blog"
+requires-python = ">=3.13"
+dependencies = [
+    "feedparser>=6.0",
+    "requests>=2.32",
+    "jinja2>=3.1",
+    "click>=8.0",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+mono-build = "src.build:main"
+mono-cli = "src.cli:main"

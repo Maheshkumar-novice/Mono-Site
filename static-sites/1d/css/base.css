@@ -1,0 +1,132 @@
+/* Scrapbook Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-body);
+    background: var(--paper-cream);
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(120, 219, 198, 0.03) 0%, transparent 50%);
+    min-height: 100vh;
+    color: var(--ink-black);
+    line-height: 1.6;
+    position: relative;
+}
+
+/* Paper texture overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f3f1ec' fill-opacity='0.4'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-handwritten);
+    color: var(--ink-black);
+    margin-bottom: 1rem;
+}
+
+h1 { 
+    font-size: 3.5rem; 
+    font-family: var(--font-title);
+    text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);
+}
+h2 { 
+    font-size: 2.2rem; 
+    transform: var(--rotate-1);
+    display: inline-block;
+}
+h3 { font-size: 1.8rem; }
+h4 { font-size: 1.4rem; }
+
+p {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+/* Handwritten text effect */
+.handwritten {
+    font-family: var(--font-handwritten);
+    color: var(--ink-blue);
+    transform: var(--rotate-2);
+    display: inline-block;
+}
+
+.typewriter {
+    font-family: var(--font-typewriter);
+    color: var(--ink-black);
+    letter-spacing: 1px;
+}
+
+/* Utility Classes */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--page-padding);
+}
+
+.scrapbook-page {
+    background: var(--paper-white);
+    box-shadow: var(--paper-shadow);
+    border-radius: 3px;
+    margin: 2rem 0;
+    padding: var(--page-padding);
+    position: relative;
+}
+
+/* Torn paper effect */
+.scrapbook-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: 
+        linear-gradient(45deg, transparent 2px, var(--paper-white) 2px, var(--paper-white) 4px, transparent 4px),
+        linear-gradient(-45deg, transparent 2px, var(--paper-white) 2px, var(--paper-white) 4px, transparent 4px);
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 0;
+}
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+/* Scattered positioning helpers */
+.scattered-1 { transform: var(--rotate-1) translateY(-5px); }
+.scattered-2 { transform: var(--rotate-2) translateY(8px); }
+.scattered-3 { transform: var(--rotate-3) translateY(-3px); }
+.scattered-4 { transform: var(--rotate-4) translateY(6px); }
+.scattered-5 { transform: var(--rotate-5) translateY(-8px); }
+
+/* Responsive */
+@media (max-width: 768px) {
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 1.8rem; }
+    
+    .container {
+        padding: 1rem;
+    }
+    
+    .scrapbook-page {
+        margin: 1rem 0;
+        padding: 1.5rem;
+    }
+}

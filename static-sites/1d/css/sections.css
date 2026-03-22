@@ -1,0 +1,1026 @@
+/* Scrapbook Page Sections */
+
+/* Hero Section - Cover Page */
+.hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 100px 0 50px;
+    background: var(--paper-cream);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Background Audio (hidden video) */
+.hero-video {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hero-overlay {
+    display: none;
+}
+
+/* Audio Play Button */
+.audio-play-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--ink-red);
+    border: 3px solid var(--paper-white);
+    color: var(--paper-white);
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.audio-play-btn:hover {
+    transform: scale(1.1);
+    background: var(--ink-blue);
+}
+
+.audio-play-btn.playing {
+    background: var(--sticker-green);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 4px 25px rgba(34, 197, 94, 0.5);
+    }
+}
+
+/* Scattered background images */
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/backgrounds/bg-tour.jpg'),
+        url('../assets/backgrounds/bg-xfactor-01.jpg'),
+        url('../assets/backgrounds/bg-niall-tour.jpg');
+    background-size: 300px 300px, 250px 250px, 350px 350px;
+    background-position: 15% 20%, 85% 15%, 10% 80%;
+    background-repeat: no-repeat;
+    opacity: 0.3;
+    transform: rotate(-2deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Scattered doodles over background images */
+.hero::after {
+    content: '♪ ♫ ☆ ♥ ★ → ♪ ♫';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 2rem;
+    color: var(--pencil-gray);
+    opacity: 0.1;
+    white-space: pre-wrap;
+    font-family: var(--font-handwritten);
+    line-height: 4;
+    letter-spacing: 4rem;
+    padding: 2rem;
+    transform: rotate(-5deg);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.hero-content {
+    text-align: center;
+    position: relative;
+    z-index: 5;
+}
+
+.hero-title {
+    font-size: 5rem;
+    font-family: var(--font-title);
+    color: var(--ink-black);
+    text-shadow: 4px 4px 0px rgba(255, 255, 255, 0.8);
+    margin-bottom: 1rem;
+    position: relative;
+    display: inline-block;
+}
+
+/* Hand-drawn underline */
+.hero-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: -20px;
+    right: -20px;
+    height: 8px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10'%3E%3Cpath d='M0,5 Q25,2 50,5 T100,5' stroke='%23dc2626' stroke-width='3' fill='none'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.6;
+}
+
+.hero-subtitle {
+    font-family: var(--font-handwritten);
+    font-size: 1.6rem;
+    color: var(--ink-blue);
+    margin-bottom: 3rem;
+    transform: var(--rotate-1);
+    display: inline-block;
+}
+
+.hero-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+/* Decorative elements around hero */
+.hero-sticker {
+    position: absolute;
+    z-index: 1;
+}
+
+.hero-sticker-1 {
+    top: 20%;
+    left: 10%;
+    color: var(--sticker-pink);
+    font-size: 3rem;
+    transform: var(--rotate-4);
+}
+
+.hero-sticker-2 {
+    top: 30%;
+    right: 15%;
+    color: var(--sticker-blue);
+    font-size: 2.5rem;
+    transform: var(--rotate-5);
+}
+
+.hero-sticker-3 {
+    bottom: 25%;
+    left: 8%;
+    color: var(--highlight-yellow);
+    font-size: 2rem;
+    transform: var(--rotate-2);
+}
+
+/* Members Section - Trading Cards */
+.members-section {
+    padding: 4rem 0;
+    background: var(--paper-cream);
+    position: relative;
+    overflow: hidden;
+}
+
+.members-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/backgrounds/bg-concert-01.jpg'),
+        url('../assets/backgrounds/bg-sheffield.jpg'),
+        url('../assets/backgrounds/bg-xfactor-02.jpg');
+    background-size: 280px 280px, 320px 320px, 300px 300px;
+    background-position: 5% 30%, 95% 20%, 8% 85%;
+    background-repeat: no-repeat;
+    opacity: 0.3;
+    transform: rotate(3deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.members-page {
+    position: relative;
+    z-index: 2;
+}
+
+.section-title-handwritten {
+    font-family: var(--font-handwritten);
+    font-size: 3rem;
+    color: var(--ink-red);
+    text-align: center;
+    margin-bottom: 1rem;
+    transform: var(--rotate-1);
+    display: inline-block;
+    width: 100%;
+}
+
+.section-note {
+    font-family: var(--font-handwritten);
+    color: var(--pencil-gray);
+    text-align: center;
+    font-size: 1.1rem;
+    margin-bottom: 3rem;
+    font-style: italic;
+}
+
+.members-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    position: relative;
+}
+
+/* Gallery Section - Polaroid Collage */
+.gallery-section {
+    padding: 4rem 0;
+    background: var(--paper-aged);
+    position: relative;
+    overflow: hidden;
+}
+
+.gallery-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/backgrounds/bg-concert-02.jpg'),
+        url('../assets/backgrounds/bg-lp1.jpg'),
+        url('../assets/members/zayn-malik.jpg');
+    background-size: 340px 340px, 260px 260px, 290px 290px;
+    background-position: 12% 15%, 88% 25%, 15% 75%;
+    background-repeat: no-repeat;
+    opacity: 0.3;
+    transform: rotate(-1deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.polaroid-collage {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    min-height: 600px;
+    z-index: 2;
+}
+
+.gallery-polaroid {
+    position: relative;
+}
+
+/* Random positioning for scattered effect */
+.gallery-polaroid:nth-child(1) {
+    transform: var(--rotate-1) translate(20px, -10px);
+    z-index: 1;
+}
+
+.gallery-polaroid:nth-child(2) {
+    transform: var(--rotate-3) translate(-15px, 25px);
+    z-index: 2;
+}
+
+.gallery-polaroid:nth-child(3) {
+    transform: var(--rotate-2) translate(10px, -20px);
+    z-index: 3;
+}
+
+.gallery-polaroid:nth-child(4) {
+    transform: var(--rotate-4) translate(-25px, 15px);
+    z-index: 4;
+}
+
+.gallery-polaroid:nth-child(5) {
+    transform: var(--rotate-5) translate(15px, 30px);
+    z-index: 5;
+}
+
+.gallery-polaroid:nth-child(6) {
+    transform: var(--rotate-1) translate(-10px, -15px);
+    z-index: 6;
+}
+
+/* Timeline Section - Notebook Pages */
+.timeline-section {
+    padding: 4rem 0;
+    background: var(--paper-white);
+    position: relative;
+    overflow: hidden;
+}
+
+.timeline-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/gallery/concert-show.jpg'),
+        url('../assets/members/zayn-liam.jpg'),
+        url('../assets/gallery/memorial-tribute.jpg');
+    background-size: 310px 310px, 280px 280px, 270px 270px;
+    background-position: 85% 20%, 10% 60%, 90% 80%;
+    background-repeat: no-repeat;
+    opacity: 0.3;
+    transform: rotate(2deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.timeline-notebook {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* Spiral binding */
+.timeline-notebook::before {
+    content: '';
+    position: absolute;
+    left: 60px;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    background:
+        repeating-linear-gradient(to bottom,
+            var(--tape-beige) 0px,
+            var(--tape-beige) 40px,
+            transparent 40px,
+            transparent 60px);
+    border-radius: 10px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Spiral holes */
+.spiral-hole {
+    position: absolute;
+    left: 70px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--paper-cream);
+    border: 1px solid var(--pencil-gray);
+}
+
+.spiral-hole:nth-child(1) {
+    top: 20px;
+}
+
+.spiral-hole:nth-child(2) {
+    top: 80px;
+}
+
+.spiral-hole:nth-child(3) {
+    top: 140px;
+}
+
+.spiral-hole:nth-child(4) {
+    top: 200px;
+}
+
+.spiral-hole:nth-child(5) {
+    top: 260px;
+}
+
+.timeline-entry {
+    background: var(--paper-white);
+    margin: 2rem 0 2rem 100px;
+    padding: 2rem;
+    border-left: 2px solid var(--ink-red);
+    position: relative;
+    box-shadow: var(--element-shadow);
+}
+
+.timeline-entry::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ink-red);
+    border: 3px solid var(--paper-white);
+    box-shadow: var(--element-shadow);
+}
+
+.timeline-date {
+    font-family: var(--font-typewriter);
+    font-size: 1.1rem;
+    color: var(--ink-red);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-event {
+    font-family: var(--font-handwritten);
+    font-size: 1.3rem;
+    color: var(--ink-blue);
+    margin-bottom: 1rem;
+}
+
+.timeline-description {
+    font-family: var(--font-body);
+    color: var(--ink-black);
+    line-height: 1.6;
+}
+
+/* Memorial timeline entry styling */
+.memorial-entry {
+    background: linear-gradient(135deg, var(--paper-white) 0%, var(--paper-cream) 100%);
+    border-left: 3px solid var(--ink-red);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.memorial-entry .timeline-event {
+    color: var(--ink-red);
+    font-weight: bold;
+}
+
+.memorial-entry .timeline-description {
+    font-family: var(--font-handwritten);
+    font-style: italic;
+    color: var(--ink-black);
+}
+
+/* Song Lyrics Section - Handwritten Pages */
+.lyrics-section {
+    padding: 4rem 0;
+    background: var(--paper-cream);
+    position: relative;
+    overflow: hidden;
+}
+
+.lyrics-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/members/zayn-malik-02.jpg'),
+        url('../assets/members/niall-horan.jpg'),
+        url('../assets/gallery/tribute-wall.jpg');
+    background-size: 290px 290px, 320px 320px, 350px 350px;
+    background-position: 8% 25%, 92% 35%, 12% 80%;
+    background-repeat: no-repeat;
+    opacity: 0.3;
+    transform: rotate(-3deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Lyrics Pages Layout */
+.lyrics-pages {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 3rem;
+    padding: 2rem;
+    position: relative;
+    z-index: 3;
+    justify-items: center;
+}
+
+.lyrics-page {
+    background: var(--paper-white);
+    width: 280px;
+    min-height: 320px;
+    padding: 25px;
+    position: relative;
+    box-shadow: var(--element-shadow);
+    transition: var(--transition-bounce);
+    cursor: pointer;
+    font-family: var(--font-handwritten);
+    border: 1px solid var(--pencil-gray);
+    border-radius: 3px;
+}
+
+.lyrics-page:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.song-title {
+    font-size: 1.4rem;
+    color: var(--ink-red);
+    margin-bottom: 1rem;
+    text-align: center;
+    font-family: var(--font-handwritten);
+    font-weight: bold;
+}
+
+.lyrics-text {
+    margin-bottom: 1.5rem;
+}
+
+.lyrics-text .handwritten {
+    font-size: 0.9rem;
+    color: var(--ink-blue);
+    line-height: 1.4;
+    margin-bottom: 0.8rem;
+}
+
+.lyrics-text em {
+    font-size: 0.8rem;
+    color: var(--pencil-gray);
+    font-style: italic;
+    display: block;
+    margin-top: 0.5rem;
+}
+
+.lyrics-note {
+    font-size: 0.85rem;
+    color: var(--ink-black);
+    font-style: italic;
+    text-align: center;
+    position: absolute;
+    bottom: 20px;
+    left: 25px;
+    right: 25px;
+}
+
+/* Notebook paper lines */
+.lyrics-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 40px;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(to bottom, transparent 0px, transparent 39px, var(--pencil-gray) 39px, var(--pencil-gray) 40px, transparent 40px),
+        linear-gradient(to right, var(--ink-red) 0px, var(--ink-red) 1px, transparent 1px);
+    background-size: 100% 40px, 40px 100%;
+    background-position: 0 0, 0 0;
+    opacity: 0.1;
+    pointer-events: none;
+}
+
+/* Discography Section - Album Collection */
+.discography-section {
+    padding: 4rem 0;
+    background: var(--paper-aged);
+    position: relative;
+    overflow: hidden;
+}
+
+.discography-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/backgrounds/bg-tour.jpg'),
+        url('../assets/backgrounds/bg-xfactor-01.jpg');
+    background-size: 250px 250px, 200px 200px;
+    background-position: 85% 20%, 10% 75%;
+    background-repeat: no-repeat;
+    opacity: 0.15;
+    transform: rotate(2deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.albums-collection {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 3rem;
+    position: relative;
+    z-index: 2;
+}
+
+.album-card,
+.singles-card {
+    background: var(--paper-white);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: var(--element-shadow);
+    position: relative;
+    transition: var(--transition-bounce);
+    cursor: pointer;
+    border: 2px solid var(--ink-blue);
+    min-height: 400px;
+}
+
+.album-card:hover,
+.singles-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.album-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px dashed var(--pencil-gray);
+    padding-bottom: 1rem;
+}
+
+.album-title {
+    font-family: var(--font-title);
+    font-size: 1.5rem;
+    color: var(--ink-red);
+    margin-bottom: 0.5rem;
+}
+
+.album-year {
+    font-family: var(--font-typewriter);
+    font-size: 0.9rem;
+    color: var(--pencil-gray);
+    margin: 0;
+}
+
+.tracklist {
+    margin-bottom: 1.5rem;
+}
+
+.tracklist ol,
+.tracklist ul {
+    font-family: var(--font-handwritten);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--ink-black);
+    padding-left: 1.2rem;
+}
+
+.tracklist li {
+    margin-bottom: 0.3rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.tracklist li:hover {
+    color: var(--ink-red);
+}
+
+.album-note {
+    position: absolute;
+    bottom: 15px;
+    left: 25px;
+    right: 25px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--ink-blue);
+    font-style: italic;
+}
+
+/* Scattered positioning for album cards */
+.album-card.scattered-1,
+.singles-card.scattered-1 {
+    transform: var(--rotate-1);
+}
+
+.album-card.scattered-2 {
+    transform: var(--rotate-3);
+}
+
+.album-card.scattered-3 {
+    transform: var(--rotate-2);
+}
+
+.album-card.scattered-4 {
+    transform: var(--rotate-4);
+}
+
+.album-card.scattered-5 {
+    transform: var(--rotate-5);
+}
+
+/* Special styling for singles card */
+.singles-card {
+    border-color: var(--sticker-green);
+}
+
+.singles-card .album-title {
+    color: var(--sticker-green);
+}
+
+.singles-card .tracklist li {
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+}
+
+/* Scattered positioning for lyrics pages */
+.page-1 {
+    transform: var(--rotate-1);
+}
+
+.page-2 {
+    transform: var(--rotate-3);
+}
+
+.page-3 {
+    transform: var(--rotate-2);
+}
+
+.page-4 {
+    transform: var(--rotate-4);
+}
+
+.page-5 {
+    transform: var(--rotate-5);
+}
+
+.page-6 {
+    transform: var(--rotate-1);
+}
+
+/* Liam Payne Tribute Section */
+.tribute-section {
+    padding: 4rem 0;
+    background: var(--paper-white);
+    position: relative;
+    overflow: hidden;
+}
+
+.tribute-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        url('../assets/members/liam-payne-02.png'),
+        url('../assets/members/liam-payne-03.jpg');
+    background-size: 200px 200px, 180px 180px;
+    background-position: 85% 15%, 10% 80%;
+    background-repeat: no-repeat;
+    opacity: 0.15;
+    transform: rotate(1deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.tribute-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+    position: relative;
+    z-index: 2;
+}
+
+.memorial-card {
+    background: var(--paper-cream);
+    padding: 2.5rem;
+    border-radius: 15px;
+    box-shadow: var(--element-shadow);
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    max-width: 700px;
+    position: relative;
+    border: 2px solid var(--ink-red);
+}
+
+.memorial-photo {
+    flex-shrink: 0;
+}
+
+.memorial-photo img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: var(--element-shadow);
+}
+
+.memorial-text {
+    flex: 1;
+}
+
+.memorial-name {
+    font-family: var(--font-title);
+    font-size: 2rem;
+    color: var(--ink-red);
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.memorial-dates {
+    font-family: var(--font-typewriter);
+    color: var(--pencil-gray);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+.memorial-message {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--ink-black);
+}
+
+.memorial-message p {
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.memory-notes {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.memorial-note {
+    transform: var(--rotate-2);
+}
+
+.memorial-note:nth-child(2) {
+    transform: var(--rotate-4);
+}
+
+/* Concert Memory Tickets - Decorative Header */
+.concert-memories {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+    margin: 2rem 0 3rem 0;
+}
+
+.ticket-scattered {
+    position: relative;
+}
+
+.ticket-scattered:nth-child(1) {
+    transform: var(--rotate-2);
+}
+
+.ticket-scattered:nth-child(2) {
+    transform: var(--rotate-4);
+}
+
+.ticket-scattered:nth-child(3) {
+    transform: var(--rotate-1);
+}
+
+.ticket-scattered:nth-child(4) {
+    transform: var(--rotate-5);
+}
+
+/* Footer - Notebook Bottom */
+.footer {
+    background: var(--paper-white);
+    padding: 2rem 0;
+    border-top: 3px solid var(--ink-blue);
+    position: relative;
+}
+
+.footer-content {
+    text-align: center;
+    font-family: var(--font-handwritten);
+    color: var(--pencil-gray);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 3rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .members-grid {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .polaroid-collage {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .gallery-polaroid {
+        transform: none !important;
+        position: static !important;
+        margin: 1rem 0;
+    }
+
+    .timeline-notebook::before {
+        left: 20px;
+        width: 15px;
+    }
+
+    .timeline-entry {
+        margin-left: 50px;
+        padding: 1rem;
+    }
+
+    .spiral-hole {
+        left: 27px;
+        width: 6px;
+        height: 6px;
+    }
+
+    .lyrics-pages {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        padding: 1rem;
+    }
+
+    .lyrics-page {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+        transform: none !important;
+    }
+
+    /* Tribute section mobile */
+    .tribute-content {
+        gap: 2rem;
+    }
+
+    .memorial-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 2rem;
+        max-width: 100%;
+    }
+
+    .memorial-photo img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .memorial-name {
+        font-size: 1.6rem;
+    }
+
+    .memory-notes {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .memorial-note {
+        transform: none !important;
+        width: 100%;
+        max-width: 280px;
+    }
+
+    /* Section titles mobile */
+    .section-title-handwritten {
+        font-size: 2.2rem;
+    }
+
+    /* Discography mobile */
+    .albums-collection {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        padding: 1rem;
+    }
+
+    .album-card,
+    .singles-card {
+        transform: none !important;
+        margin: 0 auto;
+        max-width: 350px;
+        min-height: auto;
+        padding: 20px;
+    }
+
+    .album-title {
+        font-size: 1.3rem;
+    }
+
+    .tracklist ol,
+    .tracklist ul {
+        font-size: 0.8rem;
+        padding-left: 1rem;
+    }
+}

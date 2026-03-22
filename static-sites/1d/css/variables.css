@@ -1,0 +1,47 @@
+/* Scrapbook Design Variables */
+:root {
+    /* Colors - Warm, nostalgic palette */
+    --paper-cream: #faf7f2;
+    --paper-white: #ffffff;
+    --paper-aged: #f5f1e8;
+    --ink-black: #2c2c2c;
+    --ink-blue: #1e3a8a;
+    --ink-red: #dc2626;
+    --pencil-gray: #6b7280;
+    --highlight-yellow: #fbbf24;
+    --polaroid-border: #e5e7eb;
+    --tape-beige: #d6d3d1;
+    --sticker-pink: #f472b6;
+    --sticker-green: #22c55e;
+    --sticker-blue: #3b82f6;
+    
+    /* Typography - Handwritten & Mixed styles */
+    --font-handwritten: 'Kalam', cursive;
+    --font-typewriter: 'Courier New', monospace;
+    --font-body: 'Inter', sans-serif;
+    --font-title: 'Fredoka One', cursive;
+    
+    /* Spacing & Layout */
+    --page-padding: 2rem;
+    --element-gap: 1.5rem;
+    --polaroid-size: 180px;
+    --ticket-width: 200px;
+    --sticker-size: 40px;
+    
+    /* Shadows & Effects */
+    --paper-shadow: 2px 4px 12px rgba(0, 0, 0, 0.15);
+    --element-shadow: 1px 2px 8px rgba(0, 0, 0, 0.2);
+    --tape-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    /* Rotations for scattered effect */
+    --rotate-1: rotate(-2deg);
+    --rotate-2: rotate(1.5deg);
+    --rotate-3: rotate(-1deg);
+    --rotate-4: rotate(3deg);
+    --rotate-5: rotate(-2.5deg);
+    
+    /* Animations */
+    --hover-scale: scale(1.05);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --transition-smooth: all 0.3s ease;
+}

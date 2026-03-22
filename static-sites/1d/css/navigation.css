@@ -1,0 +1,302 @@
+/* Scrapbook Navigation */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--paper-white);
+    box-shadow: var(--paper-shadow);
+    border-bottom: 3px solid var(--ink-blue);
+    height: 80px;
+}
+
+/* Notebook paper lines effect */
+.navbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 80px;
+    right: 0;
+    height: 100%;
+    background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 24px,
+        var(--polaroid-border) 24px,
+        var(--polaroid-border) 25px
+    );
+    pointer-events: none;
+}
+
+/* Red margin line */
+.navbar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 80px;
+    width: 2px;
+    height: 100%;
+    background: var(--ink-red);
+    opacity: 0.3;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-logo {
+    font-family: var(--font-title);
+    font-size: 2rem;
+    color: var(--ink-red);
+    text-decoration: none;
+    transform: var(--rotate-2);
+    text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 10;
+}
+
+/* Menu Items - Tab style */
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-menu li {
+    position: relative;
+}
+
+.nav-menu a {
+    display: block;
+    padding: 15px 20px;
+    background: var(--paper-aged);
+    color: var(--ink-blue);
+    text-decoration: none;
+    font-family: var(--font-handwritten);
+    font-size: 1.1rem;
+    border: 2px solid var(--ink-blue);
+    border-bottom: none;
+    margin-right: -2px;
+    position: relative;
+    transition: var(--transition-smooth);
+    transform: translateY(5px);
+}
+
+.nav-menu a:hover,
+.nav-menu a.active {
+    background: var(--paper-white);
+    transform: translateY(0px);
+    z-index: 5;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+}
+
+/* First and last tab rounded corners */
+.nav-menu li:first-child a {
+    border-top-left-radius: 12px;
+    margin-left: 0;
+}
+
+.nav-menu li:last-child a {
+    border-top-right-radius: 12px;
+    margin-right: 0;
+}
+
+/* Active tab indicator - little drawn star */
+.nav-menu a.active::before {
+    content: '★';
+    position: absolute;
+    top: -15px;
+    right: 10px;
+    color: var(--highlight-yellow);
+    font-size: 1.2rem;
+    text-shadow: 1px 1px 0px var(--ink-black);
+}
+
+/* Mobile hamburger - hand-drawn style */
+.nav-toggle {
+    display: none;
+    background: var(--paper-white);
+    border: 2px solid var(--ink-blue);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    position: relative;
+    box-shadow: var(--element-shadow);
+    transition: var(--transition-bounce);
+}
+
+.nav-toggle:hover {
+    transform: var(--rotate-1);
+}
+
+.nav-toggle span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background: var(--ink-blue);
+    margin: 4px 0;
+    transition: var(--transition-smooth);
+    border-radius: 2px;
+    position: relative;
+}
+
+/* Hand-drawn burger lines */
+.nav-toggle span:nth-child(1) {
+    transform: rotate(-1deg);
+}
+.nav-toggle span:nth-child(2) {
+    transform: rotate(1deg);
+}
+.nav-toggle span:nth-child(3) {
+    transform: rotate(-0.5deg);
+}
+
+/* Animated X when active */
+.nav-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.nav-toggle.active span:nth-child(2) {
+    opacity: 0;
+    transform: rotate(0deg) scale(0.2);
+}
+
+.nav-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+}
+
+/* Mobile Menu */
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: block;
+    }
+    
+    .nav-menu {
+        position: absolute;
+        top: 80px;
+        left: 0;
+        right: 0;
+        background: var(--paper-white);
+        flex-direction: column;
+        box-shadow: var(--paper-shadow);
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transition-smooth);
+        border-top: 3px solid var(--ink-blue);
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+    }
+    
+    .nav-menu.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .nav-menu li {
+        width: 100%;
+    }
+    
+    .nav-menu a {
+        width: 100%;
+        border: none;
+        border-bottom: 1px dashed var(--pencil-gray);
+        margin: 0;
+        transform: none;
+        background: var(--paper-white);
+        padding: 20px;
+    }
+    
+    .nav-menu a:hover {
+        background: var(--paper-aged);
+        transform: var(--rotate-1);
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+    
+    .nav-menu li:first-child a,
+    .nav-menu li:last-child a {
+        border-radius: 0;
+    }
+    
+    .nav-menu li:last-child a {
+        border-bottom: none;
+    }
+    
+    /* Mobile active indicators */
+    .nav-menu a.active::before {
+        content: '→';
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        color: var(--ink-red);
+        font-size: 1.5rem;
+    }
+    
+    /* Smaller font for longer nav items on mobile */
+    .nav-menu a {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-logo {
+        font-size: 1.3rem;
+    }
+    
+    .nav-menu a {
+        padding: 15px;
+        font-size: 0.9rem;
+    }
+    
+    .nav-container {
+        padding: 0 15px;
+    }
+}
+
+/* Scattered decorative elements */
+.nav-decoration {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.nav-heart {
+    top: 10px;
+    right: 200px;
+    color: var(--ink-red);
+    font-size: 1rem;
+    transform: var(--rotate-3);
+}
+
+.nav-star {
+    top: 15px;
+    right: 150px;
+    color: var(--highlight-yellow);
+    font-size: 0.8rem;
+    transform: var(--rotate-4);
+}
+
+/* Subtle animation for decorations */
+@keyframes float-gentle {
+    0%, 100% { transform: var(--rotate-3) translateY(0px); }
+    50% { transform: var(--rotate-3) translateY(-3px); }
+}
+
+.nav-heart {
+    animation: float-gentle 4s ease-in-out infinite;
+}
+
+.nav-star {
+    animation: float-gentle 6s ease-in-out infinite reverse;
+}

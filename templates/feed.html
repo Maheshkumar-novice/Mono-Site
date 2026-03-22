@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Feed | Maheshkumar{% endblock %}
+
+{% block extra_css %}
+.article-list {
+    list-style: none;
+}
+
+.article-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.article-item:last-child {
+    border-bottom: none;
+}
+
+.article-link {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: color 150ms ease;
+}
+
+.article-link:hover {
+    color: var(--accent);
+}
+
+.article-meta {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.article-source {
+    color: var(--accent-tool);
+}
+
+.empty-state {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 2rem 0;
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Feed</h1>
+<p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.875rem;">
+    Articles from the last 3 days
+</p>
+
+{% if articles %}
+<ul class="article-list">
+    {% for article in articles %}
+    <li class="article-item">
+        <a href="{{ article.link }}" target="_blank" rel="noopener noreferrer" class="article-link">
+            {{ article.title }}
+        </a>
+        <div class="article-meta">
+            <span class="article-source">{{ article.feed_title }}</span>
+            {% if article.published %}
+            <span>{{ article.published[:16] }}</span>
+            {% endif %}
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-state">No articles found in the last 3 days.</p>
+{% endif %}
+{% endblock %}
