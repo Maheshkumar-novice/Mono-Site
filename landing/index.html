@@ -32,6 +32,49 @@
         <div class="geo-dot geo-dot-2"></div>
     </div>
 
+    <!-- Orion Constellation Background -->
+    <svg class="constellation" aria-hidden="true" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid meet">
+        <!-- Constellation lines -->
+        <g class="constellation-lines" stroke="var(--accent)" stroke-width="0.5" opacity="0.08">
+            <!-- Shoulders to belt -->
+            <line x1="120" y1="100" x2="160" y2="250"/>
+            <line x1="280" y1="80" x2="230" y2="250"/>
+            <!-- Belt -->
+            <line x1="160" y1="250" x2="200" y2="260"/>
+            <line x1="200" y1="260" x2="230" y2="250"/>
+            <!-- Shoulders -->
+            <line x1="120" y1="100" x2="280" y2="80"/>
+            <!-- Belt to feet -->
+            <line x1="160" y1="250" x2="100" y2="450"/>
+            <line x1="230" y1="250" x2="300" y2="430"/>
+            <!-- Sword from belt -->
+            <line x1="195" y1="260" x2="190" y2="340"/>
+            <!-- Head -->
+            <line x1="190" y1="40" x2="200" y2="60"/>
+        </g>
+        <!-- Stars -->
+        <g class="constellation-stars">
+            <!-- Head -->
+            <circle cx="190" cy="40" r="2" class="star star-dim"/>
+            <circle cx="200" cy="60" r="1.5" class="star star-dim"/>
+            <!-- Betelgeuse (left shoulder) -->
+            <circle cx="120" cy="100" r="3.5" class="star star-bright star-red"/>
+            <!-- Bellatrix (right shoulder) -->
+            <circle cx="280" cy="80" r="2.5" class="star star-bright"/>
+            <!-- Belt: Alnitak, Alnilam, Mintaka -->
+            <circle cx="160" cy="250" r="2" class="star star-medium"/>
+            <circle cx="200" cy="260" r="2.2" class="star star-medium"/>
+            <circle cx="230" cy="250" r="2" class="star star-medium"/>
+            <!-- Sword / Orion Nebula -->
+            <circle cx="195" cy="300" r="1.5" class="star star-dim"/>
+            <circle cx="190" cy="340" r="1.8" class="star star-nebula"/>
+            <!-- Saiph (left foot) -->
+            <circle cx="100" cy="450" r="2.5" class="star star-bright"/>
+            <!-- Rigel (right foot) -->
+            <circle cx="300" cy="430" r="3" class="star star-bright star-blue"/>
+        </g>
+    </svg>
+
     <div class="container">
         <!-- Hero Section -->
         <header class="hero" id="hero">
