@@ -1,6 +1,7 @@
 """Build static HTML for the feed page."""
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from src.feed.models import get_recent_articles
 logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-BUILD_DIR = PROJECT_DIR / "build" / "feed"
+BUILD_DIR = Path(os.environ.get("MONO_BUILD_DIR", PROJECT_DIR / "build")) / "feed"
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 
 

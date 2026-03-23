@@ -1,6 +1,7 @@
 """Build static HTML for the F1 page."""
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from src.f1.service import (
 logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-BUILD_DIR = PROJECT_DIR / "build" / "f1"
+BUILD_DIR = Path(os.environ.get("MONO_BUILD_DIR", PROJECT_DIR / "build")) / "f1"
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 
 

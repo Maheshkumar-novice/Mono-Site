@@ -15,7 +15,7 @@ from src.football.api import COMPETITION_CODES
 logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-BUILD_DIR = PROJECT_DIR / "build" / "football"
+BUILD_DIR = Path(os.environ.get("MONO_BUILD_DIR", PROJECT_DIR / "build")) / "football"
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 
 COMPETITION_NAMES = {

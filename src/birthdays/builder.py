@@ -1,6 +1,7 @@
 """Build static HTML for the birthdays page."""
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from src.birthdays.models import get_all
 logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-BUILD_DIR = PROJECT_DIR / "build" / "birthdays"
+BUILD_DIR = Path(os.environ.get("MONO_BUILD_DIR", PROJECT_DIR / "build")) / "birthdays"
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 
 
