@@ -362,8 +362,8 @@
 
     document.getElementById('locateBtn').addEventListener('click', useGeolocation);
 
-    // Default: try geolocation, fallback to Tamil Nadu
-    useGeolocation();
+    // Default: load Tamil Nadu weather immediately
+    loadWeather(DEFAULT_LAT, DEFAULT_LON, DEFAULT_NAME);
     </script>
 </body>
 </html>
