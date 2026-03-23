@@ -35,12 +35,6 @@ Curated collection of stoic and existentialist quotes from Marcus Aurelius, Sene
 </details>
 
 <details>
-<summary><strong>Weather</strong> — /weather</summary>
-
-Live weather using Open-Meteo API. Auto-detects location via browser geolocation, falls back to Tamil Nadu. Shows current conditions, 24-hour hourly forecast, 7-day outlook, sunrise/sunset. Fully client-side, no API key needed.
-</details>
-
-<details>
 <summary><strong>Tic Tac Toe</strong> — /ttt</summary>
 
 Configurable Tic Tac Toe with board sizes from 3×3 to 7×7. Play against AI (minimax with alpha-beta pruning for small boards, heuristic for large) or another person. Score tracking across games. Pure HTML/CSS/JS. [Detailed explanation →](static-sites/ttt/README.md)

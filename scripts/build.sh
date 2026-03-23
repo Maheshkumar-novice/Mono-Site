@@ -19,9 +19,7 @@ build_st()       { echo "-> ST...";        cp -r static-sites/st "$TARGET/st"; }
 build_1d()       { echo "-> 1D...";        cp -r static-sites/1d "$TARGET/1d"; }
 build_quotes()   { echo "-> Quotes...";    uv run python -m src.quotes.builder; }
 build_ttt()      { echo "-> TTT...";       cp -r static-sites/ttt "$TARGET/ttt"; }
-build_weather()  { echo "-> Weather...";   cp -r static-sites/weather "$TARGET/weather"; }
-
-ALL_COMPONENTS="landing feed football f1 birthdays sky quotes st 1d ttt weather"
+ALL_COMPONENTS="landing feed football f1 birthdays sky quotes st 1d ttt"
 
 echo "=== Mono-Site Build ==="
 echo "Started at $(date)"
