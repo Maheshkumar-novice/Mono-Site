@@ -6,3 +6,5 @@ __pycache__/
 .venv/
 nginx/
 .claude/
+*.bsp
+hip_main.dat
