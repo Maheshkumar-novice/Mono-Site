@@ -253,6 +253,28 @@ body {
 }
 
 /* ========================================
+   Daily Quote
+   ======================================== */
+
+.daily-quote {
+    font-size: var(--font-size-lg);
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    border-left: 2px solid var(--accent);
+    padding-left: var(--spacing-lg);
+    margin: 0;
+}
+
+.quote-author {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-top: var(--spacing-sm);
+    padding-left: var(--spacing-lg);
+}
+
+/* ========================================
    Layout
    ======================================== */
 

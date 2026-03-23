@@ -29,12 +29,6 @@ Astronomy page showing the top 20 brightest stars and planets visible from Tamil
 </details>
 
 <details>
-<summary><strong>Quotes</strong> — /quotes</summary>
-
-Curated collection of stoic and existentialist quotes from Marcus Aurelius, Seneca, Nietzsche, Frankl, and Sartre. Daily featured quote that changes each build. Filter by author. Managed via CLI.
-</details>
-
-<details>
 <summary><strong>Tic Tac Toe</strong> — /ttt</summary>
 
 Configurable Tic Tac Toe with board sizes from 3×3 to 7×7. Play against AI (minimax with alpha-beta pruning for small boards, heuristic for large) or another person. Score tracking across games. Pure HTML/CSS/JS. [Detailed explanation →](static-sites/ttt/README.md)
@@ -84,11 +78,6 @@ uv run python -m src.cli feed remove <id>
 uv run python -m src.cli birthday list
 uv run python -m src.cli birthday add "Name" "MM-DD" --category Family
 uv run python -m src.cli birthday delete <id>
-
-# Quotes
-uv run python -m src.cli quote list
-uv run python -m src.cli quote add "Quote text" "Author" --source "Book"
-uv run python -m src.cli quote remove <index>
 ```
 
 ## Preview
@@ -125,9 +114,8 @@ Two types of apps can be added:
    build_myapp() { echo "-> MyApp..."; uv run python -m src.myapp.builder; }
    ```
 5. Add `myapp` to the `ALL_COMPONENTS` list in `build.sh`
-6. Add nav link in `templates/base.html`
-7. Add a link in `landing/index.html` under Live Apps
-8. Build: `./scripts/build.sh myapp`
+6. Add a link in `landing/index.html` under Live Apps
+7. Build: `./scripts/build.sh myapp`
 
 ### Builder template
 

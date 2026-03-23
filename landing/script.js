@@ -206,5 +206,29 @@ async function init() {
     }
 }
 
+/**
+ * Load daily quote
+ */
+async function loadDailyQuote() {
+    try {
+        const resp = await fetch('quotes.json');
+        const quotes = await resp.json();
+        if (!quotes.length) return;
+
+        const day = Math.floor(Date.now() / 86400000); // days since epoch
+        const quote = quotes[day % quotes.length];
+
+        document.getElementById('dailyQuote').textContent = quote.text;
+        document.getElementById('quoteAuthor').textContent = '— ' + quote.author;
+    } catch (e) {
+        // Hide quote section if fetch fails
+        const section = document.getElementById('quote');
+        if (section) section.style.display = 'none';
+    }
+}
+
 // Run when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    loadDailyQuote();
+});
