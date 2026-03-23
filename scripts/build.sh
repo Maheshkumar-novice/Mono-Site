@@ -36,6 +36,9 @@ uv run python -m src.f1.builder
 echo "-> Building birthdays..."
 uv run python -m src.birthdays.builder
 
+echo "-> Building sky..."
+uv run python -m src.sky.builder
+
 # Step 3: Copy static sites
 echo "-> Copying static sites..."
 cp -r static-sites/st "$BUILD_TMP/st"
