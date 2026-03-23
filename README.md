@@ -25,7 +25,13 @@ Formula 1 tracker showing driver and constructor standings, last race results, n
 <details>
 <summary><strong>Tonight's Sky</strong> — /sky</summary>
 
-Astronomy page showing the top 20 brightest stars and planets visible from Tamil Nadu. Features an interactive sky map, 24-hour time slider, moon phase indicator, and star details. Computed using Skyfield and the Hipparcos star catalog.
+Astronomy page showing the top 20 brightest stars and planets visible from Tamil Nadu. Features an interactive sky map, 24-hour time slider, moon phase indicator, and star details. Computed using Skyfield and the Hipparcos star catalog. [Detailed explanation →](src/sky/README.md)
+</details>
+
+<details>
+<summary><strong>Tic Tac Toe</strong> — /ttt</summary>
+
+Configurable Tic Tac Toe with board sizes from 3×3 to 7×7. Play against AI (minimax with alpha-beta pruning for small boards, heuristic for large) or another person. Score tracking across games. Pure HTML/CSS/JS. [Detailed explanation →](static-sites/ttt/README.md)
 </details>
 
 <details>
