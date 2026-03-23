@@ -8,9 +8,11 @@ const GITHUB_API_URL = `https://api.github.com/users/${GITHUB_USERNAME}/repos`;
 
 // Curated list of projects to display (repo names)
 const CURATED_PROJECTS = [
+    'Mono-Site',
+    'Med-Reminder-Bot',
     'Chess',
-    'Advent-Of-Code-Solutions',
     'AstroMath',
+    'Advent-Of-Code-Solutions',
     'Connect-Four',
     'Mastermind',
     'TIL'
@@ -123,6 +125,20 @@ function renderProjects(projects) {
 function useFallbackData() {
     const fallbackProjects = [
         {
+            name: 'Mono-Site',
+            description: 'Monorepo for maheshkumar.blog',
+            url: 'https://github.com/Maheshkumar-novice/Mono-Site',
+            language: 'Python',
+            stars: 0
+        },
+        {
+            name: 'Med-Reminder-Bot',
+            description: 'Medicine Reminder Bot',
+            url: 'https://github.com/Maheshkumar-novice/Med-Reminder-Bot',
+            language: 'Python',
+            stars: 0
+        },
+        {
             name: 'Chess',
             description: 'A command line game written in Ruby',
             url: 'https://github.com/Maheshkumar-novice/Chess',
@@ -130,10 +146,10 @@ function useFallbackData() {
             stars: 2
         },
         {
-            name: 'code-jam-24-luminous-lightyears',
-            description: 'Code Jam 2024 Entry for the team Luminous Lightyears',
-            url: 'https://github.com/krishnabhat3383/code-jam-24-luminous-lightyears',
-            language: 'Python',
+            name: 'AstroMath',
+            description: 'Math Game for Kids',
+            url: 'https://github.com/Maheshkumar-novice/AstroMath',
+            language: 'JavaScript',
             stars: 3
         },
         {
@@ -142,13 +158,6 @@ function useFallbackData() {
             url: 'https://github.com/Maheshkumar-novice/Advent-Of-Code-Solutions',
             language: 'Python',
             stars: 0
-        },
-        {
-            name: 'AstroMath',
-            description: 'Math Game for Kids',
-            url: 'https://github.com/Maheshkumar-novice/AstroMath',
-            language: 'JavaScript',
-            stars: 3
         },
         {
             name: 'Connect-Four',
