@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe | Maheshkumar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #525252;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            --accent-x: #06b6d4;
+            --accent-o: #f59e0b;
+            --border: #262626;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-family);
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .site-nav .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .site-nav a { font-size: 0.875rem; color: var(--text-secondary); transition: color 150ms ease; }
+        .site-nav a:hover { color: var(--accent); }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Settings */
+        .settings {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .setting {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .setting label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .setting select, .setting button {
+            padding: 0.4rem 0.8rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .setting select:focus, .setting button:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Status */
+        .status {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            min-height: 1.6rem;
+        }
+
+        .status .x { color: var(--accent-x); }
+        .status .o { color: var(--accent-o); }
+
+        /* Score */
+        .score {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .score span { font-weight: 600; font-size: 1.1rem; }
+        .score .x-score span { color: var(--accent-x); }
+        .score .o-score span { color: var(--accent-o); }
+        .score .draw-score span { color: var(--text-secondary); }
+
+        /* Board */
+        .board-container {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+
+        .board {
+            display: grid;
+            gap: 4px;
+            background: var(--border);
+            border-radius: var(--border-radius);
+            padding: 4px;
+        }
+
+        .cell {
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 150ms ease;
+            user-select: none;
+            border-radius: 4px;
+        }
+
+        .cell:hover:not(.taken) {
+            background: var(--bg-tertiary);
+        }
+
+        .cell.taken { cursor: default; }
+
+        .cell.x { color: var(--accent-x); }
+        .cell.o { color: var(--accent-o); }
+
+        .cell.win {
+            background: var(--accent-glow);
+            animation: pulse-win 0.6s ease;
+        }
+
+        @keyframes pulse-win {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Buttons */
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1.2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 150ms ease;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .btn-primary {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Footer */
+        .build-info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 2rem 0 1rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 480px) {
+            .settings { gap: 0.5rem; }
+            .score { gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav">
+        <a href="/" class="nav-brand">Maheshkumar</a>
+        <a href="/feed">Feed</a>
+        <a href="/football">Football</a>
+        <a href="/f1">F1</a>
+        <a href="/sky">Sky</a>
+        <a href="/1d">1D</a>
+        <a href="/st">ST</a>
+    </nav>
+
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+
+        <div class="settings">
+            <div class="setting">
+                <label>Board</label>
+                <select id="sizeSelect">
+                    <option value="3">3 &times; 3</option>
+                    <option value="4">4 &times; 4</option>
+                    <option value="5">5 &times; 5</option>
+                    <option value="6">6 &times; 6</option>
+                    <option value="7">7 &times; 7</option>
+                </select>
+            </div>
+            <div class="setting">
+                <label>Mode</label>
+                <select id="modeSelect">
+                    <option value="ai">vs AI</option>
+                    <option value="two">Two Player</option>
+                </select>
+            </div>
+            <div class="setting">
+                <label>Play as</label>
+                <select id="playerSelect">
+                    <option value="X">X (first)</option>
+                    <option value="O">O (second)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="score">
+            <div class="x-score">X: <span id="xScore">0</span></div>
+            <div class="draw-score">Draw: <span id="drawScore">0</span></div>
+            <div class="o-score">O: <span id="oScore">0</span></div>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="board-container">
+            <div class="board" id="board"></div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" id="newGame">New Game</button>
+            <button class="btn" id="resetScore">Reset Score</button>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        const boardEl = document.getElementById('board');
+        const statusEl = document.getElementById('status');
+        const sizeSelect = document.getElementById('sizeSelect');
+        const modeSelect = document.getElementById('modeSelect');
+        const playerSelect = document.getElementById('playerSelect');
+        const xScoreEl = document.getElementById('xScore');
+        const oScoreEl = document.getElementById('oScore');
+        const drawScoreEl = document.getElementById('drawScore');
+
+        let size = 3;
+        let winLen = 3;
+        let board = [];
+        let turn = 'X';
+        let gameOver = false;
+        let mode = 'ai';
+        let humanPlayer = 'X';
+        let scores = { X: 0, O: 0, draw: 0 };
+
+        function init() {
+            size = parseInt(sizeSelect.value);
+            winLen = size;
+            mode = modeSelect.value;
+            humanPlayer = playerSelect.value;
+            board = Array(size * size).fill('');
+            turn = 'X';
+            gameOver = false;
+
+            // Cell sizing
+            const maxBoard = Math.min(window.innerWidth - 48, 400);
+            const cellSize = Math.floor((maxBoard - (size + 1) * 4) / size);
+            const fontSize = Math.max(Math.floor(cellSize * 0.45), 14);
+
+            boardEl.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
+            boardEl.innerHTML = '';
+
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.style.width = cellSize + 'px';
+                cell.style.height = cellSize + 'px';
+                cell.style.fontSize = fontSize + 'px';
+                cell.dataset.idx = i;
+                cell.addEventListener('click', () => handleClick(i));
+                boardEl.appendChild(cell);
+            }
+
+            updateStatus();
+
+            // AI goes first if human is O
+            if (mode === 'ai' && humanPlayer === 'O') {
+                setTimeout(aiMove, 300);
+            }
+        }
+
+        function handleClick(idx) {
+            if (gameOver || board[idx]) return;
+            if (mode === 'ai' && turn !== humanPlayer) return;
+
+            makeMove(idx);
+
+            if (!gameOver && mode === 'ai') {
+                setTimeout(aiMove, 200);
+            }
+        }
+
+        function makeMove(idx) {
+            board[idx] = turn;
+            const cell = boardEl.children[idx];
+            cell.textContent = turn;
+            cell.classList.add('taken', turn.toLowerCase());
+
+            const winCells = checkWin(turn);
+            if (winCells) {
+                gameOver = true;
+                winCells.forEach(i => boardEl.children[i].classList.add('win'));
+                scores[turn]++;
+                updateScores();
+                statusEl.innerHTML = `<span class="${turn.toLowerCase()}">${turn}</span> wins!`;
+                return;
+            }
+
+            if (board.every(c => c)) {
+                gameOver = true;
+                scores.draw++;
+                updateScores();
+                statusEl.textContent = "It's a draw!";
+                return;
+            }
+
+            turn = turn === 'X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function updateStatus() {
+            if (mode === 'two') {
+                statusEl.innerHTML = `<span class="${turn.toLowerCase()}">${turn}</span>'s turn`;
+            } else {
+                if (turn === humanPlayer) {
+                    statusEl.innerHTML = `Your turn (<span class="${turn.toLowerCase()}">${turn}</span>)`;
+                } else {
+                    statusEl.innerHTML = `AI thinking...`;
+                }
+            }
+        }
+
+        function updateScores() {
+            xScoreEl.textContent = scores.X;
+            oScoreEl.textContent = scores.O;
+            drawScoreEl.textContent = scores.draw;
+        }
+
+        // --- Win check ---
+        function checkWin(player) {
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    for (const [dr, dc] of directions) {
+                        const cells = [];
+                        let valid = true;
+                        for (let k = 0; k < winLen; k++) {
+                            const nr = r + dr * k;
+                            const nc = c + dc * k;
+                            if (nr < 0 || nr >= size || nc < 0 || nc >= size) { valid = false; break; }
+                            const idx = nr * size + nc;
+                            if (board[idx] !== player) { valid = false; break; }
+                            cells.push(idx);
+                        }
+                        if (valid && cells.length === winLen) return cells;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // --- AI ---
+        function aiMove() {
+            if (gameOver) return;
+
+            const aiPlayer = humanPlayer === 'X' ? 'O' : 'X';
+            let idx;
+
+            if (size <= 4) {
+                idx = minimaxMove(aiPlayer);
+            } else {
+                idx = heuristicMove(aiPlayer);
+            }
+
+            if (idx !== -1) makeMove(idx);
+        }
+
+        // Minimax for small boards (with depth limit and alpha-beta)
+        function minimaxMove(aiPlayer) {
+            const opponent = aiPlayer === 'X' ? 'O' : 'X';
+            const maxDepth = size <= 3 ? 9 : 6;
+            let bestScore = -Infinity;
+            let bestIdx = -1;
+
+            const empty = board.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
+
+            for (const idx of empty) {
+                board[idx] = aiPlayer;
+                const score = minimax(board, 0, false, aiPlayer, opponent, -Infinity, Infinity, maxDepth);
+                board[idx] = '';
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIdx = idx;
+                }
+            }
+            return bestIdx;
+        }
+
+        function minimax(board, depth, isMax, aiPlayer, opponent, alpha, beta, maxDepth) {
+            if (checkWin(aiPlayer)) return 100 - depth;
+            if (checkWin(opponent)) return depth - 100;
+            if (board.every(c => c) || depth >= maxDepth) return 0;
+
+            const empty = board.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
+
+            if (isMax) {
+                let best = -Infinity;
+                for (const idx of empty) {
+                    board[idx] = aiPlayer;
+                    best = Math.max(best, minimax(board, depth + 1, false, aiPlayer, opponent, alpha, beta, maxDepth));
+                    board[idx] = '';
+                    alpha = Math.max(alpha, best);
+                    if (beta <= alpha) break;
+                }
+                return best;
+            } else {
+                let best = Infinity;
+                for (const idx of empty) {
+                    board[idx] = opponent;
+                    best = Math.min(best, minimax(board, depth + 1, true, aiPlayer, opponent, alpha, beta, maxDepth));
+                    board[idx] = '';
+                    beta = Math.min(beta, best);
+                    if (beta <= alpha) break;
+                }
+                return best;
+            }
+        }
+
+        // Heuristic for larger boards
+        function heuristicMove(aiPlayer) {
+            const opponent = aiPlayer === 'X' ? 'O' : 'X';
+            const empty = board.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
+
+            // 1. Win if possible
+            for (const idx of empty) {
+                board[idx] = aiPlayer;
+                if (checkWin(aiPlayer)) { board[idx] = ''; return idx; }
+                board[idx] = '';
+            }
+
+            // 2. Block opponent win
+            for (const idx of empty) {
+                board[idx] = opponent;
+                if (checkWin(opponent)) { board[idx] = ''; return idx; }
+                board[idx] = '';
+            }
+
+            // 3. Score each cell by lines through it
+            let bestScore = -1;
+            let bestIdx = empty[0];
+
+            for (const idx of empty) {
+                const r = Math.floor(idx / size);
+                const c = idx % size;
+                let score = 0;
+
+                const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+                for (const [dr, dc] of directions) {
+                    // Count friendly and empty in this line
+                    for (let start = -(winLen - 1); start <= 0; start++) {
+                        let friendly = 0, empty_ = 0, blocked = false;
+                        for (let k = 0; k < winLen; k++) {
+                            const nr = r + (start + k) * dr;
+                            const nc = c + (start + k) * dc;
+                            if (nr < 0 || nr >= size || nc < 0 || nc >= size) { blocked = true; break; }
+                            const v = board[nr * size + nc];
+                            if (v === aiPlayer) friendly++;
+                            else if (v === '') empty_++;
+                            else { blocked = true; break; }
+                        }
+                        if (!blocked) score += friendly * friendly + 1;
+                    }
+                }
+
+                // Prefer center-ish positions
+                const centerDist = Math.abs(r - size / 2) + Math.abs(c - size / 2);
+                score += (size - centerDist) * 0.5;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIdx = idx;
+                }
+            }
+            return bestIdx;
+        }
+
+        // --- Events ---
+        sizeSelect.addEventListener('change', init);
+        modeSelect.addEventListener('change', init);
+        playerSelect.addEventListener('change', init);
+        document.getElementById('newGame').addEventListener('click', init);
+        document.getElementById('resetScore').addEventListener('click', () => {
+            scores = { X: 0, O: 0, draw: 0 };
+            updateScores();
+            init();
+        });
+
+        init();
+    })();
+    </script>
+</body>
+</html>
