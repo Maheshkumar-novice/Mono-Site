@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather | Maheshkumar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #525252;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            --accent-tool: #06b6d4;
+            --border: #262626;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-family);
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .site-nav {
+            display: flex; align-items: center; gap: 1.5rem;
+            padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+            max-width: 900px; margin: 0 auto; flex-wrap: wrap;
+        }
+        .site-nav .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .site-nav a { font-size: 0.875rem; color: var(--text-secondary); transition: color 150ms ease; }
+        .site-nav a:hover, .site-nav a.active { color: var(--accent); }
+
+        .container { max-width: 700px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+        h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+
+        .location-bar {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 1.5rem; flex-wrap: wrap;
+        }
+
+        .location-name { font-size: 0.875rem; color: var(--text-secondary); }
+
+        .btn {
+            padding: 0.35rem 0.75rem; font-size: 0.75rem;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--border-radius); color: var(--text-muted);
+            cursor: pointer; font-family: var(--font-family); transition: all 150ms ease;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .status-msg { font-size: 0.8rem; color: var(--text-muted); padding: 2rem 0; text-align: center; }
+
+        /* Current Weather */
+        .current-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--border-radius); padding: 1.5rem;
+            margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.5rem;
+        }
+
+        .current-temp { font-size: 3rem; font-weight: 300; color: var(--text-primary); }
+        .current-unit { font-size: 1.2rem; color: var(--text-muted); vertical-align: super; }
+
+        .current-details { flex: 1; }
+        .current-condition { font-size: 1rem; font-weight: 500; color: var(--text-primary); margin-bottom: 0.25rem; }
+
+        .current-meta {
+            display: flex; gap: 1.25rem; flex-wrap: wrap;
+            font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;
+        }
+        .current-meta span { display: flex; align-items: center; gap: 0.3rem; }
+
+        .weather-icon { font-size: 2.5rem; }
+
+        /* Hourly */
+        .section-heading {
+            font-size: 0.8rem; font-weight: 500; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.75rem;
+        }
+
+        .hourly-scroll {
+            display: flex; gap: 0.5rem; overflow-x: auto;
+            -webkit-overflow-scrolling: touch; padding-bottom: 0.5rem;
+        }
+
+        .hour-card {
+            flex-shrink: 0; width: 65px; padding: 0.6rem 0.4rem;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--border-radius); text-align: center;
+            font-size: 0.7rem; color: var(--text-secondary);
+        }
+        .hour-card .hour-time { color: var(--text-muted); margin-bottom: 0.3rem; }
+        .hour-card .hour-icon { font-size: 1.2rem; margin: 0.2rem 0; }
+        .hour-card .hour-temp { font-weight: 600; color: var(--text-primary); font-size: 0.85rem; }
+        .hour-card .hour-rain { color: var(--accent-tool); font-size: 0.65rem; margin-top: 0.2rem; }
+
+        .hour-card.current-hour { border-color: var(--accent); background: var(--accent-glow); }
+
+        /* Daily */
+        .daily-row {
+            display: flex; align-items: center; padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border); font-size: 0.8rem;
+        }
+        .daily-row:last-child { border-bottom: none; }
+
+        .daily-day { width: 80px; font-weight: 500; color: var(--text-primary); }
+        .daily-icon { width: 30px; text-align: center; font-size: 1.1rem; }
+        .daily-condition { flex: 1; color: var(--text-secondary); font-size: 0.75rem; }
+        .daily-rain { width: 45px; color: var(--accent-tool); font-size: 0.75rem; text-align: right; }
+        .daily-temps { width: 70px; text-align: right; }
+        .daily-high { font-weight: 600; color: var(--text-primary); }
+        .daily-low { color: var(--text-muted); }
+
+        .daily-row.today .daily-day { color: var(--accent); }
+
+        /* Sun */
+        .sun-info {
+            display: flex; gap: 1.5rem; margin-top: 0.5rem;
+            font-size: 0.8rem; color: var(--text-muted);
+        }
+
+        .build-info {
+            font-size: 0.75rem; color: var(--text-muted); text-align: center;
+            padding: 2rem 0 1rem; border-top: 1px solid var(--border); margin-top: 3rem;
+        }
+
+        @media (max-width: 640px) {
+            .current-card { flex-direction: column; text-align: center; gap: 0.75rem; }
+            .current-meta { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav">
+        <a href="/" class="nav-brand">Maheshkumar</a>
+        <a href="/feed">Feed</a>
+        <a href="/football">Football</a>
+        <a href="/f1">F1</a>
+        <a href="/sky">Sky</a>
+        <a href="/quotes">Quotes</a>
+        <a href="/weather" class="active">Weather</a>
+    </nav>
+
+    <div class="container">
+        <h1>Weather</h1>
+        <div class="location-bar">
+            <span class="location-name" id="locationName">Detecting location...</span>
+            <button class="btn" id="locateBtn">Use My Location</button>
+        </div>
+
+        <div id="content">
+            <p class="status-msg" id="statusMsg">Loading weather...</p>
+        </div>
+    </div>
+
+    <div class="build-info">Powered by Open-Meteo</div>
+
+    <script>
+    const DEFAULT_LAT = 11.0;
+    const DEFAULT_LON = 79.0;
+    const DEFAULT_NAME = 'Tamil Nadu, India';
+
+    const WMO_CODES = {
+        0: ['Clear sky', '☀️'],
+        1: ['Mainly clear', '🌤️'],
+        2: ['Partly cloudy', '⛅'],
+        3: ['Overcast', '☁️'],
+        45: ['Foggy', '🌫️'],
+        48: ['Rime fog', '🌫️'],
+        51: ['Light drizzle', '🌦️'],
+        53: ['Moderate drizzle', '🌦️'],
+        55: ['Dense drizzle', '🌧️'],
+        56: ['Freezing drizzle', '🌧️'],
+        57: ['Heavy freezing drizzle', '🌧️'],
+        61: ['Slight rain', '🌦️'],
+        63: ['Moderate rain', '🌧️'],
+        65: ['Heavy rain', '🌧️'],
+        66: ['Freezing rain', '🌧️'],
+        67: ['Heavy freezing rain', '🌧️'],
+        71: ['Slight snow', '🌨️'],
+        73: ['Moderate snow', '🌨️'],
+        75: ['Heavy snow', '❄️'],
+        77: ['Snow grains', '❄️'],
+        80: ['Slight showers', '🌦️'],
+        81: ['Moderate showers', '🌧️'],
+        82: ['Violent showers', '⛈️'],
+        85: ['Slight snow showers', '🌨️'],
+        86: ['Heavy snow showers', '❄️'],
+        95: ['Thunderstorm', '⛈️'],
+        96: ['Thunderstorm with hail', '⛈️'],
+        99: ['Thunderstorm with heavy hail', '⛈️'],
+    };
+
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    function getWeatherInfo(code, isDay = true) {
+        const info = WMO_CODES[code] || ['Unknown', '❓'];
+        let icon = info[1];
+        if (!isDay && code <= 1) icon = '🌙';
+        return { condition: info[0], icon };
+    }
+
+    async function fetchWeather(lat, lon) {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+            + `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day`
+            + `&hourly=temperature_2m,weather_code,precipitation_probability`
+            + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset`
+            + `&timezone=auto&forecast_days=7`;
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Failed to fetch weather');
+        return resp.json();
+    }
+
+    async function fetchLocationName(lat, lon) {
+        try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
+            const data = await resp.json();
+            const addr = data.address || {};
+            return addr.city || addr.town || addr.county || addr.state || `${lat.toFixed(1)}°, ${lon.toFixed(1)}°`;
+        } catch {
+            return `${lat.toFixed(1)}°, ${lon.toFixed(1)}°`;
+        }
+    }
+
+    function renderWeather(data) {
+        const c = data.current;
+        const h = data.hourly;
+        const d = data.daily;
+
+        const weather = getWeatherInfo(c.weather_code, c.is_day);
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        let html = '';
+
+        // Current
+        html += `
+        <div class="current-card">
+            <span class="weather-icon">${weather.icon}</span>
+            <div class="current-details">
+                <div class="current-temp">${Math.round(c.temperature_2m)}<span class="current-unit">°C</span></div>
+                <div class="current-condition">${weather.condition}</div>
+                <div class="current-meta">
+                    <span>Feels ${Math.round(c.apparent_temperature)}°</span>
+                    <span>Humidity ${c.relative_humidity_2m}%</span>
+                    <span>Wind ${Math.round(c.wind_speed_10m)} km/h</span>
+                </div>
+            </div>
+        </div>`;
+
+        // Sun info
+        if (d.sunrise && d.sunset) {
+            const sunrise = new Date(d.sunrise[0]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const sunset = new Date(d.sunset[0]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            html += `<div class="sun-info"><span>☀️ Sunrise ${sunrise}</span><span>🌅 Sunset ${sunset}</span></div>`;
+        }
+
+        // Hourly (next 24 hours)
+        html += '<h3 class="section-heading">Next 24 Hours</h3>';
+        html += '<div class="hourly-scroll">';
+
+        const hourlyStart = h.time.findIndex(t => new Date(t).getHours() === currentHour);
+        const start = Math.max(hourlyStart, 0);
+
+        for (let i = start; i < Math.min(start + 24, h.time.length); i++) {
+            const dt = new Date(h.time[i]);
+            const hr = dt.getHours();
+            const isDay = hr >= 6 && hr < 18;
+            const wi = getWeatherInfo(h.weather_code[i], isDay);
+            const isCurrent = i === start;
+            const label = isCurrent ? 'Now' : dt.toLocaleTimeString('en-US', { hour: 'numeric' });
+            const rain = h.precipitation_probability[i];
+
+            html += `
+            <div class="hour-card${isCurrent ? ' current-hour' : ''}">
+                <div class="hour-time">${label}</div>
+                <div class="hour-icon">${wi.icon}</div>
+                <div class="hour-temp">${Math.round(h.temperature_2m[i])}°</div>
+                ${rain > 0 ? `<div class="hour-rain">${rain}%</div>` : ''}
+            </div>`;
+        }
+        html += '</div>';
+
+        // Daily
+        html += '<h3 class="section-heading">7-Day Forecast</h3>';
+
+        for (let i = 0; i < d.time.length; i++) {
+            const dt = new Date(d.time[i] + 'T00:00');
+            const isToday = i === 0;
+            const dayName = isToday ? 'Today' : DAYS[dt.getDay()];
+            const wi = getWeatherInfo(d.weather_code[i]);
+            const rain = d.precipitation_probability_max[i];
+
+            html += `
+            <div class="daily-row${isToday ? ' today' : ''}">
+                <span class="daily-day">${dayName}</span>
+                <span class="daily-icon">${wi.icon}</span>
+                <span class="daily-condition">${wi.condition}</span>
+                <span class="daily-rain">${rain > 0 ? rain + '%' : ''}</span>
+                <span class="daily-temps">
+                    <span class="daily-high">${Math.round(d.temperature_2m_max[i])}°</span>
+                    <span class="daily-low"> ${Math.round(d.temperature_2m_min[i])}°</span>
+                </span>
+            </div>`;
+        }
+
+        document.getElementById('content').innerHTML = html;
+    }
+
+    async function loadWeather(lat, lon, name) {
+        document.getElementById('locationName').textContent = name || 'Loading...';
+        document.getElementById('statusMsg') && (document.getElementById('statusMsg').textContent = 'Loading weather...');
+
+        try {
+            if (!name || name === 'Detecting location...') {
+                const locName = await fetchLocationName(lat, lon);
+                document.getElementById('locationName').textContent = locName;
+            } else {
+                document.getElementById('locationName').textContent = name;
+            }
+
+            const data = await fetchWeather(lat, lon);
+            renderWeather(data);
+        } catch (e) {
+            document.getElementById('content').innerHTML = `<p class="status-msg">Failed to load weather. Try again.</p>`;
+        }
+    }
+
+    function useGeolocation() {
+        if (!navigator.geolocation) {
+            loadWeather(DEFAULT_LAT, DEFAULT_LON, DEFAULT_NAME);
+            return;
+        }
+
+        document.getElementById('locationName').textContent = 'Detecting location...';
+
+        navigator.geolocation.getCurrentPosition(
+            pos => loadWeather(pos.coords.latitude, pos.coords.longitude, null),
+            () => loadWeather(DEFAULT_LAT, DEFAULT_LON, DEFAULT_NAME),
+            { timeout: 5000 }
+        );
+    }
+
+    document.getElementById('locateBtn').addEventListener('click', useGeolocation);
+
+    // Default: try geolocation, fallback to Tamil Nadu
+    useGeolocation();
+    </script>
+</body>
+</html>
