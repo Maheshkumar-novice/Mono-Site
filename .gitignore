@@ -7,4 +7,5 @@ __pycache__/
 nginx/
 .claude/
 *.bsp
+*.bsp.download
 hip_main.dat
