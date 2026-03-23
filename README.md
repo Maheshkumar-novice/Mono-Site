@@ -29,6 +29,12 @@ Astronomy page showing the top 20 brightest stars and planets visible from Tamil
 </details>
 
 <details>
+<summary><strong>Quotes</strong> — /quotes</summary>
+
+Curated collection of stoic and existentialist quotes from Marcus Aurelius, Seneca, Nietzsche, Frankl, and Sartre. Daily featured quote that changes each build. Filter by author. Managed via CLI.
+</details>
+
+<details>
 <summary><strong>Tic Tac Toe</strong> — /ttt</summary>
 
 Configurable Tic Tac Toe with board sizes from 3×3 to 7×7. Play against AI (minimax with alpha-beta pruning for small boards, heuristic for large) or another person. Score tracking across games. Pure HTML/CSS/JS. [Detailed explanation →](static-sites/ttt/README.md)
@@ -69,17 +75,98 @@ cp .env.example .env  # Add FOOTBALL_API_KEY
 ## CLI
 
 ```bash
+# Feeds
 uv run python -m src.cli feed list
 uv run python -m src.cli feed add <url>
 uv run python -m src.cli feed remove <id>
 
+# Birthdays
 uv run python -m src.cli birthday list
 uv run python -m src.cli birthday add "Name" "MM-DD" --category Family
 uv run python -m src.cli birthday delete <id>
+
+# Quotes
+uv run python -m src.cli quote list
+uv run python -m src.cli quote add "Quote text" "Author" --source "Book"
+uv run python -m src.cli quote remove <index>
 ```
 
 ## Preview
 
 ```bash
 uv run python -m http.server -d build 8000
+```
+
+## Adding a New App
+
+Two types of apps can be added:
+
+### Static app (pure HTML/CSS/JS)
+
+1. Create `static-sites/myapp/index.html`
+2. Add to `scripts/build.sh`:
+   ```bash
+   build_myapp() { echo "-> MyApp..."; cp -r static-sites/myapp "$TARGET/myapp"; }
+   ```
+3. Add `myapp` to the `ALL_COMPONENTS` list in `build.sh`
+4. Add a link in `landing/index.html` under Live Apps
+5. Build: `./scripts/build.sh myapp`
+
+### Dynamic app (Python builder)
+
+1. Create `src/myapp/__init__.py` and `src/myapp/builder.py`
+2. The builder should:
+   - Read data from an API, SQLite, or JSON file
+   - Render a Jinja2 template from `templates/myapp.html`
+   - Write output to `BUILD_DIR / "index.html"` using `MONO_BUILD_DIR` env var
+3. Create `templates/myapp.html` extending `base.html`
+4. Add to `scripts/build.sh`:
+   ```bash
+   build_myapp() { echo "-> MyApp..."; uv run python -m src.myapp.builder; }
+   ```
+5. Add `myapp` to the `ALL_COMPONENTS` list in `build.sh`
+6. Add nav link in `templates/base.html`
+7. Add a link in `landing/index.html` under Live Apps
+8. Build: `./scripts/build.sh myapp`
+
+### Builder template
+
+```python
+"""Build static HTML for myapp."""
+
+import logging
+import os
+from datetime import datetime
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader
+
+logger = logging.getLogger(__name__)
+
+PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+BUILD_DIR = Path(os.environ.get("MONO_BUILD_DIR", PROJECT_DIR / "build")) / "myapp"
+TEMPLATES_DIR = PROJECT_DIR / "templates"
+
+
+def build():
+    # Fetch or compute your data here
+    data = {}
+
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    template = env.get_template("myapp.html")
+
+    html = template.render(
+        data=data,
+        active="myapp",
+        build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    )
+
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    (BUILD_DIR / "index.html").write_text(html)
+    logger.info(f"MyApp page written to {BUILD_DIR / 'index.html'}")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    build()
 ```

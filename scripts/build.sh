@@ -17,9 +17,10 @@ build_birthdays(){ echo "-> Birthdays..."; uv run python -m src.birthdays.builde
 build_sky()      { echo "-> Sky...";       uv run python -m src.sky.builder; }
 build_st()       { echo "-> ST...";        cp -r static-sites/st "$TARGET/st"; }
 build_1d()       { echo "-> 1D...";        cp -r static-sites/1d "$TARGET/1d"; }
+build_quotes()   { echo "-> Quotes...";    uv run python -m src.quotes.builder; }
 build_ttt()      { echo "-> TTT...";       cp -r static-sites/ttt "$TARGET/ttt"; }
 
-ALL_COMPONENTS="landing feed football f1 birthdays sky st 1d ttt"
+ALL_COMPONENTS="landing feed football f1 birthdays sky quotes st 1d ttt"
 
 echo "=== Mono-Site Build ==="
 echo "Started at $(date)"

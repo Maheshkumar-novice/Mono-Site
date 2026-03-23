@@ -138,5 +138,91 @@ def birthday_delete(birthday_id):
     click.echo(f"Birthday {birthday_id} deleted.")
 
 
+# ── Quote commands ──────────────────────────────────────────
+
+@main.group()
+def quote():
+    """Manage quotes."""
+    pass
+
+
+@quote.command("list")
+@click.option("--author", "-a", default=None, help="Filter by author")
+def quote_list(author):
+    """List all quotes."""
+    import json
+    from pathlib import Path
+
+    quotes_file = Path(__file__).resolve().parent.parent / "data" / "quotes.json"
+    if not quotes_file.exists():
+        click.echo("No quotes file found.")
+        return
+    with open(quotes_file) as f:
+        quotes = json.load(f)
+
+    if author:
+        quotes = [q for q in quotes if author.lower() in q.get("author", "").lower()]
+
+    for i, q in enumerate(quotes, 1):
+        src = f' — {q["source"]}' if q.get("source") else ""
+        click.echo(f'  [{i}] "{q["text"][:80]}..." — {q["author"]}{src}')
+    click.echo(f"\n  {len(quotes)} quotes total.")
+
+
+@quote.command("add")
+@click.argument("text")
+@click.argument("author")
+@click.option("--source", "-s", default=None, help="Book or work name")
+def quote_add(text, author, source):
+    """Add a new quote."""
+    import json
+    from pathlib import Path
+
+    quotes_file = Path(__file__).resolve().parent.parent / "data" / "quotes.json"
+    quotes = []
+    if quotes_file.exists():
+        with open(quotes_file) as f:
+            quotes = json.load(f)
+
+    entry = {"text": text, "author": author}
+    if source:
+        entry["source"] = source
+
+    quotes.append(entry)
+    with open(quotes_file, "w") as f:
+        json.dump(quotes, f, indent=4, ensure_ascii=False)
+
+    click.echo(f"Added quote by {author}. Total: {len(quotes)}")
+
+
+@quote.command("remove")
+@click.argument("index", type=int)
+def quote_remove(index):
+    """Remove a quote by index (1-based)."""
+    import json
+    from pathlib import Path
+
+    quotes_file = Path(__file__).resolve().parent.parent / "data" / "quotes.json"
+    if not quotes_file.exists():
+        click.echo("No quotes file found.")
+        return
+    with open(quotes_file) as f:
+        quotes = json.load(f)
+
+    idx = index - 1
+    if idx < 0 or idx >= len(quotes):
+        click.echo(f"Invalid index. Must be 1-{len(quotes)}.")
+        return
+
+    if not click.confirm(f'Remove "{quotes[idx]["text"][:60]}..." by {quotes[idx]["author"]}?'):
+        return
+
+    removed = quotes.pop(idx)
+    with open(quotes_file, "w") as f:
+        json.dump(quotes, f, indent=4, ensure_ascii=False)
+
+    click.echo(f"Removed quote by {removed['author']}. Remaining: {len(quotes)}")
+
+
 if __name__ == "__main__":
     main()
