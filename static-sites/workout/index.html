@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout Plan | Maheshkumar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #525252;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            --border: #262626;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-family);
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        /* Nav */
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+        .site-nav .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .site-nav a { font-size: 0.875rem; color: var(--text-secondary); transition: color 150ms ease; }
+        .site-nav a:hover { color: var(--accent); }
+
+        /* Container */
+        .container {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 2.5rem;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Exercise list */
+        .exercise {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .exercise:last-child { border-bottom: none; }
+
+        .exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .exercise-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .exercise-detail {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .exercise-note {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        /* Schedule */
+        .schedule {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        .day {
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .day.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .day.rest {
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+
+        /* Tips */
+        .tip {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 0.3rem 0;
+        }
+
+        /* Link card */
+        .link-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            color: inherit;
+            transition: all 250ms ease;
+            margin-top: 1rem;
+        }
+        .link-card:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        .link-card-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            transition: color 150ms ease;
+        }
+        .link-card:hover .link-card-name { color: var(--accent); }
+        .link-card-arrow { color: var(--text-muted); font-size: 0.85rem; }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            h1 { font-size: 1.5rem; }
+            .schedule { gap: 0.35rem; }
+            .day { font-size: 0.7rem; padding: 0.25rem 0.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav">
+        <a href="/" class="nav-brand">Maheshkumar</a>
+    </nav>
+
+    <div class="container">
+        <h1>Workout Plan</h1>
+        <p class="subtitle">Full body, bodyweight, 3 days a week</p>
+
+        <!-- Schedule -->
+        <div class="section">
+            <div class="section-title">Weekly Schedule</div>
+            <div class="schedule">
+                <span class="day active">Mon</span>
+                <span class="day rest">Tue</span>
+                <span class="day active">Wed</span>
+                <span class="day rest">Thu</span>
+                <span class="day active">Fri</span>
+                <span class="day rest">Sat</span>
+                <span class="day rest">Sun</span>
+            </div>
+            <div class="tip">Stretch routine daily. Workout on Mon, Wed, Fri.</div>
+        </div>
+
+        <!-- Warm Up -->
+        <div class="section">
+            <div class="section-title">Warm Up (5 min)</div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Jumping Jacks</span>
+                    <span class="exercise-detail">30s</span>
+                </div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Arm Circles</span>
+                    <span class="exercise-detail">30s</span>
+                </div>
+                <div class="exercise-note">Forward then backward</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Leg Swings</span>
+                    <span class="exercise-detail">30s each leg</span>
+                </div>
+                <div class="exercise-note">Front-back, then side-to-side</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Bodyweight Squats</span>
+                    <span class="exercise-detail">10 reps</span>
+                </div>
+                <div class="exercise-note">Slow and controlled</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Inchworms</span>
+                    <span class="exercise-detail">5 reps</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workout -->
+        <div class="section">
+            <div class="section-title">Workout</div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Push Ups</span>
+                    <span class="exercise-detail">3 sets</span>
+                </div>
+                <div class="exercise-note">Chest, shoulders, triceps</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Squats</span>
+                    <span class="exercise-detail">3 sets</span>
+                </div>
+                <div class="exercise-note">Quads, glutes, core</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Pull Ups</span>
+                    <span class="exercise-detail">3 sets</span>
+                </div>
+                <div class="exercise-note">Back, biceps. Do negatives if needed.</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Planks</span>
+                    <span class="exercise-detail">3 sets</span>
+                </div>
+                <div class="exercise-note">Core stability. Hold as long as you can.</div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Hip Bridges</span>
+                    <span class="exercise-detail">3 sets</span>
+                </div>
+                <div class="exercise-note">Glutes, hamstrings, lower back</div>
+            </div>
+        </div>
+
+        <!-- Cool Down -->
+        <div class="section">
+            <div class="section-title">Cool Down (5 min)</div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Chest Doorway Stretch</span>
+                    <span class="exercise-detail">30s</span>
+                </div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Quad Stretch (Standing)</span>
+                    <span class="exercise-detail">30s each</span>
+                </div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Hamstring Stretch</span>
+                    <span class="exercise-detail">30s each</span>
+                </div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Shoulder Cross-Body Stretch</span>
+                    <span class="exercise-detail">30s each</span>
+                </div>
+            </div>
+            <div class="exercise">
+                <div class="exercise-header">
+                    <span class="exercise-name">Child's Pose</span>
+                    <span class="exercise-detail">30s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="section">
+            <div class="section-title">Notes</div>
+            <div class="tip">Rest 60-90 seconds between sets.</div>
+            <div class="tip">Increase reps when sets feel easy. No fixed rep count needed.</div>
+            <div class="tip">Pull up negatives: jump up, lower yourself slowly for 3-5 seconds.</div>
+            <div class="tip">Morning stretch routine covers mobility on all days.</div>
+        </div>
+
+        <!-- Cross-link -->
+        <a href="/stretch" class="link-card">
+            <span class="link-card-name">Morning Mobility Routine</span>
+            <span class="link-card-arrow">&rarr;</span>
+        </a>
+    </div>
+</body>
+</html>

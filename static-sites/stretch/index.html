@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morning Mobility | Maheshkumar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #525252;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            --accent-buffer: #06b6d4;
+            --accent-buffer-hover: #22d3ee;
+            --accent-buffer-glow: rgba(6, 182, 212, 0.15);
+            --border: #262626;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-family);
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .hidden { display: none !important; }
+
+        /* Nav */
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+        .site-nav .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .site-nav a { font-size: 0.875rem; color: var(--text-secondary); transition: color 150ms ease; }
+        .site-nav a:hover { color: var(--accent); }
+
+        /* Container */
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* ===== IDLE SCREEN ===== */
+        .idle-wrap {
+            text-align: center;
+            padding-top: 3rem;
+        }
+        .idle-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--accent-glow);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+        .idle-wrap h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .idle-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .idle-tip {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-style: italic;
+            margin-bottom: 2rem;
+        }
+        .btn-start {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font-family);
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 150ms ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-start:hover { background: var(--accent-hover); transform: scale(1.02); }
+        .btn-start:active { transform: scale(0.98); }
+
+        .stretch-list {
+            text-align: left;
+            margin-bottom: 2rem;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+        }
+        .stretch-list-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+        .stretch-list-item {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+        }
+        .stretch-list-name {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .stretch-list-muscle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .stretch-list-group {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding-top: 1rem;
+            padding-bottom: 0.25rem;
+        }
+        .stretch-list-group:first-child { padding-top: 0; }
+
+        .workout-link {
+            display: block;
+            margin-top: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 250ms ease;
+        }
+        .workout-link:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        /* ===== RUNNING SCREEN ===== */
+        .running-wrap {
+            padding-top: 1rem;
+        }
+
+        /* Header row */
+        .run-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .step-info {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .btn-reset {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.4rem;
+            border-radius: 4px;
+            transition: color 150ms ease;
+            display: flex;
+            align-items: center;
+        }
+        .btn-reset:hover { color: var(--text-secondary); }
+
+        /* Main card */
+        .timer-card {
+            background: var(--bg-secondary);
+            border-radius: 24px;
+            padding: 2rem 1.5rem;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Progress bar at top of card */
+        .progress-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--bg-tertiary);
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 1s linear, background-color 0.3s ease;
+        }
+        .phase-buffer .progress-fill { background: var(--accent-buffer); }
+
+        /* Phase badge */
+        .phase-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.25rem;
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+        .phase-buffer .phase-badge {
+            background: var(--accent-buffer-glow);
+            color: var(--accent-buffer);
+        }
+
+        /* Pose icon area */
+        .pose-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 140px;
+            margin-bottom: 1rem;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .pose-area svg {
+            width: 120px;
+            height: 120px;
+            color: var(--accent);
+            transition: color 0.3s ease;
+        }
+        .phase-buffer .pose-area svg { color: var(--accent-buffer); opacity: 0.7; transform: scale(0.85); }
+
+        /* Stretch info */
+        .stretch-name {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .stretch-side {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        .stretch-side span { color: var(--text-secondary); font-weight: 600; }
+
+        /* Timer display */
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+        .phase-buffer .timer-display { color: var(--accent-buffer); }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        .btn-ctrl {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 150ms ease;
+        }
+        .btn-ctrl:hover { background: var(--border); }
+        .btn-ctrl:disabled { opacity: 0.3; cursor: default; }
+        .btn-ctrl:disabled:hover { background: var(--bg-tertiary); }
+
+        .btn-play {
+            width: 64px;
+            height: 64px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-play:hover { background: var(--accent-hover); transform: scale(1.05); }
+        .btn-play:active { transform: scale(0.95); }
+        .phase-buffer .btn-play {
+            background: var(--accent-buffer);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+        .phase-buffer .btn-play:hover { background: var(--accent-buffer-hover); }
+
+        /* Up next */
+        .up-next {
+            margin-top: 1.5rem;
+            background: rgba(20, 20, 20, 0.5);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(38, 38, 38, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .up-next-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .up-next-icon svg { width: 28px; height: 28px; color: var(--text-muted); }
+        .up-next-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.1rem;
+        }
+        .up-next-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .up-next-duration {
+            margin-left: auto;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ===== COMPLETE SCREEN ===== */
+        .complete-wrap {
+            text-align: center;
+            padding-top: 4rem;
+        }
+        .complete-icon {
+            width: 96px;
+            height: 96px;
+            background: var(--accent-glow);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+        .complete-wrap h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .complete-wrap p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+        .btn-restart {
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: var(--font-family);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 150ms ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-restart:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        /* ===== Card text center ===== */
+        .timer-card { text-align: center; }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 480px) {
+            .pose-area { height: 110px; }
+            .pose-area svg { width: 90px; height: 90px; }
+            .timer-display { font-size: 3rem; }
+            .stretch-name { font-size: 1.15rem; }
+            .controls { gap: 1rem; }
+            .btn-play { width: 56px; height: 56px; }
+            .btn-ctrl { width: 44px; height: 44px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav">
+        <a href="/" class="nav-brand">Maheshkumar</a>
+    </nav>
+
+    <div class="container">
+        <!-- Idle Screen -->
+        <div id="screen-idle" class="idle-wrap">
+            <div class="idle-icon" id="idleIcon"></div>
+            <h1>Morning Mobility</h1>
+            <p class="idle-subtitle" id="idleSubtitle"></p>
+            <p class="idle-tip">Best done right after waking up, before sitting down at your desk.</p>
+            <button class="btn-start" id="btnStart"></button>
+            <div class="stretch-list" id="stretchList"></div>
+            <a href="/workout" class="workout-link">See workout plan &rarr;</a>
+            <a href="https://youtu.be/t2jel6q1GRk?si=tw6PtzaiVSyNW6Z4" target="_blank" rel="noopener" class="workout-link">Watch reference video &rarr;</a>
+        </div>
+
+        <!-- Running Screen -->
+        <div id="screen-running" class="running-wrap hidden">
+            <div class="run-header">
+                <span class="step-info" id="stepInfo"></span>
+                <button class="btn-reset" id="btnReset"></button>
+            </div>
+            <div class="timer-card" id="timerCard">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="phase-badge" id="phaseBadge"></div>
+                <div class="pose-area" id="poseArea"></div>
+                <div class="stretch-name" id="stretchName"></div>
+                <div class="stretch-side" id="stretchSide"></div>
+                <div class="timer-display" id="timerDisplay"></div>
+                <div class="controls">
+                    <button class="btn-ctrl" id="btnPrev"></button>
+                    <button class="btn-ctrl btn-play" id="btnPlayPause"></button>
+                    <button class="btn-ctrl" id="btnNext"></button>
+                </div>
+            </div>
+            <div class="up-next hidden" id="upNext">
+                <div class="up-next-icon" id="upNextIcon"></div>
+                <div>
+                    <div class="up-next-label">Up Next</div>
+                    <div class="up-next-name" id="upNextName"></div>
+                </div>
+                <div class="up-next-duration" id="upNextDuration"></div>
+            </div>
+        </div>
+
+        <!-- Complete Screen -->
+        <div id="screen-complete" class="complete-wrap hidden">
+            <div class="complete-icon" id="completeIcon"></div>
+            <h1>Routine Complete!</h1>
+            <p>Great job keeping your body mobile today.</p>
+            <button class="btn-restart" id="btnRestart"></button>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        // === DATA ===
+        const STRETCHES = [
+            // Spine
+            { name: "Lumbar Rotation", side: "Left", duration: 30, icon: "supine-twist", muscle: "Lower Back", group: "Spine" },
+            { name: "Lumbar Rotation", side: "Right", duration: 30, icon: "supine-twist", muscle: "Lower Back" },
+            { name: "Thoracic Rotation", side: "Left", duration: 30, icon: "seated-twist", muscle: "Mid Back" },
+            { name: "Thoracic Rotation", side: "Right", duration: 30, icon: "seated-twist", muscle: "Mid Back" },
+            { name: "Cat Cow / Cat Camel", side: "Both", duration: 60, icon: "quadruped", muscle: "Full Spine" },
+            { name: "Cobra (Low Back Extension)", side: "Both", duration: 30, icon: "cobra", muscle: "Lower Back & Abs" },
+            // Hips
+            { name: "Hip Flexor Stretch", side: "Left", duration: 30, icon: "kneeling-lunge", muscle: "Hip Flexors", group: "Hips" },
+            { name: "Hip Flexor Stretch", side: "Right", duration: 30, icon: "kneeling-lunge", muscle: "Hip Flexors" },
+            { name: "Glute Stretch (Figure 4)", side: "Left", duration: 30, icon: "figure-four", muscle: "Glutes & Piriformis" },
+            { name: "Glute Stretch (Figure 4)", side: "Right", duration: 30, icon: "figure-four", muscle: "Glutes & Piriformis" },
+            { name: "Hip Adductor (Groin)", side: "Left", duration: 30, icon: "kneeling-side", muscle: "Inner Thigh" },
+            { name: "Hip Adductor (Groin)", side: "Right", duration: 30, icon: "kneeling-side", muscle: "Inner Thigh" },
+            // Legs
+            { name: "Hamstring Stretch", side: "Left", duration: 30, icon: "kneeling-straight", muscle: "Hamstrings", group: "Legs" },
+            { name: "Hamstring Stretch", side: "Right", duration: 30, icon: "kneeling-straight", muscle: "Hamstrings" },
+            { name: "Calf Stretch", side: "Left", duration: 30, icon: "calf", muscle: "Calves & Achilles" },
+            { name: "Calf Stretch", side: "Right", duration: 30, icon: "calf", muscle: "Calves & Achilles" },
+            // Upper body cooldown
+            { name: "Upper Trapezius Stretch", side: "Left", duration: 30, icon: "neck", muscle: "Neck & Traps", group: "Upper Body" },
+            { name: "Upper Trapezius Stretch", side: "Right", duration: 30, icon: "neck", muscle: "Neck & Traps" },
+            { name: "Wrist Circles & Forearm Stretch", side: "Both", duration: 30, icon: "wrist", muscle: "Wrists & Forearms" },
+            { name: "Chest & Shoulder Extension", side: "Both", duration: 30, icon: "chest-open", muscle: "Chest & Shoulders" },
+            { name: "Overhead Reach & 'W'", side: "Both", duration: 30, icon: "arms-overhead", muscle: "Shoulders & Upper Back" },
+        ];
+        const BUFFER = 10;
+
+        // === WAKE LOCK ===
+        let wakeLock = null;
+
+        async function acquireWakeLock() {
+            if (!('wakeLock' in navigator)) return;
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => { wakeLock = null; });
+            } catch (e) { /* wake lock not available */ }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && state.isPlaying) {
+                acquireWakeLock();
+            }
+        });
+
+        // === AUDIO ===
+        let audioCtx = null;
+
+        function getAudioCtx() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+
+        function playBeep(type) {
+            try {
+                const ctx = getAudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+
+                if (type === 'high') {
+                    osc.frequency.value = 880;
+                    gain.gain.value = 0.15;
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.2);
+                } else if (type === 'low') {
+                    osc.frequency.value = 440;
+                    gain.gain.value = 0.1;
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.15);
+                } else if (type === 'tick') {
+                    osc.frequency.value = 660;
+                    gain.gain.value = 0.08;
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.1);
+                } else if (type === 'complete') {
+                    osc.frequency.value = 523;
+                    gain.gain.value = 0.15;
+                    osc.start();
+                    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+                    osc.stop(ctx.currentTime + 0.4);
+                }
+            } catch (e) { /* audio unavailable */ }
+        }
+
+        // === SVG ICONS ===
+        const CTRL_ICONS = {
+            play: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,3 20,12 6,21"/></svg>',
+            pause: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>',
+            skipBack: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="11,3 11,12 2,7"/><polygon points="11,12 11,21 2,16"/><polygon points="22,3 22,12 13,7"/><polygon points="22,12 22,21 13,16"/></svg>',
+            skipFwd: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="2,3 11,8 2,12"/><polygon points="2,12 11,17 2,21"/><polygon points="13,3 22,8 13,12"/><polygon points="13,12 22,17 13,21"/></svg>',
+            reset: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
+            clock: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>',
+            check: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>',
+            startPlay: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,3 20,12 6,21"/></svg>',
+        };
+
+        const POSE_ICONS = {
+            'supine-twist': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="75" r="8" fill="currentColor"/><path d="M28 75 L65 75 L75 50 L85 75"/><path d="M40 75 L40 55" stroke-width="4" stroke-dasharray="2 4"/></svg>',
+            'seated-twist': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="45" cy="25" r="8" fill="currentColor"/><path d="M45 33 L45 75 L85 75"/><path d="M45 45 L65 60"/><path d="M25 60 L45 45"/></svg>',
+            'neck': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="40" cy="25" r="8" fill="currentColor"/><path d="M45 33 L45 80"/><path d="M25 45 L45 50 L65 45"/><path d="M60 20 Q 75 10 80 25"/><polygon points="75,25 80,30 85,20" fill="currentColor" stroke-width="1"/></svg>',
+            'quadruped': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="25" cy="40" r="8" fill="currentColor"/><path d="M33 40 Q 50 30 70 40"/><path d="M35 40 L35 80 L45 80"/><path d="M65 40 L65 80 L75 80"/><path d="M45 30 L45 15" stroke-width="4"/><polygon points="40,20 45,10 50,20" fill="currentColor" stroke-width="1"/></svg>',
+            'kneeling-lunge': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="40" cy="20" r="8" fill="currentColor"/><path d="M40 28 L40 60"/><path d="M40 60 L65 60 L65 90 L75 90"/><path d="M40 60 L20 80 L40 80"/></svg>',
+            'kneeling-straight': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="35" cy="25" r="8" fill="currentColor"/><path d="M35 33 L35 65"/><path d="M35 65 L75 90 L85 90"/><path d="M35 65 L20 90 L40 90"/><path d="M35 45 L60 70"/></svg>',
+            'kneeling-side': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="25" r="8" fill="currentColor"/><path d="M50 33 L50 65"/><path d="M50 65 L35 90 L50 90"/><path d="M50 65 L85 65"/><path d="M50 45 L70 55"/></svg>',
+            'chest-open': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="20" r="8" fill="currentColor"/><path d="M50 28 L50 70"/><path d="M50 70 L40 95 M50 70 L60 95"/><path d="M50 40 Q 30 50 20 40 M50 40 Q 70 50 80 40"/></svg>',
+            'arms-overhead': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="30" r="8" fill="currentColor"/><path d="M50 38 L50 75"/><path d="M50 75 L40 95 M50 75 L60 95"/><path d="M50 45 L30 20 L20 10 M50 45 L70 20 L80 10"/></svg>',
+            'cobra': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="35" cy="25" r="8" fill="currentColor"/><path d="M35 33 L35 50 Q 50 55 70 65 Q 85 72 90 80"/><path d="M35 50 L25 70"/><path d="M35 50 L45 70"/><path d="M70 80 L90 80"/></svg>',
+            'figure-four': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="40" r="8" fill="currentColor"/><path d="M30 48 L30 65"/><path d="M15 90 L30 65 L50 90"/><path d="M50 75 L70 65 L80 75"/><path d="M30 55 L20 50 M30 55 L40 50"/></svg>',
+            'calf': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="35" cy="20" r="8" fill="currentColor"/><path d="M35 28 L35 55"/><path d="M35 55 L25 90"/><path d="M35 55 L65 80 L80 80"/><path d="M35 40 L25 35 M35 40 L45 35"/></svg>',
+            'wrist': '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M30 50 L70 50"/><path d="M50 50 L50 30"/><path d="M40 30 L50 20 L60 30"/><circle cx="50" cy="50" r="18" stroke-dasharray="4 4"/><circle cx="30" cy="50" r="4" fill="currentColor"/><circle cx="70" cy="50" r="4" fill="currentColor"/></svg>',
+        };
+
+        function poseIcon(type) {
+            return POSE_ICONS[type] || '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6"><circle cx="50" cy="50" r="30"/></svg>';
+        }
+
+        // === DOM REFS ===
+        const $ = id => document.getElementById(id);
+        const screenIdle = $('screen-idle');
+        const screenRunning = $('screen-running');
+        const screenComplete = $('screen-complete');
+        const idleIcon = $('idleIcon');
+        const idleSubtitle = $('idleSubtitle');
+        const btnStart = $('btnStart');
+        const stretchList = $('stretchList');
+        const stepInfo = $('stepInfo');
+        const btnReset = $('btnReset');
+        const timerCard = $('timerCard');
+        const progressFill = $('progressFill');
+        const phaseBadge = $('phaseBadge');
+        const poseArea = $('poseArea');
+        const stretchName = $('stretchName');
+        const stretchSide = $('stretchSide');
+        const timerDisplay = $('timerDisplay');
+        const btnPrev = $('btnPrev');
+        const btnPlayPause = $('btnPlayPause');
+        const btnNext = $('btnNext');
+        const upNext = $('upNext');
+        const upNextIcon = $('upNextIcon');
+        const upNextName = $('upNextName');
+        const upNextDuration = $('upNextDuration');
+        const completeIconEl = $('completeIcon');
+        const btnRestart = $('btnRestart');
+
+        // === STATE ===
+        let state = {
+            screen: 'idle',
+            currentStep: 0,
+            phase: 'buffer',
+            timeRemaining: BUFFER,
+            isPlaying: false,
+            intervalId: null,
+            lastTickTime: 0,
+        };
+
+        // === HELPERS ===
+        const totalDuration = STRETCHES.reduce((sum, s) => sum + s.duration, 0) + STRETCHES.length * BUFFER;
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return m + ':' + String(s).padStart(2, '0');
+        }
+
+        // === TIMER ===
+        function startTimer() {
+            if (state.intervalId) return;
+            state.isPlaying = true;
+            state.lastTickTime = Date.now();
+            state.intervalId = setInterval(tick, 1000);
+            acquireWakeLock();
+            render();
+        }
+
+        function stopTimer() {
+            state.isPlaying = false;
+            clearInterval(state.intervalId);
+            state.intervalId = null;
+            releaseWakeLock();
+            render();
+        }
+
+        function tick() {
+            const now = Date.now();
+            const elapsed = Math.round((now - state.lastTickTime) / 1000);
+            state.lastTickTime = now;
+            state.timeRemaining -= elapsed;
+
+            if (state.phase === 'active' && state.timeRemaining > 0 && state.timeRemaining <= 3) {
+                playBeep('tick');
+            }
+
+            // Drain overflow across phases (handles tab backgrounding)
+            while (state.timeRemaining <= 0 && state.screen === 'running') {
+                if (state.phase === 'buffer') {
+                    state.phase = 'active';
+                    state.timeRemaining += STRETCHES[state.currentStep].duration;
+                    playBeep('high');
+                } else {
+                    if (state.currentStep < STRETCHES.length - 1) {
+                        state.currentStep++;
+                        state.phase = 'buffer';
+                        state.timeRemaining += BUFFER;
+                        playBeep('low');
+                    } else {
+                        stopTimer();
+                        state.screen = 'complete';
+                        playBeep('complete');
+                        break;
+                    }
+                }
+            }
+            render();
+        }
+
+        // === CONTROLS ===
+        function togglePlayPause() {
+            if (state.screen === 'idle') {
+                state.screen = 'running';
+                state.currentStep = 0;
+                state.phase = 'buffer';
+                state.timeRemaining = BUFFER;
+                render();
+                startTimer();
+                return;
+            }
+            if (state.isPlaying) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function skipForward() {
+            if (state.currentStep >= STRETCHES.length - 1) {
+                stopTimer();
+                state.screen = 'complete';
+                playBeep('complete');
+                render();
+                return;
+            }
+            state.currentStep++;
+            state.phase = 'buffer';
+            state.timeRemaining = BUFFER;
+            state.lastTickTime = Date.now();
+            render();
+        }
+
+        function skipBack() {
+            if (state.currentStep > 0) {
+                state.currentStep--;
+            }
+            state.phase = 'buffer';
+            state.timeRemaining = BUFFER;
+            state.lastTickTime = Date.now();
+            render();
+        }
+
+        function resetSession() {
+            stopTimer();
+            state.screen = 'idle';
+            state.currentStep = 0;
+            state.phase = 'buffer';
+            state.timeRemaining = BUFFER;
+            render();
+        }
+
+        // === PROGRESS CALC ===
+        function calcProgress() {
+            let totalTime = 0, elapsedTime = 0;
+            for (let i = 0; i < STRETCHES.length; i++) {
+                const stepTotal = BUFFER + STRETCHES[i].duration;
+                totalTime += stepTotal;
+                if (i < state.currentStep) {
+                    elapsedTime += stepTotal;
+                } else if (i === state.currentStep) {
+                    if (state.phase === 'buffer') {
+                        elapsedTime += BUFFER - state.timeRemaining;
+                    } else {
+                        elapsedTime += BUFFER + (STRETCHES[i].duration - state.timeRemaining);
+                    }
+                }
+            }
+            return (elapsedTime / totalTime * 100);
+        }
+
+        // === RENDER ===
+        let lastRenderedIcon = '';
+
+        function render() {
+            // Screen visibility
+            screenIdle.classList.toggle('hidden', state.screen !== 'idle');
+            screenRunning.classList.toggle('hidden', state.screen !== 'running');
+            screenComplete.classList.toggle('hidden', state.screen !== 'complete');
+
+            if (state.screen === 'running') {
+                const s = STRETCHES[state.currentStep];
+                const next = STRETCHES[state.currentStep + 1];
+
+                // Phase class
+                timerCard.classList.toggle('phase-buffer', state.phase === 'buffer');
+                timerCard.classList.toggle('phase-active', state.phase === 'active');
+
+                // Header
+                stepInfo.textContent = 'Stretch ' + (state.currentStep + 1) + ' of ' + STRETCHES.length;
+
+                // Progress
+                progressFill.style.width = calcProgress() + '%';
+
+                // Phase badge
+                phaseBadge.textContent = state.phase === 'buffer' ? 'GET READY' : 'ACTIVE STRETCH';
+
+                // Pose (only update when icon changes)
+                if (lastRenderedIcon !== s.icon) {
+                    poseArea.innerHTML = poseIcon(s.icon);
+                    lastRenderedIcon = s.icon;
+                }
+
+                // Stretch info
+                stretchName.textContent = s.name;
+                stretchSide.innerHTML = s.side + ' &middot; <span>' + s.muscle + '</span>';
+
+                // Timer
+                timerDisplay.textContent = formatTime(state.timeRemaining);
+
+                // Play/pause button (only dynamic control icon)
+                btnPlayPause.innerHTML = state.isPlaying ? CTRL_ICONS.pause : CTRL_ICONS.play;
+
+                // Up next
+                if (next) {
+                    upNext.classList.remove('hidden');
+                    upNextIcon.innerHTML = poseIcon(next.icon);
+                    upNextName.textContent = next.name + ' (' + next.side + ')';
+                    upNextDuration.textContent = next.duration + 's';
+                } else {
+                    upNext.classList.add('hidden');
+                }
+            }
+        }
+
+        // === EVENTS ===
+        btnStart.addEventListener('click', togglePlayPause);
+        btnPlayPause.addEventListener('click', togglePlayPause);
+        btnNext.addEventListener('click', skipForward);
+        btnPrev.addEventListener('click', skipBack);
+        btnReset.addEventListener('click', resetSession);
+        btnRestart.addEventListener('click', resetSession);
+
+        // === INIT ===
+        // Static content (set once, never changes)
+        idleIcon.innerHTML = CTRL_ICONS.clock;
+        idleSubtitle.textContent = STRETCHES.length + ' stretches \u2022 ' + formatTime(totalDuration) + ' total';
+        btnStart.innerHTML = CTRL_ICONS.startPlay + ' Start Routine';
+        btnReset.innerHTML = CTRL_ICONS.reset;
+        btnPrev.innerHTML = CTRL_ICONS.skipBack;
+        btnNext.innerHTML = CTRL_ICONS.skipFwd;
+        completeIconEl.innerHTML = CTRL_ICONS.check;
+        btnRestart.innerHTML = CTRL_ICONS.reset + ' Do it again';
+
+        // Build stretch list (grouped by name, with section headers)
+        let listHtml = '<div class="stretch-list-title">Routine</div>';
+        let lastGroup = '';
+        let lastName = '';
+        for (const s of STRETCHES) {
+            if (s.name === lastName) continue;
+            if (s.group && s.group !== lastGroup) {
+                listHtml += '<div class="stretch-list-group">' + s.group + '</div>';
+                lastGroup = s.group;
+            }
+            listHtml += '<div class="stretch-list-item">' +
+                '<span class="stretch-list-name">' + s.name + '</span>' +
+                '<span class="stretch-list-muscle">' + s.muscle + '</span>' +
+                '</div>';
+            lastName = s.name;
+        }
+        stretchList.innerHTML = listHtml;
+
+        render();
+    })();
+    </script>
+</body>
+</html>
