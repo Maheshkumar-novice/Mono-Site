@@ -3,7 +3,7 @@
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.db import get_db, init_football_db
 from src.football.api import COMPETITION_CODES, FootballAPIClient
@@ -27,8 +27,8 @@ def _is_cache_fresh():
         ).fetchone()
     if not row or not row["oldest"]:
         return False
-    oldest = datetime.fromisoformat(row["oldest"])
-    age_minutes = (datetime.utcnow() - oldest).total_seconds() / 60
+    oldest = datetime.fromisoformat(row["oldest"]).replace(tzinfo=UTC)
+    age_minutes = (datetime.now(UTC) - oldest).total_seconds() / 60
     logger.info(f"Cache age: {age_minutes:.0f} min (max {CACHE_MAX_AGE_MINUTES})")
     return age_minutes < CACHE_MAX_AGE_MINUTES
 
@@ -38,7 +38,7 @@ def _save(table, competition_code, data):
         conn.execute(
             f"INSERT OR REPLACE INTO {table} "
             "(competition_code, data_json, updated_at) VALUES (?, ?, ?)",
-            (competition_code, json.dumps(data), datetime.utcnow().isoformat()),
+            (competition_code, json.dumps(data), datetime.now(UTC).isoformat()),
         )
 
 

@@ -2,7 +2,7 @@
 
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import requests
 
@@ -32,7 +32,7 @@ class FootballAPIClient:
             return None
 
     def fetch_recent_matches(self, competition_code, hours=168):
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         date_from = (now - timedelta(hours=hours)).strftime("%Y-%m-%d")
         date_to = now.strftime("%Y-%m-%d")
         url = f"{BASE_URL}/competitions/{competition_code}/matches"

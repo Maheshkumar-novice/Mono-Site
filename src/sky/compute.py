@@ -342,7 +342,8 @@ def compute_sky():
             and best_data
             and (
                 name not in results
-                or float(best_data["magnitude"]) < float(results[name].get("magnitude", 99))
+                or float(str(best_data["magnitude"]))
+                < float(str(results[name].get("magnitude", 99)))
             )
         ):
             results[name] = best_data
