@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Stats | Maheshkumar{% endblock %}
+
+{% block extra_css %}
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.section-heading {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 1.5rem 0 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.stats-table th {
+    text-align: left;
+    padding: 0.5rem 0.4rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.stats-table td {
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.stats-table td:first-child {
+    color: var(--text-primary);
+}
+
+.stats-note {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2rem;
+    font-style: italic;
+}
+
+@media (max-width: 640px) {
+    .stats-cards {
+        grid-template-columns: 1fr;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Stats</h1>
+
+<div class="stats-cards">
+    <div class="stat-card">
+        <div class="stat-value">{{ "{:,}".format(stats.total_requests) }}</div>
+        <div class="stat-label">Total Requests</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ "{:,}".format(stats.unique_visitors) }}</div>
+        <div class="stat-label">Unique Visitors</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ "{:,}".format(stats.bot_hits) }}</div>
+        <div class="stat-label">Bot Hits</div>
+    </div>
+</div>
+
+<h3 class="section-heading">Top Pages</h3>
+<div class="table-scroll">
+<table class="stats-table">
+    <thead>
+        <tr><th>Page</th><th>Hits</th><th>Visitors</th></tr>
+    </thead>
+    <tbody>
+        {% for page in stats.top_pages %}
+        <tr>
+            <td>{{ page.path }}</td>
+            <td>{{ "{:,}".format(page.hits) }}</td>
+            <td>{{ "{:,}".format(page.visitors) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<p class="stats-note">Last updated: {{ stats.generated_at }}</p>
+{% endblock %}

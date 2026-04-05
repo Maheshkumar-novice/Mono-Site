@@ -20,7 +20,8 @@ build_1d()       { echo "-> 1D...";        cp -r static-sites/1d "$TARGET/1d"; }
 build_ttt()      { echo "-> TTT...";       cp -r static-sites/ttt "$TARGET/ttt"; }
 build_stretch()  { echo "-> Stretch...";   cp -r static-sites/stretch "$TARGET/stretch"; }
 build_workout()  { echo "-> Workout...";   cp -r static-sites/workout "$TARGET/workout"; }
-ALL_COMPONENTS="landing feed football f1 birthdays sky st 1d ttt stretch workout"
+build_stats()    { echo "-> Stats...";     uv run python -m src.stats.builder; }
+ALL_COMPONENTS="landing feed football f1 birthdays sky st 1d ttt stretch workout stats"
 
 echo "=== Mono-Site Build ==="
 echo "Started at $(date)"
