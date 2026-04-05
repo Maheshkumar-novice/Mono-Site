@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ song.title }} | Maheshkumar{% endblock %}
+
+{% block extra_css %}
+.back-link {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    display: inline-block;
+}
+
+.back-link:hover {
+    color: var(--accent);
+}
+
+.song-content h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.song-content h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 2rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.song-content h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 1.5rem 0 0.5rem;
+}
+
+.song-content p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+
+.song-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.song-content ul, .song-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.song-content li {
+    margin-bottom: 0.35rem;
+    line-height: 1.6;
+}
+
+.song-content strong {
+    color: var(--text-primary);
+}
+
+.song-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+.song-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin: 1rem 0;
+}
+
+.song-content th {
+    text-align: left;
+    padding: 0.5rem 0.4rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.song-content td {
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.song-content a {
+    color: var(--accent);
+}
+
+.song-content a:hover {
+    color: var(--accent-hover);
+}
+
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+{% endblock %}
+
+{% block content %}
+<a href="/songs" class="back-link">&larr; All Songs</a>
+
+<div class="song-content">
+    {{ song.content | safe }}
+</div>
+{% endblock %}

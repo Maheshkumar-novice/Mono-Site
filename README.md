@@ -70,6 +70,12 @@ Workout routine with a built-in timer. Static HTML/CSS/JS.
 Site analytics page powered by GoAccess. Shows total requests, unique visitors, bot hits, top pages, referring sites, OS breakdown, and bot breakdown. Built from Caddy access logs during the build process.
 </details>
 
+<details>
+<summary><strong>Songs</strong> — /songs</summary>
+
+Song deep-dive blog pages. Each song is a markdown file in `content/songs/` that gets converted to a styled HTML page. List page shows all songs, each links to a full deep dive covering themes, key lyrics, vocabulary, cultural context, and more.
+</details>
+
 ## Setup
 
 ```bash
@@ -97,6 +103,12 @@ uv run python -m src.cli birthday list
 uv run python -m src.cli birthday add "Name" "MM-DD" --category Family
 uv run python -m src.cli birthday delete <id>
 ```
+
+## Claude Code Skills
+
+Custom slash commands for Claude Code are in `.claude/skills/`.
+
+- `/song-deep-dive` — Generate a blog-ready markdown deep dive for any English song. Covers themes, key lyrics, vocabulary, cultural context, and more. Save output to `content/songs/<slug>.md` and build with `./scripts/build.sh songs`.
 
 ## Lint
 

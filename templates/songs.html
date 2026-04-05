@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Songs | Maheshkumar{% endblock %}
+
+{% block extra_css %}
+.song-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.song-card {
+    display: block;
+    padding: 1rem 1.25rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    transition: border-color 150ms ease;
+    text-decoration: none;
+}
+
+.song-card:hover {
+    border-color: var(--accent);
+}
+
+.song-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.song-card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.empty-msg {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem 0;
+    font-size: 0.875rem;
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Songs</h1>
+
+{% if songs %}
+<div class="song-list">
+    {% for song in songs %}
+    <a href="/songs/{{ song.slug }}.html" class="song-card">
+        <div class="song-card-title">{{ song.title }}</div>
+        {% if song.subtitle %}
+        <div class="song-card-subtitle">{{ song.subtitle }}</div>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<p class="empty-msg">No songs yet.</p>
+{% endif %}
+{% endblock %}

@@ -6,7 +6,8 @@ __pycache__/
 *.pyc
 .venv/
 nginx/
-.claude/
+.claude/*
+!.claude/skills/
 *.bsp
 *.bsp.download
 hip_main.dat
