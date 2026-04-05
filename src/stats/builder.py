@@ -68,10 +68,18 @@ def _parse_stats(data):
 
     # Bot metrics
     bot_hits = 0
+    bots = []
     for entry in data.get("browsers", {}).get("data", []):
         agent = entry.get("data", "").lower()
         if "bot" in agent or "crawl" in agent or "spider" in agent:
-            bot_hits += entry.get("hits", {}).get("count", 0)
+            hits = entry.get("hits", {}).get("count", 0)
+            bot_hits += hits
+            for item in entry.get("items", []):
+                bots.append({
+                    "name": item.get("data", ""),
+                    "hits": item.get("hits", {}).get("count", 0),
+                })
+    bots.sort(key=lambda x: x["hits"], reverse=True)
 
     # Referring sites
     referrers = []
@@ -103,6 +111,7 @@ def _parse_stats(data):
         "top_pages": top_pages,
         "referrers": referrers[:10],
         "os": os_list,
+        "bots": bots[:10],
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
 

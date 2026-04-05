@@ -162,5 +162,24 @@
 </div>
 {% endif %}
 
+{% if stats.bots %}
+<h3 class="section-heading">Bots</h3>
+<div class="table-scroll">
+<table class="stats-table">
+    <thead>
+        <tr><th>Bot</th><th>Hits</th></tr>
+    </thead>
+    <tbody>
+        {% for bot in stats.bots %}
+        <tr>
+            <td>{{ bot.name }}</td>
+            <td>{{ "{:,}".format(bot.hits) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
 <p class="stats-note">Last updated: {{ stats.generated_at }}</p>
 {% endblock %}
