@@ -73,11 +73,23 @@ def _parse_stats(data):
         if "bot" in agent or "crawl" in agent or "spider" in agent:
             bot_hits += entry.get("hits", {}).get("count", 0)
 
+    # Referring sites
+    referrers = []
+    for entry in data.get("referring_sites", {}).get("data", []):
+        site = entry.get("data", "")
+        if site:
+            referrers.append({
+                "site": site,
+                "hits": entry.get("hits", {}).get("count", 0),
+                "visitors": entry.get("visitors", {}).get("count", 0),
+            })
+
     return {
         "total_requests": general.get("total_requests", 0),
         "unique_visitors": general.get("unique_visitors", 0),
         "bot_hits": bot_hits,
         "top_pages": top_pages,
+        "referrers": referrers[:10],
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
 

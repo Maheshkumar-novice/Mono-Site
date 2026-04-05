@@ -122,5 +122,25 @@
 </table>
 </div>
 
+{% if stats.referrers %}
+<h3 class="section-heading">Referring Sites</h3>
+<div class="table-scroll">
+<table class="stats-table">
+    <thead>
+        <tr><th>Site</th><th>Hits</th><th>Visitors</th></tr>
+    </thead>
+    <tbody>
+        {% for ref in stats.referrers %}
+        <tr>
+            <td>{{ ref.site }}</td>
+            <td>{{ "{:,}".format(ref.hits) }}</td>
+            <td>{{ "{:,}".format(ref.visitors) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
 <p class="stats-note">Last updated: {{ stats.generated_at }}</p>
 {% endblock %}
