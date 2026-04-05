@@ -12,6 +12,25 @@ from src.football.processor import normalize_match
 logger = logging.getLogger(__name__)
 
 RATE_LIMIT_SECONDS = 7
+CACHE_MAX_AGE_MINUTES = 45
+
+
+def _is_cache_fresh():
+    """Check if all cached data is less than CACHE_MAX_AGE_MINUTES old."""
+    with get_db("football.db") as conn:
+        row = conn.execute(
+            "SELECT MIN(updated_at) as oldest FROM ("
+            "  SELECT updated_at FROM matches"
+            "  UNION ALL SELECT updated_at FROM scorers"
+            "  UNION ALL SELECT updated_at FROM standings"
+            ")"
+        ).fetchone()
+    if not row or not row["oldest"]:
+        return False
+    oldest = datetime.fromisoformat(row["oldest"])
+    age_minutes = (datetime.utcnow() - oldest).total_seconds() / 60
+    logger.info(f"Cache age: {age_minutes:.0f} min (max {CACHE_MAX_AGE_MINUTES})")
+    return age_minutes < CACHE_MAX_AGE_MINUTES
 
 
 def _save(table, competition_code, data):
@@ -31,6 +50,11 @@ def _load_all(table):
 def refresh_data(api_key):
     """Fetch fresh data from football-data.org and store in SQLite."""
     init_football_db()
+
+    if _is_cache_fresh():
+        logger.info("Cache is fresh, skipping API fetch.")
+        return
+
     client = FootballAPIClient(api_key)
 
     # Matches

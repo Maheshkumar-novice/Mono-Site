@@ -50,25 +50,46 @@
 .match-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 0.6rem 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.875rem;
+    gap: 0.5rem;
 }
 
 .match-card:last-child { border-bottom: none; }
 
-.match-teams {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    flex: 1;
+.match-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 5rem;
+    flex-shrink: 0;
 }
 
-.team-row {
+.match-body {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    flex: 1;
+    gap: 0.4rem;
+    text-align: center;
+}
+
+.match-team {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.match-team.home {
+    justify-content: flex-start;
+    flex: 1;
+    text-align: left;
+}
+
+.match-team.away {
+    justify-content: flex-end;
+    flex: 1;
+    text-align: right;
 }
 
 .team-crest {
@@ -77,38 +98,24 @@
     object-fit: contain;
 }
 
-.match-score {
+.match-center {
     font-weight: 600;
     color: var(--accent);
-    min-width: 3rem;
-    text-align: center;
-}
-
-.match-date {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    min-width: 5rem;
-    text-align: left;
-}
-
-.match-status {
-    font-size: 0.65rem;
-    color: var(--text-muted);
     min-width: 4rem;
     text-align: center;
+    flex-shrink: 0;
+}
+
+.match-center.status {
+    font-size: 0.7rem;
+    color: var(--text-muted);
     text-transform: uppercase;
 }
 
-.match-link {
-    font-size: 0.75rem;
-    text-decoration: none;
-    opacity: 0.4;
-    transition: opacity 150ms ease;
+.match-sep {
+    color: var(--text-muted);
 }
 
-.match-link:hover {
-    opacity: 1;
-}
 
 /* Scorers */
 .scorers-table, .standings-table {
@@ -129,6 +136,7 @@
     padding: 0.4rem;
     border-bottom: 1px solid var(--border);
     color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 .standings-table .team-col { min-width: 150px; }
@@ -141,6 +149,11 @@
     width: 2rem;
 }
 
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .empty-msg {
     color: var(--text-muted);
     font-style: italic;
@@ -149,7 +162,8 @@
 }
 
 @media (max-width: 640px) {
-    .match-date, .match-status { display: none; }
+    .match-date { display: none; }
+    .team-crest { display: none; }
 }
 {% endblock %}
 
@@ -173,23 +187,32 @@
         {% for match in matches[code] %}
         <div class="match-card">
             <div class="match-date">{{ match.display_date }}</div>
-            <div class="match-teams">
-                <div class="team-row">
+            <div class="match-body">
+                <div class="match-team home">
                     {% if match.home_team.crest %}
                     <img src="{{ match.home_team.crest }}" alt="" class="team-crest">
                     {% endif %}
                     <span>{{ match.home_team.name }}</span>
                 </div>
-                <div class="team-row">
+                {% if match.status == 'FINISHED' %}
+                <div class="match-center">
+                    {{ match.score.full_time.home }} <span class="match-sep">:</span> {{ match.score.full_time.away }}
+                </div>
+                {% elif match.status in ('LIVE', 'IN_PLAY') %}
+                <div class="match-center">
+                    {{ match.score.full_time.home }} <span class="match-sep">:</span> {{ match.score.full_time.away }}
+                </div>
+                {% else %}
+                <div class="match-center status">{{ match.status }}</div>
+                {% endif %}
+                <div class="match-team away">
+                    <span>{{ match.away_team.name }}</span>
                     {% if match.away_team.crest %}
                     <img src="{{ match.away_team.crest }}" alt="" class="team-crest">
                     {% endif %}
-                    <span>{{ match.away_team.name }}</span>
                 </div>
             </div>
-            <div class="match-score">{{ match.score_text }}</div>
-            <div class="match-status">{{ match.status }}</div>
-            <a class="match-link" href="https://www.google.com/search?q={{ match.home_team.name | urlencode }}+vs+{{ match.away_team.name | urlencode }}" target="_blank" rel="noopener noreferrer">&#x1F50D;</a>
+
         </div>
         {% endfor %}
     {% else %}
@@ -199,6 +222,7 @@
     <!-- Scorers -->
     <h3 class="section-heading">Top Scorers</h3>
     {% if scorers.get(code) %}
+    <div class="table-scroll">
     <table class="scorers-table">
         <thead>
             <tr><th>#</th><th>Player</th><th>Team</th><th>Goals</th><th>Assists</th></tr>
@@ -215,6 +239,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
         <p class="empty-msg">No scorer data available.</p>
     {% endif %}
@@ -222,6 +247,7 @@
     <!-- Standings -->
     <h3 class="section-heading">Standings</h3>
     {% if standings.get(code) %}
+    <div class="table-scroll">
     <table class="standings-table">
         <thead>
             <tr><th>#</th><th class="team-col">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
@@ -243,6 +269,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
         <p class="empty-msg">No standings data available.</p>
     {% endif %}
