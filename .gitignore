@@ -1,5 +1,6 @@
 data/*.db
 data/stats.json
+data/song_art.json
 build/
 .env
 __pycache__/

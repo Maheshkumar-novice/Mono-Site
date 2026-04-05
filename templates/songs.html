@@ -10,13 +10,23 @@
 }
 
 .song-card {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     padding: 1rem 1.25rem;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--border-radius);
     transition: border-color 150ms ease;
     text-decoration: none;
+}
+
+.song-card-art {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .song-card:hover {
@@ -51,10 +61,15 @@
 <div class="song-list">
     {% for song in songs %}
     <a href="/songs/{{ song.slug }}.html" class="song-card">
-        <div class="song-card-title">{{ song.title }}</div>
-        {% if song.subtitle %}
-        <div class="song-card-subtitle">{{ song.subtitle }}</div>
+        {% if song.artwork %}
+        <img src="{{ song.artwork }}" alt="" class="song-card-art">
         {% endif %}
+        <div>
+            <div class="song-card-title">{{ song.title }}</div>
+            {% if song.subtitle %}
+            <div class="song-card-subtitle">{{ song.subtitle }}</div>
+            {% endif %}
+        </div>
     </a>
     {% endfor %}
 </div>
