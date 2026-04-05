@@ -9,7 +9,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # Components and their build commands
-build_landing()  { echo "-> Landing...";   cp landing/index.html landing/styles.css landing/script.js landing/quotes.json "$TARGET/"; }
+build_landing()  { echo "-> Landing...";   cp landing/index.html landing/styles.css landing/script.js landing/quotes.json landing/robots.txt landing/sitemap.xml "$TARGET/"; }
 build_feed()     { echo "-> Feed...";      uv run python -m src.feed.builder; }
 build_football() { echo "-> Football...";  uv run python -m src.football.builder; }
 build_f1()       { echo "-> F1...";        uv run python -m src.f1.builder; }
