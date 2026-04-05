@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 from src.db import get_db, init_football_db
-from src.football.api import FootballAPIClient, COMPETITION_CODES
+from src.football.api import COMPETITION_CODES, FootballAPIClient
 from src.football.processor import normalize_match
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,8 @@ def _is_cache_fresh():
 def _save(table, competition_code, data):
     with get_db("football.db") as conn:
         conn.execute(
-            f"INSERT OR REPLACE INTO {table} (competition_code, data_json, updated_at) VALUES (?, ?, ?)",
+            f"INSERT OR REPLACE INTO {table} "
+            "(competition_code, data_json, updated_at) VALUES (?, ?, ?)",
             (competition_code, json.dumps(data), datetime.utcnow().isoformat()),
         )
 
@@ -65,7 +66,9 @@ def refresh_data(api_key):
             if resp:
                 matches = resp.get("matches", [])
                 comp_name = resp.get("competition", {}).get("name", code)
-                normalized = [m for m in (normalize_match(m, code, comp_name) for m in matches) if m]
+                normalized = [
+                    m for m in (normalize_match(m, code, comp_name) for m in matches) if m
+                ]
                 _save("matches", code, normalized)
                 logger.info(f"Matches {code}: {len(normalized)}")
         except Exception as e:

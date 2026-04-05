@@ -2,7 +2,7 @@
 
 import click
 
-from src.db import init_feed_db, init_birthdays_db, seed_default_feeds
+from src.db import init_birthdays_db, init_feed_db, seed_default_feeds
 
 
 @click.group()
@@ -12,6 +12,7 @@ def main():
 
 
 # ── Feed commands ──────────────────────────────────────────────
+
 
 @main.group()
 def feed():
@@ -39,6 +40,7 @@ def feed_add(url):
     """Add a new feed URL."""
     init_feed_db()
     import feedparser
+
     from src.feed.models import add_feed
 
     click.echo(f"Fetching feed metadata for {url}...")
@@ -74,6 +76,7 @@ def feed_seed():
 
 # ── Birthday commands ──────────────────────────────────────────
 
+
 @main.group()
 def birthday():
     """Manage birthdays."""
@@ -93,7 +96,10 @@ def birthday_list():
     for b in birthdays:
         days = b["days_until"]
         age_str = f" (turning {b['age_next']})" if b["age_next"] is not None else ""
-        click.echo(f"  [{b['id']}] {b['name']} — {b['date_obj'].strftime('%b %d')}{age_str} — {days} days away — {b['category']}")
+        name = b["name"]
+        date = b["date_obj"].strftime("%b %d")
+        cat = b["category"]
+        click.echo(f"  [{b['id']}] {name} — {date}{age_str} — {days} days away — {cat}")
 
 
 @birthday.command("add")
@@ -136,7 +142,6 @@ def birthday_delete(birthday_id):
         return
     delete(birthday_id)
     click.echo(f"Birthday {birthday_id} deleted.")
-
 
 
 if __name__ == "__main__":

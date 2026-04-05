@@ -1,6 +1,7 @@
 """Birthday database operations."""
 
-from datetime import datetime, date
+from datetime import date, datetime
+
 from src.db import get_db
 
 CATEGORIES = ["Family", "Friends", "Work", "Other"]

@@ -3,16 +3,16 @@
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.db import get_db, init_f1_db
 from src.f1 import ergast_api
 
 logger = logging.getLogger(__name__)
 
-CACHE_TTL_STANDINGS = 3600   # 1 hour
-CACHE_TTL_SCHEDULE = 3600    # 1 hour
-CACHE_TTL_RESULTS = 86400    # 24 hours
+CACHE_TTL_STANDINGS = 3600  # 1 hour
+CACHE_TTL_SCHEDULE = 3600  # 1 hour
+CACHE_TTL_RESULTS = 86400  # 24 hours
 
 
 def _get_cached(key, ttl):
@@ -52,11 +52,15 @@ def _cached_or_fetch(key, ttl, fetch_fn):
 
 
 def get_driver_standings():
-    return _cached_or_fetch("driver_standings", CACHE_TTL_STANDINGS, ergast_api.get_driver_standings)
+    return _cached_or_fetch(
+        "driver_standings", CACHE_TTL_STANDINGS, ergast_api.get_driver_standings
+    )
 
 
 def get_constructor_standings():
-    return _cached_or_fetch("constructor_standings", CACHE_TTL_STANDINGS, ergast_api.get_constructor_standings)
+    return _cached_or_fetch(
+        "constructor_standings", CACHE_TTL_STANDINGS, ergast_api.get_constructor_standings
+    )
 
 
 def get_schedule():
@@ -75,12 +79,14 @@ def get_next_race():
     schedule = get_schedule()
     if not schedule:
         return None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for race in schedule:
         race_date_str = race.get("date", "")
         race_time_str = race.get("time", "00:00:00Z")
         try:
-            race_dt = datetime.fromisoformat(f"{race_date_str}T{race_time_str}".replace("Z", "+00:00"))
+            race_dt = datetime.fromisoformat(
+                f"{race_date_str}T{race_time_str}".replace("Z", "+00:00")
+            )
             if race_dt > now:
                 return race
         except (ValueError, TypeError):

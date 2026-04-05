@@ -7,8 +7,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from src.db import init_birthdays_db
 from src.birthdays.models import get_all
+from src.db import init_birthdays_db
 
 logger = logging.getLogger(__name__)
 

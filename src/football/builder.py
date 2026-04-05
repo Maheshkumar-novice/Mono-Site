@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 
 from src.db import init_football_db
-from src.football.service import refresh_data, get_all_matches, get_all_scorers, get_all_standings
 from src.football.api import COMPETITION_CODES
+from src.football.service import get_all_matches, get_all_scorers, get_all_standings, refresh_data
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,9 @@ def build():
 
     api_key = os.getenv("FOOTBALL_API_KEY")
     if not api_key:
-        logger.error("FOOTBALL_API_KEY not set. Skipping football build (using cached data if available).")
+        logger.error(
+            "FOOTBALL_API_KEY not set. Skipping football build (using cached data if available)."
+        )
     else:
         logger.info("Fetching football data...")
         refresh_data(api_key)

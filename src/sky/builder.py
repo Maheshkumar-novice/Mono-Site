@@ -8,7 +8,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from src.sky.compute import compute_sky, get_night_hours, LOCATION_NAME
+from src.sky.compute import LOCATION_NAME, compute_sky, get_night_hours
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +22,14 @@ def build():
     objects, moon, hour_labels = compute_sky()
     night_hours = get_night_hours()
 
-    logger.info(f"Found {len(objects)} visible objects, moon: {moon['name']} ({moon['illumination']}%)")
+    logger.info(
+        f"Found {len(objects)} visible objects, moon: {moon['name']} ({moon['illumination']}%)"
+    )
 
     # Serialize positions data for JS
     positions_data = {}
     for obj in objects:
-        positions_data[obj['name']] = obj.get('positions', [])
+        positions_data[obj["name"]] = obj.get("positions", [])
 
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     template = env.get_template("sky.html")
@@ -38,8 +40,8 @@ def build():
         hour_labels=hour_labels,
         positions_json=json.dumps(positions_data),
         location=LOCATION_NAME,
-        window_start=night_hours[0].strftime('%I %p').lstrip('0'),
-        window_end=night_hours[-1].strftime('%I %p').lstrip('0'),
+        window_start=night_hours[0].strftime("%I %p").lstrip("0"),
+        window_end=night_hours[-1].strftime("%I %p").lstrip("0"),
         active="sky",
         build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
     )

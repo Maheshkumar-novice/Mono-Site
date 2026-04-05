@@ -1,6 +1,7 @@
 """Feed and article database operations."""
 
 from datetime import datetime
+
 from src.db import get_db
 
 
@@ -26,7 +27,8 @@ def add_feed(url, title=None, description="", link=""):
     with get_db("feed.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO feeds (url, title, description, link, last_updated) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO feeds (url, title, description, link, last_updated) "
+            "VALUES (?, ?, ?, ?, ?)",
             (url, title, description, link, datetime.now()),
         )
         return cursor.lastrowid

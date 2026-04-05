@@ -1,7 +1,6 @@
 """Main build entry point — builds all sections."""
 
 import logging
-import sys
 
 
 def main():
@@ -10,18 +9,22 @@ def main():
 
     logger.info("Building feed...")
     from src.feed.builder import build as build_feed
+
     build_feed()
 
     logger.info("Building football...")
     from src.football.builder import build as build_football
+
     build_football()
 
     logger.info("Building F1...")
     from src.f1.builder import build as build_f1
+
     build_f1()
 
     logger.info("Building birthdays...")
     from src.birthdays.builder import build as build_birthdays
+
     build_birthdays()
 
     logger.info("All builders complete.")

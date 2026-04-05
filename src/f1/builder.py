@@ -9,12 +9,12 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.db import init_f1_db
 from src.f1.service import (
-    get_driver_standings,
     get_constructor_standings,
-    get_schedule,
+    get_driver_standings,
     get_last_race,
     get_next_race,
     get_recent_results,
+    get_schedule,
 )
 
 logger = logging.getLogger(__name__)

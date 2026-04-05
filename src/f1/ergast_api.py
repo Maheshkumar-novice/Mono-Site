@@ -1,6 +1,7 @@
 """Ergast API client for F1 data."""
 
 import logging
+
 import requests
 
 logger = logging.getLogger(__name__)

@@ -1,9 +1,9 @@
 """Shared database helpers and schema initialization."""
 
-import sqlite3
 import logging
-from pathlib import Path
+import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,9 @@ def init_feed_db():
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_feed_id ON articles(feed_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published DESC)")
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published DESC)"
+        )
         conn.commit()
 
 
@@ -128,14 +130,14 @@ def seed_default_feeds():
     import feedparser
 
     default_feeds = [
-        'https://jvns.ca/atom.xml',
-        'https://simonwillison.net/atom/everything/',
-        'https://lucumr.pocoo.org/feed.atom',
-        'https://samwho.dev/rss.xml',
-        'https://blog.miguelgrinberg.com/feed',
-        'https://world.hey.com/dhh/feed.atom',
-        'https://herman.bearblog.dev/feed/',
-        'https://harper.blog/index.xml',
+        "https://jvns.ca/atom.xml",
+        "https://simonwillison.net/atom/everything/",
+        "https://lucumr.pocoo.org/feed.atom",
+        "https://samwho.dev/rss.xml",
+        "https://blog.miguelgrinberg.com/feed",
+        "https://world.hey.com/dhh/feed.atom",
+        "https://herman.bearblog.dev/feed/",
+        "https://harper.blog/index.xml",
     ]
 
     with get_db("feed.db") as conn:
@@ -150,13 +152,14 @@ def seed_default_feeds():
         for url in default_feeds:
             try:
                 feed_data = feedparser.parse(url)
-                title = feed_data.feed.get('title', 'Untitled Feed')
-                description = feed_data.feed.get('description', feed_data.feed.get('subtitle', ''))
-                link = feed_data.feed.get('link', '')
-                cursor.execute(
-                    "INSERT OR IGNORE INTO feeds (url, title, description, link) VALUES (?, ?, ?, ?)",
-                    (url, title, description, link),
+                title = feed_data.feed.get("title", "Untitled Feed")
+                description = feed_data.feed.get("description", feed_data.feed.get("subtitle", ""))
+                link = feed_data.feed.get("link", "")
+                sql = (
+                    "INSERT OR IGNORE INTO feeds (url, title, description, link) "
+                    "VALUES (?, ?, ?, ?)"
                 )
+                cursor.execute(sql, (url, title, description, link))
                 logger.info(f"Seeded feed: {title}")
             except Exception as e:
                 logger.error(f"Failed to seed feed {url}: {e}")

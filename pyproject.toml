@@ -16,3 +16,15 @@ dependencies = [
 [project.scripts]
 mono-build = "src.build:main"
 mono-cli = "src.cli:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

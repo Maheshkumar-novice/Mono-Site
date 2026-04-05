@@ -13,8 +13,14 @@ def normalize_match(match_data, competition_code=None, competition_name=None):
         home_team_data = match_data.get("homeTeam", {})
         away_team_data = match_data.get("awayTeam", {})
 
-        home_team = {"name": home_team_data.get("name", "N/A"), "crest": home_team_data.get("crest", "")}
-        away_team = {"name": away_team_data.get("name", "N/A"), "crest": away_team_data.get("crest", "")}
+        home_team = {
+            "name": home_team_data.get("name", "N/A"),
+            "crest": home_team_data.get("crest", ""),
+        }
+        away_team = {
+            "name": away_team_data.get("name", "N/A"),
+            "crest": away_team_data.get("crest", ""),
+        }
 
         utc_kickoff = match_data.get("utcDate", "")
         score_text = _format_score(match_data, status)

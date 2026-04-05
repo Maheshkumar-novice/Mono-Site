@@ -18,7 +18,18 @@ TEMPLATES_DIR = PROJECT_DIR / "templates"
 CACHE_FILE = PROJECT_DIR / "data" / "stats.json"
 
 ACCESS_LOG = "/var/log/caddy/access.log"
-ASSET_EXTENSIONS = {".json", ".css", ".js", ".png", ".jpg", ".svg", ".ico", ".woff", ".woff2", ".ttf"}
+ASSET_EXTENSIONS = {
+    ".json",
+    ".css",
+    ".js",
+    ".png",
+    ".jpg",
+    ".svg",
+    ".ico",
+    ".woff",
+    ".woff2",
+    ".ttf",
+}
 
 
 def _run_goaccess():
@@ -26,7 +37,9 @@ def _run_goaccess():
     try:
         result = subprocess.run(
             ["goaccess", ACCESS_LOG, "--log-format=CADDY", "-o", "json"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode == 0:
             return json.loads(result.stdout)
@@ -63,7 +76,8 @@ def _parse_stats(data):
 
     top_pages = sorted(
         [{"path": k, **v} for k, v in page_map.items()],
-        key=lambda x: x["hits"], reverse=True,
+        key=lambda x: x["hits"],
+        reverse=True,
     )[:10]
 
     # Bot metrics
@@ -75,10 +89,12 @@ def _parse_stats(data):
             hits = entry.get("hits", {}).get("count", 0)
             bot_hits += hits
             for item in entry.get("items", []):
-                bots.append({
-                    "name": item.get("data", ""),
-                    "hits": item.get("hits", {}).get("count", 0),
-                })
+                bots.append(
+                    {
+                        "name": item.get("data", ""),
+                        "hits": item.get("hits", {}).get("count", 0),
+                    }
+                )
     bots.sort(key=lambda x: x["hits"], reverse=True)
 
     # Referring sites
@@ -86,11 +102,13 @@ def _parse_stats(data):
     for entry in data.get("referring_sites", {}).get("data", []):
         site = entry.get("data", "")
         if site:
-            referrers.append({
-                "site": site,
-                "hits": entry.get("hits", {}).get("count", 0),
-                "visitors": entry.get("visitors", {}).get("count", 0),
-            })
+            referrers.append(
+                {
+                    "site": site,
+                    "hits": entry.get("hits", {}).get("count", 0),
+                    "visitors": entry.get("visitors", {}).get("count", 0),
+                }
+            )
 
     # Operating systems (exclude crawlers and unknown)
     os_list = []
@@ -98,11 +116,13 @@ def _parse_stats(data):
         name = entry.get("data", "")
         if name.lower() in ("crawlers", "unknown"):
             continue
-        os_list.append({
-            "name": name,
-            "hits": entry.get("hits", {}).get("count", 0),
-            "visitors": entry.get("visitors", {}).get("count", 0),
-        })
+        os_list.append(
+            {
+                "name": name,
+                "hits": entry.get("hits", {}).get("count", 0),
+                "visitors": entry.get("visitors", {}).get("count", 0),
+            }
+        )
 
     return {
         "total_requests": general.get("total_requests", 0),

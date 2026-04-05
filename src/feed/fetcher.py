@@ -1,5 +1,6 @@
 """Fetch articles from RSS/Atom feeds using feedparser."""
 
+import contextlib
 import logging
 from datetime import datetime
 
@@ -47,10 +48,8 @@ def _fetch_feed(feed_id, feed_url):
         for field in ("published_parsed", "updated_parsed"):
             parsed = entry.get(field)
             if parsed:
-                try:
+                with contextlib.suppress(Exception):
                     published = datetime(*parsed[:6])
-                except Exception:
-                    pass
                 break
 
         entries.append((feed_id, guid, title, link, description, author, published))
