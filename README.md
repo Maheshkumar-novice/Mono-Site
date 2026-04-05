@@ -52,6 +52,24 @@ Fan tribute scrapbook with member profiles, gallery, timeline, discography, and 
 Comic book-style tribute to the TV series. Features interactive Wall of Lights, Upside Down toggle, and character panels. Static HTML/CSS/JS.
 </details>
 
+<details>
+<summary><strong>Morning Mobility</strong> — /stretch</summary>
+
+Stretching routine with a built-in timer. Static HTML/CSS/JS.
+</details>
+
+<details>
+<summary><strong>Workout Plan</strong> — /workout</summary>
+
+Workout routine with a built-in timer. Static HTML/CSS/JS.
+</details>
+
+<details>
+<summary><strong>Stats</strong> — /stats</summary>
+
+Site analytics page powered by GoAccess. Shows total requests, unique visitors, bot hits, top pages, referring sites, OS breakdown, and bot breakdown. Built from Caddy access logs during the build process.
+</details>
+
 ## Setup
 
 ```bash
@@ -78,6 +96,13 @@ uv run python -m src.cli feed remove <id>
 uv run python -m src.cli birthday list
 uv run python -m src.cli birthday add "Name" "MM-DD" --category Family
 uv run python -m src.cli birthday delete <id>
+```
+
+## Lint
+
+```bash
+uv run ruff check src/     # Lint
+uv run ruff format src/    # Format
 ```
 
 ## Preview
