@@ -104,9 +104,3 @@ KATSEYE is a six-member global girl group formed through a partnership between S
 ## 💬 Why This Song Is Worth Your Time
 
 "Gabriela" is a great entry point for learning how modern English handles jealousy and emotional complexity. Phrases like "got something I don't got" and "can't even hate her" are exactly how young English speakers talk — casual, direct, and emotionally loaded. Beyond the language, the song is a window into how today's global pop works: written by Charli XCX, performed by a group spanning five countries, with a Spanish bridge and a Latin groove. It's pop music as a borderless, multilingual, beautifully messy thing.
-
----
-
-## 🧑‍🎤 About the Artist
-
-KATSEYE is a six-member global girl group formed through a partnership between South Korea's HYBE and America's Geffen Records. Members Sophia (Philippines), Daniela (US/Cuban-Venezuelan), Megan (US/Hawaii), Manon (Switzerland/Ghana), Lara (US/Indian), and Yoonchae (South Korea) were selected through the Netflix reality competition *Dream Academy* in 2023. They represent a new model for pop groups — blending K-pop training discipline with Western pop sensibility and genuine multicultural identity.

@@ -114,9 +114,3 @@ Panic! at the Disco was formed in Las Vegas in 2004 and became famous with their
 ## 💬 Why This Song Is Worth Your Time
 
 "High Hopes" is one of those rare songs that works both as a feel-good anthem and as a genuine piece of storytelling. For English learners, it's packed with useful idioms and motivational vocabulary that comes up constantly in everyday conversation. But beyond the language, it carries a universal message: dream bigger than your circumstances, and don't let the fear of falling stop you from climbing.
-
----
-
-## 🧑‍🎤 About the Artist
-
-Panic! at the Disco was formed in Las Vegas in 2004 and became famous with their debut single "I Write Sins Not Tragedies." Over the years, the band evolved into a solo vehicle for frontman Brendon Urie, known for his extraordinary vocal range and theatrical stage presence. Urie announced the end of Panic! at the Disco in 2023, but the music — especially "High Hopes" — remains a defining anthem of resilient optimism in modern pop rock.

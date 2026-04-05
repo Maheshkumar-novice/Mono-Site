@@ -133,10 +133,6 @@ List 2–3 films that share the same emotional themes as the song — not necess
 and what a non-native English speaker can take away from it — linguistically,
 emotionally, or culturally.]
 
-## 🧑‍🎤 About the Artist
-
-[2–3 sentences: who they are, where they're from, why they matter musically]
-
 ```
 
 ---

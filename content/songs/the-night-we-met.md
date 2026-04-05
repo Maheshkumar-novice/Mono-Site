@@ -114,9 +114,3 @@ Lord Huron is an American indie folk band formed in 2010 by Ben Schneider in Los
 ## 💬 Why This Song Is Worth Your Time
 
 "The Night We Met" teaches you something that textbooks can't: how English speakers talk about regret, memory, and emotional pain. Words like "haunted," "ghost," and "debt" take on completely new meanings here — not literal, but deeply felt. Beyond the language, the song captures a universal human experience: the moment you realize that some beautiful things leave you worse off than before. It's a quiet, devastating masterpiece.
-
----
-
-## 🧑‍🎤 About the Artist
-
-Lord Huron is an American indie folk band formed in 2010 by Ben Schneider in Los Angeles, though Schneider originally hails from Michigan. The band is known for their cinematic, storytelling-driven sound that blends folk, rock, and Americana with themes of adventure, love, and the supernatural. "The Night We Met" remains their most widely known song, but their albums *Lonesome Dreams*, *Strange Trails*, and *Vide Noir* are rich with atmospheric, narrative songwriting.

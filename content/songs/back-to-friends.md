@@ -106,9 +106,3 @@ Sombr is the stage name of Shane Boose, an American singer-songwriter and produc
 ## 💬 Why This Song Is Worth Your Time
 
 "Back to Friends" teaches you some of the most useful conversational English around relationships — phrases like "go back to," "cross the line," and "live with" come up constantly in everyday speech. But more than that, it captures a feeling that transcends language: the helpless ache of wanting someone who's right there but emotionally out of reach. It's a small, quiet song that became massive because it told a truth that everyone recognized.
-
----
-
-## 🧑‍🎤 About the Artist
-
-Sombr is the stage name of Shane Boose, an American singer-songwriter and producer born in 2005 and raised on the Lower East Side of New York City. He dropped out of LaGuardia High School to focus on music and taught himself production through online tutorials starting in middle school. "Back to Friends" made him one of the biggest breakout artists of 2025, earning him Grammy nominations, a VMAs win, and performances on SNL and The Tonight Show — all before turning 21.

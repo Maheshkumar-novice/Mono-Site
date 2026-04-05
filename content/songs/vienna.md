@@ -114,9 +114,3 @@ Billy Joel is an American singer-songwriter and pianist from the Bronx, New York
 ## 💬 Why This Song Is Worth Your Time
 
 "Vienna" teaches you how English handles gentle advice — phrases like "slow down," "before your time," and "dream on" are everywhere in daily conversation. But the real gift of this song is its message, which crosses every language barrier: you are not behind. You are not late. The life you're building will be there when you arrive. For anyone learning English in their twenties, feeling the pressure to master everything at once — this song is for you. Vienna waits.
-
----
-
-## 🧑‍🎤 About the Artist
-
-Billy Joel is an American singer-songwriter and pianist from the Bronx, New York, often called "The Piano Man" after his signature song. Over a career spanning five decades, he became one of the best-selling music artists of all time, with hits like "Piano Man," "Uptown Girl," and "We Didn't Start the Fire." He held a record-breaking residency at Madison Square Garden and was inducted into the Rock and Roll Hall of Fame in 1999.
