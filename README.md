@@ -115,6 +115,13 @@ Custom slash commands for Claude Code are in `.claude/skills/`.
 ```bash
 uv run ruff check src/     # Lint
 uv run ruff format src/    # Format
+uvx ty check src/          # Type check
+```
+
+Pre-commit hooks run `ruff check`, `ruff format`, and `ty check` on every commit. Setup:
+
+```bash
+uv run pre-commit install
 ```
 
 ## Preview
