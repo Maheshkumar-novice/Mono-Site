@@ -84,12 +84,25 @@ def _parse_stats(data):
                 "visitors": entry.get("visitors", {}).get("count", 0),
             })
 
+    # Operating systems (exclude crawlers and unknown)
+    os_list = []
+    for entry in data.get("os", {}).get("data", []):
+        name = entry.get("data", "")
+        if name.lower() in ("crawlers", "unknown"):
+            continue
+        os_list.append({
+            "name": name,
+            "hits": entry.get("hits", {}).get("count", 0),
+            "visitors": entry.get("visitors", {}).get("count", 0),
+        })
+
     return {
         "total_requests": general.get("total_requests", 0),
         "unique_visitors": general.get("unique_visitors", 0),
         "bot_hits": bot_hits,
         "top_pages": top_pages,
         "referrers": referrers[:10],
+        "os": os_list,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
 
