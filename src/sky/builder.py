@@ -5,6 +5,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -43,7 +44,7 @@ def build():
         window_start=night_hours[0].strftime("%I %p").lstrip("0"),
         window_end=night_hours[-1].strftime("%I %p").lstrip("0"),
         active="sky",
-        build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        build_time=datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
     )
 
     BUILD_DIR.mkdir(parents=True, exist_ok=True)

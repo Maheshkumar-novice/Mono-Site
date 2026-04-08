@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote_plus
 from urllib.request import urlopen
+from zoneinfo import ZoneInfo
 
 import markdown
 from jinja2 import Environment, FileSystemLoader
@@ -135,7 +136,7 @@ def build():
         html = song_template.render(
             song=song,
             active="songs",
-            build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            build_time=datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
         )
         (BUILD_DIR / f"{song['slug']}.html").write_text(html)
 
@@ -144,7 +145,7 @@ def build():
     html = list_template.render(
         songs=songs,
         active="songs",
-        build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        build_time=datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
     )
     (BUILD_DIR / "index.html").write_text(html)
     logger.info(f"Songs: {len(songs)} pages written to {BUILD_DIR}")

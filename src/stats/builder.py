@@ -7,6 +7,7 @@ import subprocess
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -132,7 +133,7 @@ def _parse_stats(data):
         "referrers": referrers[:10],
         "os": os_list,
         "bots": bots[:10],
-        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "generated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
     }
 
 
@@ -157,7 +158,7 @@ def build():
     html = template.render(
         stats=stats,
         active="stats",
-        build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        build_time=datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
     )
 
     BUILD_DIR.mkdir(parents=True, exist_ok=True)

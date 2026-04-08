@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -36,7 +37,7 @@ def build():
     html = template.render(
         articles=articles,
         active="feed",
-        build_time=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        build_time=datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
     )
 
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
