@@ -4,8 +4,8 @@
 
 {% block extra_css %}
 .song-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1rem;
 }
 
@@ -19,6 +19,18 @@
     border-radius: var(--border-radius);
     transition: border-color 150ms ease;
     text-decoration: none;
+    min-width: 0;
+}
+
+.song-card > div {
+    min-width: 0;
+}
+
+.song-card-title,
+.song-card-subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .song-card-art {
