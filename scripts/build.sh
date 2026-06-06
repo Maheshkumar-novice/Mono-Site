@@ -22,7 +22,8 @@ build_stretch()  { echo "-> Stretch...";   cp -r static-sites/stretch "$TARGET/s
 build_workout()  { echo "-> Workout...";   cp -r static-sites/workout "$TARGET/workout"; }
 build_stats()    { echo "-> Stats...";     uv run python -m src.stats.builder; }
 build_songs()    { echo "-> Songs...";    uv run python -m src.songs.builder; }
-ALL_COMPONENTS="landing feed football f1 birthdays sky st 1d ttt stretch workout stats songs"
+build_akshaya()  { echo "-> Akshaya...";   cp -r akshaya-build/akshaya "$TARGET/akshaya"; }
+ALL_COMPONENTS="landing feed football f1 birthdays sky st 1d ttt stretch workout stats songs akshaya"
 
 echo "=== Mono-Site Build ==="
 echo "Started at $(date)"
