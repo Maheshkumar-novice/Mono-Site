@@ -134,14 +134,15 @@ Two types of apps can be added:
 
 ### Static app (pure HTML/CSS/JS)
 
-1. Create `static-sites/myapp/index.html`
-2. Add to `scripts/build.sh`:
-   ```bash
-   build_myapp() { echo "-> MyApp..."; cp -r static-sites/myapp "$TARGET/myapp"; }
+1. Create `static-sites/myapp/index.html`. It's served at `/myapp`.
+2. Name it and pick its home page section with two tags in its `<head>`:
+   ```html
+   <meta name="app-name" content="My App">
+   <meta name="app-section" content="Fun">  <!-- Trackers, Fun or Personal -->
    ```
-3. Add `myapp` to the `ALL_COMPONENTS` list in `build.sh`
-4. Add a link in `landing/index.html` under Live Apps
-5. Build: `./scripts/build.sh myapp`
+3. Push. The next build copies every folder in `static-sites/`, adds its card to the home page and its address to the sitemap. To build now: `./scripts/build.sh landing static`
+
+A page without the two tags is still published, but gets no card, and the build log says so.
 
 ### Dynamic app (Python builder)
 

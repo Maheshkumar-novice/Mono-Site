@@ -20,20 +20,23 @@ fi
 STEP_TIMEOUT="${STEP_TIMEOUT:-300}"
 
 # Components and their build commands
-build_landing()  { echo "-> Landing...";   cp landing/index.html landing/styles.css landing/script.js landing/quotes.json landing/robots.txt landing/sitemap.xml "$TARGET/"; }
+build_landing()  { echo "-> Landing...";   uv run python -m src.landing.builder; }
 build_feed()     { echo "-> Feed...";      uv run python -m src.feed.builder; }
 build_football() { echo "-> Football...";  uv run python -m src.football.builder; }
 build_f1()       { echo "-> F1...";        uv run python -m src.f1.builder; }
 build_birthdays(){ echo "-> Birthdays..."; uv run python -m src.birthdays.builder; }
 build_sky()      { echo "-> Sky...";       uv run python -m src.sky.builder; }
-build_st()       { echo "-> ST...";        cp -r static-sites/st "$TARGET/st"; }
-build_1d()       { echo "-> 1D...";        cp -r static-sites/1d "$TARGET/1d"; }
-build_ttt()      { echo "-> TTT...";       cp -r static-sites/ttt "$TARGET/ttt"; }
-build_stretch()  { echo "-> Stretch...";   cp -r static-sites/stretch "$TARGET/stretch"; }
-build_workout()  { echo "-> Workout...";   cp -r static-sites/workout "$TARGET/workout"; }
+# Every folder in static-sites/ is a page at its own address; the home page step lists it.
+build_static() {
+    echo "-> Static pages..."
+    for dir in static-sites/*/; do
+        name=$(basename "$dir")
+        rm -rf "${TARGET:?}/$name" && cp -r "static-sites/$name" "$TARGET/$name" || return 1
+    done
+}
 build_songs()    { echo "-> Songs...";    uv run python -m src.songs.builder; }
 build_akshaya()  { echo "-> Akshaya...";   cp -r akshaya-build/akshaya "$TARGET/akshaya"; }
-ALL_COMPONENTS="landing feed football f1 birthdays sky st 1d ttt stretch workout songs akshaya"
+ALL_COMPONENTS="landing feed football f1 birthdays sky static songs akshaya"
 
 # Each step runs in its own shell under the time limit, so the build functions are exported to it.
 export -f $(compgen -A function build_)
@@ -56,6 +59,12 @@ keep_old() {
     rm -rf "${TARGET:?}/$1"
     if [ "$1" = landing ]; then
         [ -d build ] && find build -maxdepth 1 -type f -exec cp {} "$TARGET/" \;
+    elif [ "$1" = static ]; then
+        for dir in static-sites/*/; do
+            name=$(basename "$dir")
+            rm -rf "${TARGET:?}/$name"
+            [ -d "build/$name" ] && cp -r "build/$name" "$TARGET/$name"
+        done
     elif [ -d "build/$1" ]; then
         cp -r "build/$1" "$TARGET/$1"
     fi
