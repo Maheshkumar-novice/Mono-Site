@@ -84,6 +84,8 @@ cp .env.example .env  # Add FOOTBALL_API_KEY
 ./scripts/build.sh feed sky     # Build specific components
 ```
 
+On the droplet, cron runs a full build every 3 hours (00, 03, 06 … 21 IST) and pulls the latest `main` from GitHub first, so a push goes live by the next build. If the pull fails, the log says so and the build uses the code already there.
+
 Only one build runs at a time; if the previous one is still running, the new one skips its turn. A step that fails, or runs longer than 5 minutes (`STEP_TIMEOUT`), is reported in the log and keeps its page from the last good build, so the rest of the site still updates.
 
 ## CLI
