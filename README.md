@@ -71,6 +71,12 @@ Format, minify and syntax-highlight PostgreSQL and JSON, with a collapsible JSON
 </details>
 
 <details>
+<summary><strong>The Enchiridion</strong> — /enchiridion</summary>
+
+Epictetus's manual in 53 short chapters, George Long's translation (public domain, text from Standard Ebooks under CC0), with chapter contents, folded footnotes and a Random chapter button. Static HTML/CSS/JS.
+</details>
+
+<details>
 <summary><strong>Songs</strong> — /songs</summary>
 
 Song deep-dive blog pages. Each song is a markdown file in `content/songs/` that gets converted to a styled HTML page. List page shows all songs, each links to a full deep dive covering themes, key lyrics, vocabulary, cultural context, and more.
@@ -144,7 +150,7 @@ Two types of apps can be added:
 2. Name it and pick its home page section with two tags in its `<head>`:
    ```html
    <meta name="app-name" content="My App">
-   <meta name="app-section" content="Fun">  <!-- Trackers, Fun, Personal or Tools -->
+   <meta name="app-section" content="Fun">  <!-- Trackers, Fun, Personal, Tools or Reading -->
    ```
 3. Push. The next build copies every folder in `static-sites/`, adds its card to the home page and its address to the sitemap. To build now: `./scripts/build.sh landing static`
 

@@ -26,7 +26,7 @@ LANDING_DIR = PROJECT_DIR / "landing"
 STATIC_DIR = PROJECT_DIR / "static-sites"
 
 SITE_URL = "https://maheshkumar.blog"
-SECTIONS = ("Trackers", "Fun", "Personal", "Tools")
+SECTIONS = ("Trackers", "Fun", "Personal", "Tools", "Reading")
 LANDING_FILES = (
     "index.html",
     "styles.css",
