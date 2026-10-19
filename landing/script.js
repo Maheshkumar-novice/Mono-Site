@@ -229,6 +229,8 @@ async function loadDailyQuote() {
 
 // Run when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // Keep the footer year current
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
     init();
     loadDailyQuote();
 });
