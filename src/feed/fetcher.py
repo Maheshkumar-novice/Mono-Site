@@ -2,6 +2,7 @@
 
 import contextlib
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import feedparser
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 # feedparser has no time limit of its own, so a site that stops answering would hang the build.
 TIMEOUT_SECONDS = 15
 HEADERS = {"User-Agent": "maheshkumar.blog feed reader (+https://maheshkumar.blog/feed)"}
+# Blogs are fetched in parallel, at most this many at a time. Each blog still gets one request.
+MAX_PARALLEL = 20
 
 
 def fetch_all_feeds():
@@ -23,17 +26,23 @@ def fetch_all_feeds():
         cursor.execute("SELECT id, url, title FROM feeds WHERE deleted = 0")
         feeds = cursor.fetchall()
 
-    for feed in feeds:
-        feed_id, url, title = feed["id"], feed["url"], feed["title"]
+    # Download in parallel, then save one feed at a time: SQLite handles one writer at a time.
+    with ThreadPoolExecutor(max_workers=MAX_PARALLEL) as pool:
+        downloads = [pool.submit(_download, feed["id"], feed["url"]) for feed in feeds]
+
+    for feed, download in zip(feeds, downloads, strict=True):
+        url, title = feed["url"], feed["title"]
         try:
-            _fetch_feed(feed_id, url)
+            entries = download.result()
+            if entries:
+                _save(feed["id"], entries)
             logger.info(f"Fetched: {title}")
         except Exception as e:
             logger.error(f"Failed to fetch {title} ({url}): {e}")
 
 
-def _fetch_feed(feed_id, feed_url):
-    """Fetch and store articles for a single feed."""
+def _download(feed_id, feed_url):
+    """Fetch and parse one feed. Returns its articles, ready to save."""
     resp = requests.get(feed_url, headers=HEADERS, timeout=TIMEOUT_SECONDS)
     resp.raise_for_status()
     # Passing the final address keeps relative links in the feed working.
@@ -43,7 +52,7 @@ def _fetch_feed(feed_id, feed_url):
 
     if feed_data.bozo and not feed_data.entries:
         logger.warning(f"Feed parse failed for {feed_url}")
-        return
+        return []
 
     # Parse all entries first — only delete old articles if we got new ones
     entries = []
@@ -64,9 +73,11 @@ def _fetch_feed(feed_id, feed_url):
 
         entries.append((feed_id, guid, title, link, description, author, published))
 
-    if not entries:
-        return
+    return entries
 
+
+def _save(feed_id, entries):
+    """Replace a feed's stored articles with freshly fetched ones."""
     with get_db("feed.db") as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM articles WHERE feed_id = ?", (feed_id,))
