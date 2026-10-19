@@ -25,6 +25,9 @@
   .app{width:100%;max-width:100%;margin:0;padding:16px 20px 12px;display:flex;flex-direction:column;min-height:100vh}
   header{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:14px}
   h1{font-size:18px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .brand{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none}
+  .brand:hover{color:var(--accent-hover)}
+  .crumb{color:var(--faint);margin:0 -6px}
   .tabs{display:flex;gap:6px;margin-left:auto}
   .tab{appearance:none;border:1px solid var(--border);background:var(--panel);color:var(--muted);
        padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px}
@@ -93,6 +96,7 @@
 <body>
 <div class="app">
   <header>
+    <a class="brand" href="/">Maheshkumar</a><span class="crumb">/</span>
     <h1>SQL &amp; JSON Formatter</h1>
     <div class="tabs">
       <button class="tab active" data-tab="sql">PostgreSQL</button>
