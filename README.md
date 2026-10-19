@@ -84,6 +84,8 @@ cp .env.example .env  # Add FOOTBALL_API_KEY
 ./scripts/build.sh feed sky     # Build specific components
 ```
 
+Only one build runs at a time; if the previous one is still running, the new one skips its turn. A step that fails, or runs longer than 5 minutes (`STEP_TIMEOUT`), is reported in the log and keeps its page from the last good build, so the rest of the site still updates.
+
 ## CLI
 
 ```bash
