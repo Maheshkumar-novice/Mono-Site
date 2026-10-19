@@ -5,10 +5,15 @@ import logging
 from datetime import datetime
 
 import feedparser
+import requests
 
 from src.db import get_db
 
 logger = logging.getLogger(__name__)
+
+# feedparser has no time limit of its own, so a site that stops answering would hang the build.
+TIMEOUT_SECONDS = 15
+HEADERS = {"User-Agent": "maheshkumar.blog feed reader (+https://maheshkumar.blog/feed)"}
 
 
 def fetch_all_feeds():
@@ -29,7 +34,12 @@ def fetch_all_feeds():
 
 def _fetch_feed(feed_id, feed_url):
     """Fetch and store articles for a single feed."""
-    feed_data = feedparser.parse(feed_url)
+    resp = requests.get(feed_url, headers=HEADERS, timeout=TIMEOUT_SECONDS)
+    resp.raise_for_status()
+    # Passing the final address keeps relative links in the feed working.
+    feed_data = feedparser.parse(
+        resp.content, response_headers={**resp.headers, "content-location": resp.url}
+    )
 
     if feed_data.bozo and not feed_data.entries:
         logger.warning(f"Feed parse failed for {feed_url}")
