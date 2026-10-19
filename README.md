@@ -65,12 +65,6 @@ Workout routine with a built-in timer. Static HTML/CSS/JS.
 </details>
 
 <details>
-<summary><strong>Stats</strong> — /stats</summary>
-
-Site analytics page powered by GoAccess. Shows total requests, unique visitors, bot hits, top pages, referring sites, OS breakdown, and bot breakdown. Built from Caddy access logs during the build process.
-</details>
-
-<details>
 <summary><strong>Songs</strong> — /songs</summary>
 
 Song deep-dive blog pages. Each song is a markdown file in `content/songs/` that gets converted to a styled HTML page. List page shows all songs, each links to a full deep dive covering themes, key lyrics, vocabulary, cultural context, and more.
