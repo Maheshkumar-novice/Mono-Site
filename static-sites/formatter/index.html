@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="app-name" content="SQL &amp; JSON Formatter">
+<meta name="app-section" content="Tools">
+<title>SQL &amp; JSON Formatter | Maheshkumar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#0a0a0a; --panel:#141414; --ink:#e5e5e5; --muted:#a3a3a3; --faint:#525252;
+    --border:#262626; --accent:#10b981; --accent-hover:#34d399; --accent-soft:rgba(16,185,129,.15);
+    --code-bg:#101010; --ok:#34d399; --err:#f87171;
+    --kw:#22d3ee; --str:#86efac; --num:#fbbf24; --com:#737373; --op:#a3a3a3;
+    --id:#c4b5fd; --jkey:#67e8f9; --jstr:#86efac; --jnum:#fbbf24; --jbool:#f472b6; --jnull:#737373;
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{margin:0;font:14px/1.5 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:var(--bg);color:var(--ink)}
+  .app{width:100%;max-width:100%;margin:0;padding:16px 20px 12px;display:flex;flex-direction:column;min-height:100vh}
+  header{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:14px}
+  h1{font-size:18px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .tabs{display:flex;gap:6px;margin-left:auto}
+  .tab{appearance:none;border:1px solid var(--border);background:var(--panel);color:var(--muted);
+       padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px}
+  .tab:hover{color:var(--accent-hover);border-color:var(--accent)}
+  .tab.active{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+  .panel{display:none;flex:1;flex-direction:column}
+  .panel.active{display:flex}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .toolbar button{appearance:none;border:1px solid var(--border);background:var(--panel);color:var(--ink);
+       padding:7px 13px;border-radius:7px;cursor:pointer;font-weight:550;font-size:13px}
+  .toolbar button:hover{border-color:var(--accent);color:var(--accent-hover)}
+  .toolbar button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-hover)}
+  .hist{position:relative;display:inline-flex}
+  .menu{position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:300px;max-width:460px;
+        background:var(--panel);border:1px solid var(--border);border-radius:9px;
+        box-shadow:0 8px 24px rgba(0,0,0,.5);padding:4px}
+  .menu .item{display:flex;gap:10px;align-items:baseline;padding:7px 9px;border-radius:6px;cursor:pointer;overflow:hidden}
+  .menu .item:hover{background:var(--accent-soft)}
+  .menu .item .time{color:var(--muted);font-size:11px;flex:none;font-variant-numeric:tabular-nums}
+  .menu .item .snip{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+        color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .menu .empty{padding:9px;color:var(--muted);font-size:12.5px}
+  .menu .clear{margin-top:4px;border-top:1px solid var(--border);text-align:center;padding:8px;
+        cursor:pointer;font-size:12px;color:var(--err)}
+  .menu .clear:hover{background:rgba(248,113,113,.1)}
+  .status{margin-left:auto;font-size:12.5px;color:var(--muted);min-height:18px}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)}
+  .workspace{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;min-height:420px;min-width:0}
+  textarea,.output{border:1px solid var(--border);border-radius:10px;background:var(--panel);
+       padding:12px 14px;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+       width:100%;height:100%;min-height:420px;min-width:0;resize:none;color:var(--ink);overflow:auto;tab-size:2}
+  textarea{outline:none;white-space:pre;caret-color:var(--accent)}
+  textarea::placeholder{color:var(--faint)}
+  textarea:focus{border-color:var(--accent)}
+  .output{background:var(--code-bg);margin:0;white-space:pre;color:var(--muted)}
+  .output pre.code{margin:0;white-space:pre;font:inherit}
+  pre.output.code{margin:0}
+  /* SQL highlight */
+  .s-kw{color:var(--kw);font-weight:600}
+  .s-str{color:var(--str)} .s-num{color:var(--num)} .s-com{color:var(--com);font-style:italic}
+  .s-op{color:var(--op)} .s-id{color:var(--id)}
+  /* JSON text highlight */
+  .j-key{color:var(--jkey);font-weight:600} .j-str{color:var(--jstr)}
+  .j-num{color:var(--jnum)} .j-bool{color:var(--jbool)} .j-null{color:var(--jnull);font-style:italic}
+  /* JSON tree */
+  .tree{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
+  .tchildren{padding-left:18px;border-left:1px dashed var(--border);margin-left:4px}
+  .tline{white-space:pre}
+  .toggle{display:inline-block;width:14px;color:var(--muted);cursor:default;user-select:none}
+  .tnode.has-children > .tline .toggle{cursor:pointer}
+  .t-key{color:var(--jkey);font-weight:600} .t-punct{color:var(--op)}
+  .t-count{color:var(--muted);font-size:11.5px}
+  .t-str{color:var(--jstr)} .t-num{color:var(--jnum)} .t-bool{color:var(--jbool)} .t-null{color:var(--jnull)}
+  .ellipsis{color:var(--muted)}
+  .tnode.collapsed > .tchildren,.tnode.collapsed > .t-close{display:none}
+  .tnode:not(.collapsed) > .tline .ellipsis{display:none}
+  @media(max-width:760px){
+    .workspace{grid-template-columns:1fr}
+    textarea,.output{min-height:240px;height:auto}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>SQL &amp; JSON Formatter</h1>
+    <div class="tabs">
+      <button class="tab active" data-tab="sql">PostgreSQL</button>
+      <button class="tab" data-tab="json">JSON</button>
+    </div>
+  </header>
+
+  <section class="panel active" id="panel-sql">
+    <div class="toolbar">
+      <button data-act="sql-format">Format</button>
+      <button data-act="sql-minify">Minify</button>
+      <span class="hist" id="sql-hist">
+        <button data-act="sql-history">History ▾</button>
+        <div class="menu" id="sql-hist-menu" hidden></div>
+      </span>
+      <button data-act="sql-copy">Copy</button>
+      <button data-act="sql-sample">Sample</button>
+      <button data-act="sql-clear">Clear</button>
+      <span class="status" id="sql-status"></span>
+    </div>
+    <div class="workspace">
+      <textarea id="sql-input" spellcheck="false" placeholder="Paste PostgreSQL here, then click Format…"></textarea>
+      <pre class="output code" id="sql-output"></pre>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-json">
+    <div class="toolbar">
+      <button data-act="json-format">Format</button>
+      <button data-act="json-minify">Minify</button>
+      <span class="hist" id="json-hist">
+        <button data-act="json-history">History ▾</button>
+        <div class="menu" id="json-hist-menu" hidden></div>
+      </span>
+      <button data-act="json-tree" id="json-tree-btn">Tree view</button>
+      <button data-act="json-copy">Copy</button>
+      <button data-act="json-sample">Sample</button>
+      <button data-act="json-clear">Clear</button>
+      <span class="status" id="json-status"></span>
+    </div>
+    <div class="workspace">
+      <textarea id="json-input" spellcheck="false" placeholder="Paste JSON here, then click Format…"></textarea>
+      <div class="output" id="json-output"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------- shared helpers ---------- */
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok=false; try{ ok=document.execCommand('copy'); }catch(_){}
+    document.body.removeChild(ta); return ok;
+  }
+}
+function setStatus(id, msg, kind){
+  const el=document.getElementById(id);
+  el.textContent=msg||''; el.className='status'+(kind?(' '+kind):'');
+}
+
+/* ============================================================
+   SQL  (tokenizer -> phrase merge -> reflow / minify / highlight)
+   ============================================================ */
+const SQL_KEYWORDS = new Set((
+  "SELECT FROM WHERE AND OR NOT NULL IS IN LIKE ILIKE SIMILAR BETWEEN EXISTS ANY ALL SOME " +
+  "AS ON USING JOIN INNER LEFT RIGHT FULL OUTER CROSS NATURAL LATERAL " +
+  "GROUP BY ORDER HAVING LIMIT OFFSET FETCH FIRST NEXT ROW ROWS ONLY DISTINCT " +
+  "UNION EXCEPT INTERSECT INSERT INTO VALUES UPDATE SET DELETE RETURNING " +
+  "WITH RECURSIVE CASE WHEN THEN ELSE END " +
+  "ASC DESC NULLS LAST OVER PARTITION WINDOW FILTER WITHIN GROUPING " +
+  "TRUE FALSE UNKNOWN DEFAULT " +
+  "CREATE ALTER DROP TRUNCATE TABLE VIEW INDEX SEQUENCE SCHEMA DATABASE EXTENSION " +
+  "MATERIALIZED FUNCTION PROCEDURE TRIGGER CONSTRAINT PRIMARY FOREIGN KEY REFERENCES " +
+  "UNIQUE CHECK COLUMN ADD RENAME CASCADE RESTRICT GRANT REVOKE " +
+  "INT INTEGER BIGINT SMALLINT NUMERIC DECIMAL REAL DOUBLE PRECISION SERIAL BIGSERIAL " +
+  "BOOLEAN BOOL TEXT VARCHAR CHAR CHARACTER VARYING DATE TIME TIMESTAMP TIMESTAMPTZ " +
+  "INTERVAL BYTEA JSON JSONB UUID ARRAY MONEY BIT XML " +
+  "CURRENT_DATE CURRENT_TIME CURRENT_TIMESTAMP"
+).split(/\s+/));
+
+const TIGHT_OPS = new Set(['::','.','->','->>','#>','#>>']);
+const CLAUSE_NL  = new Set(['WITH','SELECT','FROM','WHERE','GROUP BY','HAVING','ORDER BY',
+  'LIMIT','OFFSET','RETURNING','VALUES','SET','UPDATE','INSERT INTO','DELETE FROM',
+  'UNION','UNION ALL','EXCEPT','INTERSECT']);
+const LIST_CLAUSES = new Set(['SELECT','GROUP BY','ORDER BY','SET','RETURNING']);
+const JOIN_WORDS = new Set(['LEFT','RIGHT','FULL','INNER','CROSS','NATURAL','OUTER','JOIN']);
+
+function tokenizeSql(sql){
+  const t=[]; let i=0; const n=sql.length;
+  const isWord = c => /[A-Za-z0-9_$]/.test(c);
+  while(i<n){
+    const c=sql[i];
+    if(/\s/.test(c)){ let j=i+1; while(j<n&&/\s/.test(sql[j]))j++; t.push({type:'ws',value:sql.slice(i,j)}); i=j; continue; }
+    if(c==='-'&&sql[i+1]==='-'){ let j=i+2; while(j<n&&sql[j]!=='\n')j++; t.push({type:'comment',value:sql.slice(i,j)}); i=j; continue; }
+    if(c==='/'&&sql[i+1]==='*'){ let j=i+2; while(j<n&&!(sql[j]==='*'&&sql[j+1]==='/'))j++; j=Math.min(j+2,n); t.push({type:'comment',value:sql.slice(i,j)}); i=j; continue; }
+    if(c==="'"){ let j=i+1; while(j<n){ if(sql[j]==="'"&&sql[j+1]==="'"){j+=2;continue;} if(sql[j]==="'"){j++;break;} j++; } t.push({type:'string',value:sql.slice(i,j)}); i=j; continue; }
+    if(c==='$'){ const m=sql.slice(i).match(/^\$([A-Za-z0-9_]*)\$/); if(m){ const tag=m[0]; const end=sql.indexOf(tag,i+tag.length); const j=end===-1?n:end+tag.length; t.push({type:'string',value:sql.slice(i,j)}); i=j; continue; } }
+    if(c==='"'){ let j=i+1; while(j<n){ if(sql[j]==='"'&&sql[j+1]==='"'){j+=2;continue;} if(sql[j]==='"'){j++;break;} j++; } t.push({type:'identifier',value:sql.slice(i,j)}); i=j; continue; }
+    if(/[0-9]/.test(c) || (c==='.'&&/[0-9]/.test(sql[i+1]))){
+      const m=sql.slice(i).match(/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?/);
+      if(m){ t.push({type:'number',value:m[0]}); i+=m[0].length; continue; }
+    }
+    if(isWord(c)){ let j=i+1; while(j<n&&isWord(sql[j]))j++; t.push({type:'word',value:sql.slice(i,j)}); i=j; continue; }
+    const three=sql.substr(i,3), two=sql.substr(i,2);
+    if(['->>','#>>'].includes(three)){ t.push({type:'op',value:three}); i+=3; continue; }
+    if(['->','#>','::','>=','<=','<>','!=','||'].includes(two)){ t.push({type:'op',value:two}); i+=2; continue; }
+    if(c==='('||c===')'){ t.push({type:'paren',value:c}); i++; continue; }
+    if(c===','){ t.push({type:'comma',value:c}); i++; continue; }
+    if(c===';'){ t.push({type:'semicolon',value:c}); i++; continue; }
+    t.push({type:'op',value:c}); i++;
+  }
+  return t;
+}
+
+function mergeKeywordPhrases(tokens){
+  const out=[]; const up=t=> (t&&t.type==='word')? t.value.toUpperCase():null;
+  for(let i=0;i<tokens.length;i++){
+    const t=tokens[i], u=up(t), u1=up(tokens[i+1]);
+    if(u==='GROUP'&&u1==='BY'){ out.push({type:'word',value:'GROUP BY',keyword:true}); i++; continue; }
+    if(u==='ORDER'&&u1==='BY'){ out.push({type:'word',value:'ORDER BY',keyword:true}); i++; continue; }
+    if(u==='INSERT'&&u1==='INTO'){ out.push({type:'word',value:'INSERT INTO',keyword:true}); i++; continue; }
+    if(u==='DELETE'&&u1==='FROM'){ out.push({type:'word',value:'DELETE FROM',keyword:true}); i++; continue; }
+    if(u==='UNION'&&u1==='ALL'){ out.push({type:'word',value:'UNION ALL',keyword:true}); i++; continue; }
+    if(u&&JOIN_WORDS.has(u)){
+      const parts=[]; let k=i, sawJoin=false;
+      while(k<tokens.length && tokens[k].type==='word' && JOIN_WORDS.has(up(tokens[k]))){
+        parts.push(up(tokens[k]));
+        if(up(tokens[k])==='JOIN'){ sawJoin=true; k++; break; }
+        k++;
+      }
+      if(sawJoin){ out.push({type:'word',value:parts.join(' '),keyword:true,join:true}); i=k-1; continue; }
+    }
+    out.push(t);
+  }
+  return out;
+}
+
+function prepareSqlTokens(sql){
+  let toks=tokenizeSql(sql).filter(t=>t.type!=='ws');
+  toks=mergeKeywordPhrases(toks);
+  for(const t of toks){
+    if(t.type==='word'&&!t.keyword){
+      const u=t.value.toUpperCase();
+      if(SQL_KEYWORDS.has(u)){ t.value=u; t.keyword=true; }
+    }
+  }
+  return toks;
+}
+
+function needSpaceBefore(cur,prev){
+  if(!prev) return false;
+  if(cur.type==='comma'||cur.type==='semicolon') return false;
+  if(cur.type==='paren'&&cur.value===')') return false;
+  if(cur.type==='op'&&TIGHT_OPS.has(cur.value)) return false;
+  if(prev.type==='paren'&&prev.value==='(') return false;
+  if(prev.type==='op'&&TIGHT_OPS.has(prev.value)) return false;
+  if(cur.type==='paren'&&cur.value==='('){
+    if((prev.type==='word'&&!prev.keyword)||prev.type==='identifier') return false; // function call
+    return true;
+  }
+  return true;
+}
+
+function formatSql(sql){
+  const toks=prepareSqlTokens(sql);
+  let result='', indent=0, curIndent=0, atLineStart=true, listMode=false, listDepth=0;
+  const stack=[];
+  const trim=()=>{ result=result.replace(/[ \t]+$/,''); };
+  const newline=lvl=>{ trim(); result+='\n'+'  '.repeat(Math.max(0,lvl)); curIndent=lvl; atLineStart=true; };
+  const emit=s=>{ result+=s; atLineStart=false; };
+  const space=(cur,prev)=>{ if(!atLineStart&&prev&&needSpaceBefore(cur,prev)) emit(' '); };
+
+  for(let i=0;i<toks.length;i++){
+    const t=toks[i], prev=toks[i-1], next=toks[i+1];
+    const u=t.type==='word'?t.value.toUpperCase():'';
+
+    if(t.type==='comment'){ space(t,prev); emit(t.value); if(t.value.startsWith('--')) newline(indent); continue; }
+
+    if(t.keyword&&!t.join&&CLAUSE_NL.has(u)){
+      if(!atLineStart&&result!=='') newline(indent);
+      emit(t.value);
+      if(LIST_CLAUSES.has(u)){
+        if(next&&next.type==='word'&&(next.value.toUpperCase()==='DISTINCT'||next.value.toUpperCase()==='ALL')){
+          emit(' '+next.value.toUpperCase()); i++;
+        }
+        listMode=true; listDepth=stack.length; newline(indent+1);
+      } else { listMode=false; }
+      continue;
+    }
+    if(t.keyword&&t.join){ if(!atLineStart) newline(indent); emit(t.value); listMode=false; continue; }
+    if(t.keyword&&(u==='AND'||u==='OR')){ newline(indent+1); emit(t.value); continue; }
+
+    if(t.type==='comma'){ trim(); emit(','); if(listMode&&stack.length===listDepth) newline(indent+1); continue; }
+    if(t.type==='semicolon'){
+      trim(); emit(';'); result+='\n\n'; atLineStart=true; curIndent=0;
+      indent=0; listMode=false; listDepth=0; stack.length=0; continue;
+    }
+    if(t.type==='paren'&&t.value==='('){
+      const sub=next&&next.type==='word'&&['SELECT','WITH'].includes(next.value.toUpperCase());
+      space(t,prev); emit('(');
+      stack.push({sub,restoreIndent:indent,closeIndent:curIndent,listMode,listDepth});
+      if(sub){ indent=curIndent+1; listMode=false; newline(indent); }
+      continue;
+    }
+    if(t.type==='paren'&&t.value===')'){
+      const ctx=stack.pop()||{sub:false};
+      if(ctx.sub){ newline(ctx.closeIndent); emit(')'); indent=ctx.restoreIndent; listMode=ctx.listMode; listDepth=ctx.listDepth; }
+      else { trim(); emit(')'); }
+      continue;
+    }
+    space(t,prev); emit(t.value);
+  }
+  return result.replace(/[ \t]+$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+function minifySql(sql){
+  const toks=prepareSqlTokens(sql);
+  let out='', prev=null;
+  for(const t of toks){
+    if(t.type==='comment'&&t.value.startsWith('--')){ out=out.replace(/ $/,''); out+=(out&&!out.endsWith('\n')?' ':'')+t.value+'\n'; prev=t; continue; }
+    if(prev&&!out.endsWith('\n')&&needSpaceBefore(t,prev)) out+=' ';
+    out+=t.value; prev=t;
+  }
+  return out.trim();
+}
+
+function highlightSql(text){
+  let html='';
+  for(const t of tokenizeSql(text)){
+    if(t.type==='ws'){ html+=escapeHtml(t.value); continue; }
+    const v=escapeHtml(t.value);
+    if(t.type==='comment') html+='<span class="s-com">'+v+'</span>';
+    else if(t.type==='string') html+='<span class="s-str">'+v+'</span>';
+    else if(t.type==='number') html+='<span class="s-num">'+v+'</span>';
+    else if(t.type==='identifier') html+='<span class="s-id">'+v+'</span>';
+    else if(t.type==='word') html+=(SQL_KEYWORDS.has(t.value.toUpperCase())?'<span class="s-kw">'+v+'</span>':v);
+    else html+='<span class="s-op">'+v+'</span>';
+  }
+  return html;
+}
+
+/* ============================================================
+   JSON  (format / minify / validate / highlight / tree)
+   ============================================================ */
+function highlightJson(str){
+  const re=/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+  return str.replace(re,(m,strTok,colon,lit,num)=>{
+    if(strTok!==undefined){
+      const safe=escapeHtml(strTok);
+      return colon ? '<span class="j-key">'+safe+'</span>'+colon : '<span class="j-str">'+safe+'</span>';
+    }
+    if(lit!==undefined) return '<span class="'+(lit==='null'?'j-null':'j-bool')+'">'+lit+'</span>';
+    if(num!==undefined) return '<span class="j-num">'+num+'</span>';
+    return m;
+  });
+}
+
+function jsonErrorDetail(raw, err){
+  const m=/position (\d+)/.exec(err.message||'');
+  if(m){ const pos=+m[1]; const line=raw.slice(0,pos).split('\n').length; return err.message+' (line '+line+')'; }
+  return err.message;
+}
+
+function buildTreeNode(value, key){
+  const type = value===null?'null':Array.isArray(value)?'array':typeof value;
+  const node=document.createElement('div'); node.className='tnode';
+  if(type==='object'||type==='array'){
+    const entries = type==='array' ? value.map((v,idx)=>[idx,v]) : Object.entries(value);
+    const open=type==='array'?'[':'{', close=type==='array'?']':'}';
+    const line=document.createElement('div'); line.className='tline';
+    const tog=document.createElement('span'); tog.className='toggle'; tog.textContent=entries.length?'▾':'·';
+    line.appendChild(tog);
+    if(key!==null){ const k=document.createElement('span'); k.className='t-key'; k.textContent=key+': '; line.appendChild(k); }
+    const o=document.createElement('span'); o.className='t-punct'; o.textContent=open; line.appendChild(o);
+    const cnt=document.createElement('span'); cnt.className='t-count';
+    cnt.textContent=' '+entries.length+(type==='array'?' items':(entries.length===1?' key':' keys'))+' '; line.appendChild(cnt);
+    const ell=document.createElement('span'); ell.className='ellipsis'; ell.textContent='… '+close; line.appendChild(ell);
+    node.appendChild(line);
+    const kids=document.createElement('div'); kids.className='tchildren';
+    entries.forEach(([k,v])=>kids.appendChild(buildTreeNode(v,k)));
+    node.appendChild(kids);
+    const c=document.createElement('div'); c.className='tline t-close t-punct'; c.textContent=close; node.appendChild(c);
+    if(entries.length){
+      node.classList.add('has-children');
+      const toggle=()=>{ const col=node.classList.toggle('collapsed'); tog.textContent=col?'▸':'▾'; };
+      tog.addEventListener('click',toggle); o.addEventListener('click',toggle);
+    }
+  } else {
+    const line=document.createElement('div'); line.className='tline';
+    line.appendChild(document.createTextNode('   '));
+    if(key!==null){ const k=document.createElement('span'); k.className='t-key'; k.textContent=key+': '; line.appendChild(k); }
+    const val=document.createElement('span');
+    val.className='t-'+(type==='string'?'str':type==='number'?'num':type==='boolean'?'bool':'null');
+    val.textContent = type==='string' ? JSON.stringify(value) : String(value);
+    line.appendChild(val); node.appendChild(line);
+  }
+  return node;
+}
+
+/* ============================================================
+   UI wiring
+   ============================================================ */
+const HISTORY_MAX = 3;
+const state = {
+  sql:{ out:'', action:'', history:[] },
+  json:{ out:'', value:undefined, hasValue:false, view:'text', action:'', history:[] }
+};
+
+const SAMPLE_SQL = `with recent as (select id, user_id, amount from orders where created_at > now() - interval '30 days') select u.id, u.name, count(r.id) as order_count, sum(r.amount) as total from users u left join recent r on r.user_id = u.id where u.active = true and u.country in ('US','CA') group by u.id, u.name having sum(r.amount) > 100 order by total desc limit 10;`;
+const SAMPLE_JSON = `{"id":42,"name":"Ada Lovelace","active":true,"roles":["admin","user"],"profile":{"age":36,"email":"ada@example.com","tags":[],"manager":null},"score":98.6,"history":[{"year":2019,"role":"dev"},{"year":2023,"role":"lead"}]}`;
+
+function renderSqlOutput(text){
+  state.sql.out=text;
+  document.getElementById('sql-output').innerHTML = highlightSql(text);
+}
+
+/* --- SQL actions --- */
+function sqlFormat(){
+  const raw=document.getElementById('sql-input').value;
+  if(!raw.trim()){ renderSqlOutput(''); state.sql.action=''; setStatus('sql-status','Nothing to format'); persist(); return; }
+  try{ renderSqlOutput(formatSql(raw)); state.sql.action='format'; pushHistory('sql',raw); setStatus('sql-status','Formatted','ok'); }
+  catch(e){ setStatus('sql-status','Could not format: '+e.message,'err'); }
+  persist();
+}
+function sqlMinify(){
+  const raw=document.getElementById('sql-input').value;
+  if(!raw.trim()){ renderSqlOutput(''); state.sql.action=''; setStatus('sql-status','Nothing to minify'); persist(); return; }
+  try{ renderSqlOutput(minifySql(raw)); state.sql.action='minify'; pushHistory('sql',raw); setStatus('sql-status','Minified','ok'); }
+  catch(e){ setStatus('sql-status','Could not minify: '+e.message,'err'); }
+  persist();
+}
+
+/* --- JSON actions --- */
+function renderJsonView(){
+  const out=document.getElementById('json-output');
+  if(!state.json.hasValue){ out.innerHTML=''; return; }
+  if(state.json.view==='tree'){ out.innerHTML=''; out.appendChild(buildTreeNode(state.json.value,null)); }
+  else { out.innerHTML='<pre class="code">'+highlightJson(state.json.out)+'</pre>'; }
+}
+function jsonParse(raw){
+  const value=JSON.parse(raw);   // throws on invalid
+  state.json.value=value; state.json.hasValue=true; return value;
+}
+function jsonFormat(){
+  const raw=document.getElementById('json-input').value;
+  if(!raw.trim()){ state.json.hasValue=false; state.json.action=''; renderJsonView(); setStatus('json-status','Nothing to format'); persist(); return; }
+  try{
+    const v=jsonParse(raw);
+    state.json.out=JSON.stringify(v,null,2);
+    state.json.action='format'; pushHistory('json',raw);
+    renderJsonView();
+    setStatus('json-status','Valid JSON · formatted','ok');
+  }catch(e){ setStatus('json-status','Invalid JSON: '+jsonErrorDetail(raw,e),'err'); }
+  persist();
+}
+function jsonMinify(){
+  const raw=document.getElementById('json-input').value;
+  if(!raw.trim()){ state.json.hasValue=false; state.json.action=''; renderJsonView(); setStatus('json-status','Nothing to minify'); persist(); return; }
+  try{
+    const v=jsonParse(raw);
+    state.json.out=JSON.stringify(v);
+    state.json.action='minify'; pushHistory('json',raw);
+    state.json.view='text'; syncTreeBtn();
+    renderJsonView();
+    setStatus('json-status','Valid JSON · minified','ok');
+  }catch(e){ setStatus('json-status','Invalid JSON: '+jsonErrorDetail(raw,e),'err'); }
+  persist();
+}
+function jsonToggleTree(){
+  if(!state.json.hasValue){ jsonFormat(); if(!state.json.hasValue) return; }
+  state.json.view = state.json.view==='tree' ? 'text' : 'tree';
+  syncTreeBtn(); renderJsonView(); persist();
+}
+function syncTreeBtn(){
+  const b=document.getElementById('json-tree-btn');
+  const on=state.json.view==='tree';
+  b.classList.toggle('on',on); b.textContent= on?'Text view':'Tree view';
+}
+
+/* --- generic copy / clear / sample --- */
+async function doCopy(which){
+  const text = which==='sql' ? state.sql.out : state.json.out;
+  if(!text){ setStatus(which+'-status','Nothing to copy'); return; }
+  const ok=await copyText(text);
+  setStatus(which+'-status', ok?'Copied to clipboard':'Copy failed', ok?'ok':'err');
+}
+function doClear(which){
+  document.getElementById(which+'-input').value='';
+  if(which==='sql'){ renderSqlOutput(''); state.sql.action=''; }
+  else { state.json.hasValue=false; state.json.out=''; state.json.action=''; renderJsonView(); }
+  setStatus(which+'-status','Cleared');
+  persist();
+}
+
+const ACTIONS={
+  'sql-format':sqlFormat, 'sql-minify':sqlMinify, 'sql-copy':()=>doCopy('sql'),
+  'sql-history':()=>toggleHistory('sql'),
+  'sql-sample':()=>{ document.getElementById('sql-input').value=SAMPLE_SQL; sqlFormat(); },
+  'sql-clear':()=>doClear('sql'),
+  'json-format':jsonFormat, 'json-minify':jsonMinify, 'json-tree':jsonToggleTree, 'json-copy':()=>doCopy('json'),
+  'json-history':()=>toggleHistory('json'),
+  'json-sample':()=>{ document.getElementById('json-input').value=SAMPLE_JSON; jsonFormat(); },
+  'json-clear':()=>doClear('json')
+};
+
+/* ---------- history dropdown ---------- */
+function pushHistory(which, text){
+  text=(text||'').trim();
+  if(!text) return;
+  const h=state[which].history || (state[which].history=[]);
+  if(h.length && h[0].text===text) return;     // skip consecutive duplicate
+  h.unshift({ t:Date.now(), text });
+  if(h.length>HISTORY_MAX) h.length=HISTORY_MAX;
+}
+function timeLabel(t){
+  const d=new Date(t);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function snippet(text){ return text.replace(/\s+/g,' ').trim().slice(0,70); }
+function closeMenus(){ ['sql','json'].forEach(w=>{ const m=document.getElementById(w+'-hist-menu'); if(m) m.hidden=true; }); }
+function loadHistory(which, text){
+  document.getElementById(which+'-input').value=text;
+  closeMenus();
+  (which==='sql'?sqlFormat:jsonFormat)();
+}
+function renderHistoryMenu(which){
+  const menu=document.getElementById(which+'-hist-menu');
+  const hist=state[which].history||[];
+  menu.innerHTML='';
+  if(!hist.length){ const e=document.createElement('div'); e.className='empty'; e.textContent='No history yet'; menu.appendChild(e); return; }
+  hist.forEach(entry=>{
+    const it=document.createElement('div'); it.className='item'; it.title='Load this input';
+    const tm=document.createElement('span'); tm.className='time'; tm.textContent=timeLabel(entry.t);
+    const sn=document.createElement('span'); sn.className='snip'; sn.textContent=snippet(entry.text);
+    it.appendChild(tm); it.appendChild(sn);
+    it.addEventListener('click',()=>loadHistory(which, entry.text));
+    menu.appendChild(it);
+  });
+  const clr=document.createElement('div'); clr.className='clear'; clr.textContent='Clear history';
+  clr.addEventListener('click',()=>{ state[which].history=[]; persist(); renderHistoryMenu(which); });
+  menu.appendChild(clr);
+}
+function toggleHistory(which){
+  const menu=document.getElementById(which+'-hist-menu');
+  const willOpen=menu.hidden;
+  closeMenus();
+  if(willOpen){ renderHistoryMenu(which); menu.hidden=false; }
+}
+
+function activeTabName(){
+  const p=document.querySelector('.panel.active');
+  return (p&&p.id==='panel-json')?'json':'sql';
+}
+function activateTab(name){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+name));
+}
+
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.hist')) closeMenus();   // click outside any dropdown closes it
+  const tab=e.target.closest('.tab');
+  if(tab){ activateTab(tab.dataset.tab); persist(); return; }
+  const btn=e.target.closest('button[data-act]');
+  if(btn && ACTIONS[btn.dataset.act]) ACTIONS[btn.dataset.act]();
+});
+
+// Ctrl/Cmd+Enter formats the active tab
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+    if(activeTabName()==='sql') sqlFormat(); else jsonFormat();
+  }
+});
+
+/* ---------- localStorage persistence (replay on reload) ---------- */
+const LS_KEY='sql-json-tool.v1';
+function persist(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      sqlInput: document.getElementById('sql-input').value,
+      jsonInput: document.getElementById('json-input').value,
+      activeTab: activeTabName(),
+      sqlAction: state.sql.action||'',
+      jsonAction: state.json.action||'',
+      jsonView: state.json.view||'text',
+      sqlHistory: state.sql.history||[],
+      jsonHistory: state.json.history||[]
+    }));
+  }catch(e){ /* storage unavailable — degrade silently */ }
+}
+function restore(){
+  let s=null;
+  try{ s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){}
+  if(!s) return;
+  if(Array.isArray(s.sqlHistory))  state.sql.history=s.sqlHistory.slice(0,HISTORY_MAX);
+  if(Array.isArray(s.jsonHistory)) state.json.history=s.jsonHistory.slice(0,HISTORY_MAX);
+  if(typeof s.sqlInput==='string')  document.getElementById('sql-input').value=s.sqlInput;
+  if(typeof s.jsonInput==='string') document.getElementById('json-input').value=s.jsonInput;
+  if(document.getElementById('sql-input').value.trim())
+    (s.sqlAction==='minify'?sqlMinify:sqlFormat)();
+  if(document.getElementById('json-input').value.trim()){
+    (s.jsonAction==='minify'?jsonMinify:jsonFormat)();
+    if(s.jsonView==='tree' && state.json.hasValue){ state.json.view='tree'; syncTreeBtn(); renderJsonView(); }
+  }
+  activateTab(s.activeTab==='json'?'json':'sql');
+  persist();
+}
+
+let saveTimer=null;
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(persist, 300); }
+document.getElementById('sql-input').addEventListener('input', scheduleSave);
+document.getElementById('json-input').addEventListener('input', scheduleSave);
+
+restore();
+</script>
+</body>
+</html>

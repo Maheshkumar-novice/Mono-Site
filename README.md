@@ -65,6 +65,12 @@ Workout routine with a built-in timer. Static HTML/CSS/JS.
 </details>
 
 <details>
+<summary><strong>SQL &amp; JSON Formatter</strong> — /formatter</summary>
+
+Format, minify and syntax-highlight PostgreSQL and JSON, with a collapsible JSON tree view and a short history. Runs entirely in the browser. Static HTML/CSS/JS.
+</details>
+
+<details>
 <summary><strong>Songs</strong> — /songs</summary>
 
 Song deep-dive blog pages. Each song is a markdown file in `content/songs/` that gets converted to a styled HTML page. List page shows all songs, each links to a full deep dive covering themes, key lyrics, vocabulary, cultural context, and more.
@@ -138,7 +144,7 @@ Two types of apps can be added:
 2. Name it and pick its home page section with two tags in its `<head>`:
    ```html
    <meta name="app-name" content="My App">
-   <meta name="app-section" content="Fun">  <!-- Trackers, Fun or Personal -->
+   <meta name="app-section" content="Fun">  <!-- Trackers, Fun, Personal or Tools -->
    ```
 3. Push. The next build copies every folder in `static-sites/`, adds its card to the home page and its address to the sitemap. To build now: `./scripts/build.sh landing static`
 
