@@ -81,6 +81,9 @@
   .ellipsis{color:var(--muted)}
   .tnode.collapsed > .tchildren,.tnode.collapsed > .t-close{display:none}
   .tnode:not(.collapsed) > .tline .ellipsis{display:none}
+  /* Wrap long lines (Wrap button, on by default) */
+  .panel.wrap textarea,.panel.wrap .output,.panel.wrap .output pre.code,.panel.wrap .tline{
+    white-space:pre-wrap;overflow-wrap:anywhere}
   @media(max-width:760px){
     .workspace{grid-template-columns:1fr}
     textarea,.output{min-height:240px;height:auto}
@@ -101,6 +104,7 @@
     <div class="toolbar">
       <button data-act="sql-format">Format</button>
       <button data-act="sql-minify">Minify</button>
+      <button data-act="sql-wrap" id="sql-wrap-btn" title="Wrap long lines">Wrap</button>
       <span class="hist" id="sql-hist">
         <button data-act="sql-history">History ▾</button>
         <div class="menu" id="sql-hist-menu" hidden></div>
@@ -120,6 +124,7 @@
     <div class="toolbar">
       <button data-act="json-format">Format</button>
       <button data-act="json-minify">Minify</button>
+      <button data-act="json-wrap" id="json-wrap-btn" title="Wrap long lines">Wrap</button>
       <span class="hist" id="json-hist">
         <button data-act="json-history">History ▾</button>
         <div class="menu" id="json-hist-menu" hidden></div>
@@ -404,8 +409,8 @@ function buildTreeNode(value, key){
    ============================================================ */
 const HISTORY_MAX = 3;
 const state = {
-  sql:{ out:'', action:'', history:[] },
-  json:{ out:'', value:undefined, hasValue:false, view:'text', action:'', history:[] }
+  sql:{ out:'', action:'', history:[], wrap:true },
+  json:{ out:'', value:undefined, hasValue:false, view:'text', action:'', history:[], wrap:true }
 };
 
 const SAMPLE_SQL = `with recent as (select id, user_id, amount from orders where created_at > now() - interval '30 days') select u.id, u.name, count(r.id) as order_count, sum(r.amount) as total from users u left join recent r on r.user_id = u.id where u.active = true and u.country in ('US','CA') group by u.id, u.name having sum(r.amount) > 100 order by total desc limit 10;`;
@@ -479,6 +484,14 @@ function syncTreeBtn(){
   b.classList.toggle('on',on); b.textContent= on?'Text view':'Tree view';
 }
 
+/* --- wrap long lines --- */
+function applyWrap(which){
+  const on=state[which].wrap;
+  document.getElementById('panel-'+which).classList.toggle('wrap', on);
+  document.getElementById(which+'-wrap-btn').classList.toggle('on', on);
+}
+function toggleWrap(which){ state[which].wrap=!state[which].wrap; applyWrap(which); persist(); }
+
 /* --- generic copy / clear / sample --- */
 async function doCopy(which){
   const text = which==='sql' ? state.sql.out : state.json.out;
@@ -496,11 +509,11 @@ function doClear(which){
 
 const ACTIONS={
   'sql-format':sqlFormat, 'sql-minify':sqlMinify, 'sql-copy':()=>doCopy('sql'),
-  'sql-history':()=>toggleHistory('sql'),
+  'sql-history':()=>toggleHistory('sql'), 'sql-wrap':()=>toggleWrap('sql'),
   'sql-sample':()=>{ document.getElementById('sql-input').value=SAMPLE_SQL; sqlFormat(); },
   'sql-clear':()=>doClear('sql'),
   'json-format':jsonFormat, 'json-minify':jsonMinify, 'json-tree':jsonToggleTree, 'json-copy':()=>doCopy('json'),
-  'json-history':()=>toggleHistory('json'),
+  'json-history':()=>toggleHistory('json'), 'json-wrap':()=>toggleWrap('json'),
   'json-sample':()=>{ document.getElementById('json-input').value=SAMPLE_JSON; jsonFormat(); },
   'json-clear':()=>doClear('json')
 };
@@ -585,13 +598,18 @@ function persist(){
       jsonAction: state.json.action||'',
       jsonView: state.json.view||'text',
       sqlHistory: state.sql.history||[],
-      jsonHistory: state.json.history||[]
+      jsonHistory: state.json.history||[],
+      sqlWrap: state.sql.wrap,
+      jsonWrap: state.json.wrap
     }));
   }catch(e){ /* storage unavailable — degrade silently */ }
 }
 function restore(){
   let s=null;
   try{ s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){}
+  if(s&&typeof s.sqlWrap==='boolean')  state.sql.wrap=s.sqlWrap;
+  if(s&&typeof s.jsonWrap==='boolean') state.json.wrap=s.jsonWrap;
+  applyWrap('sql'); applyWrap('json');
   if(!s) return;
   if(Array.isArray(s.sqlHistory))  state.sql.history=s.sqlHistory.slice(0,HISTORY_MAX);
   if(Array.isArray(s.jsonHistory)) state.json.history=s.jsonHistory.slice(0,HISTORY_MAX);
