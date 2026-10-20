@@ -188,6 +188,8 @@ The angle is how far the Moon has moved round from the Sun, measured along the e
 
 The page uses the four main names for about a day either side of their exact moment, which is 12°, because the Moon moves about 12° a day. In between it shows Waxing or Waning Crescent and Gibbous.
 
+Moonrise and moonset come from `almanac.find_risings` and `find_settings` for the observer. The search runs from the noon before tonight to the noon after, so the times cover the whole night, listed in time order. The Moon rises about 50 minutes later each day, so about once a month that window has only a rise or only a set, and the card shows just that one.
+
 Moon illumination affects stargazing:
 - **>75%**: Bright moonlight washes out faint stars
 - **40-75%**: Some impact on faint stars

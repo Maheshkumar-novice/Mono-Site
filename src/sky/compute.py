@@ -202,6 +202,21 @@ def compute_moon_phase(eph, t):
     }
 
 
+def compute_moon_times(eph, ts, observer, night_hours):
+    """Moonrise and moonset from the noon before tonight to the noon after, in time order."""
+    noon = night_hours[0].replace(hour=12)
+    start = ts.from_datetime(noon)
+    end = ts.from_datetime(noon + timedelta(days=1))
+    events = []
+    for label, find in (("Moonrise", almanac.find_risings), ("Moonset", almanac.find_settings)):
+        times, happens = find(observer, eph["moon"], start, end)
+        events += [(t.utc_datetime(), label) for t, ok in zip(times, happens, strict=True) if ok]
+    return [
+        {"label": label, "time": dt.astimezone(IST).strftime("%I:%M %p").lstrip("0")}
+        for dt, label in sorted(events)
+    ]
+
+
 def compute_sky():
     ts = load.timescale()
     eph = load("de421.bsp")
@@ -361,6 +376,7 @@ def compute_sky():
     # Moon phase at midnight
     midnight = next(i for i, dt in enumerate(night_hours) if dt.hour == 0)
     moon = compute_moon_phase(eph, t_list[midnight])
+    moon["times"] = compute_moon_times(eph, ts, observer, night_hours)
 
     return top20, moon, hour_labels
 

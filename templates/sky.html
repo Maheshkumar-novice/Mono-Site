@@ -231,6 +231,9 @@
     <span class="moon-emoji">{{ moon.emoji }}</span>
     <div class="moon-info">
         <div class="moon-name">{{ moon.name }} — {{ moon.illumination }}% illuminated</div>
+        {% if moon.times %}
+        <div class="moon-detail">{% for e in moon.times %}{{ e.label }} {{ e.time }}{% if not loop.last %} · {% endif %}{% endfor %}</div>
+        {% endif %}
         <div class="moon-impact">{{ moon.impact }}</div>
     </div>
 </div>
