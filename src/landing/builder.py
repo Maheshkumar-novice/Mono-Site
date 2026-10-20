@@ -34,6 +34,8 @@ LANDING_FILES = (
     "quotes.json",
     "robots.txt",
     "sitemap.xml",
+    # Browsers ask for /favicon.ico on every page, so one file at the root covers the whole site.
+    "favicon.ico",
 )
 
 CARD = """                <a href="/{slug}" class="live-app-card">
