@@ -77,6 +77,12 @@ Epictetus's manual in 53 short chapters, George Long's translation (public domai
 </details>
 
 <details>
+<summary><strong>Explore</strong> — /explore</summary>
+
+Books, guides and things I want to read, learn and try, drawn as a night sky. Each theme is a constellation and each thing a star, coloured by status (want to, exploring, done); tap one for a note and a link. Everything comes from one plain list, `static-sites/explore/list.txt`, and the page lays the stars out itself. Static HTML/CSS/JS.
+</details>
+
+<details>
 <summary><strong>Songs</strong> — /songs</summary>
 
 Song deep-dive blog pages. Each song is a markdown file in `content/songs/` that gets converted to a styled HTML page. List page shows all songs, each links to a full deep dive covering themes, key lyrics, vocabulary, cultural context, and more.
