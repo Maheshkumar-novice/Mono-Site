@@ -76,8 +76,9 @@
   @media(max-width:600px){
     body{font-size:17px}
     main{padding:28px 16px 64px}
-    .top-inner{padding:10px 16px}
-    .top-title{visibility:hidden}
+    .top-inner{padding:10px 16px;gap:8px}
+    .brand{margin-right:auto}
+    .top-title,.wide{display:none}
     h1{font-size:1.6rem}
   }
 </style>
@@ -88,7 +89,7 @@
     <a class="brand" href="/">Maheshkumar</a>
     <span class="top-title">The Enchiridion</span>
     <a class="btn" href="#contents">Contents</a>
-    <button class="btn primary" id="random" type="button">Random chapter</button>
+    <button class="btn primary" id="random" type="button" aria-label="Random chapter">Random<span class="wide"> chapter</span></button>
   </div>
 </header>
 
