@@ -28,7 +28,7 @@
   .top{position:sticky;top:0;z-index:10;background:rgba(10,10,10,.92);backdrop-filter:blur(6px);
        border-bottom:1px solid var(--border)}
   .top-inner{max-width:680px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:12px;font-family:var(--ui)}
-  .brand{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .brand{font-size:18px;font-weight:600;color:var(--ink);white-space:nowrap}
   .brand:hover{color:var(--accent-hover)}
   .top-title{font-size:14px;font-weight:500;color:var(--muted);margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .top-title::before{content:"/";color:var(--faint);margin-right:12px}
@@ -80,6 +80,10 @@
     .brand{margin-right:auto}
     .top-title,.wide{display:none}
     h1{font-size:1.6rem}
+  }
+  @media(max-width:360px){
+    .top-inner{padding:10px 12px}
+    .btn{padding:7px 10px}
   }
 </style>
 </head>
