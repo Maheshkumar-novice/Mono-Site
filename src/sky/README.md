@@ -101,7 +101,7 @@ We filter to stars brighter than magnitude 2.0:
 bright = df[df['magnitude'] < 2.0]
 ```
 
-This gives us about 45-50 stars — the brightest naked-eye stars. Many have familiar names (Sirius, Rigel, Vega, etc.) which we map from HIP IDs:
+This gives us 49 stars — the brightest naked-eye stars. Each one has a name (Sirius, Rigel, Vega, etc.), mapped from its HIP ID:
 
 ```python
 STAR_NAMES = {
@@ -111,6 +111,8 @@ STAR_NAMES = {
     ...
 }
 ```
+
+To check an entry, compare the star's RA/Dec in the catalogue with the named star's published position. A bright star missing from the list still shows as `HIP 12345`, and the build logs a warning.
 
 ### Planets
 
@@ -170,19 +172,21 @@ Daytime hours are still computed so the time slider can show where objects are d
 
 ## How Moon Phase Is Computed
 
-The moon phase depends on the angle between the Sun and Moon as seen from Earth:
+The moon phase is worked out for midnight, using Skyfield's almanac:
 
 ```python
-elongation = sun_position.separation_from(moon_position)
-phase_angle = 180 - elongation.degrees
-illumination = (1 + cos(phase_angle)) / 2 * 100
+angle = almanac.moon_phase(eph, t).degrees                      # 0–360°
+illumination = almanac.fraction_illuminated(eph, 'moon', t) * 100
 ```
 
-- **New Moon**: Sun and Moon in the same direction (elongation ≈ 0°) → 0% illuminated
-- **Full Moon**: Sun and Moon in opposite directions (elongation ≈ 180°) → 100% illuminated
-- **Quarter**: 90° apart → 50% illuminated
+The angle is how far the Moon has moved round from the Sun, measured along the ecliptic. It covers the whole cycle, so it tells growing (waxing) from shrinking (waning) on its own:
 
-To determine if the moon is **waxing** (growing) or **waning** (shrinking), we compare tonight's elongation with tomorrow's. If tomorrow's elongation is smaller, the moon is past full and waning.
+- **0°**: New Moon → 0% illuminated
+- **90°**: First Quarter → 50%, growing
+- **180°**: Full Moon → 100%
+- **270°**: Last Quarter → 50%, shrinking
+
+The page uses the four main names for about a day either side of their exact moment, which is 12°, because the Moon moves about 12° a day. In between it shows Waxing or Waning Crescent and Gibbous.
 
 Moon illumination affects stargazing:
 - **>75%**: Bright moonlight washes out faint stars
@@ -206,12 +210,14 @@ const dist = (1 - alt / 90) * radius * 0.9;
 // Angle from north, clockwise
 const angle = (azimuth - 90) * Math.PI / 180;
 
-// Cartesian coordinates
-const x = centerX + dist * Math.cos(angle);
+// Cartesian coordinates, with east on the left
+const x = centerX - dist * Math.cos(angle);
 const y = centerY + dist * Math.sin(angle);
 ```
 
 The `- 90` converts from compass bearing (0° = top/North) to standard math angle (0° = right). The `* 0.9` adds a small margin so stars at the horizon aren't right at the edge.
+
+The minus sign in `x` puts **east on the left**, like every star chart. A road map has east on the right because you look down at the ground. You look up at the sky, so it's mirrored. Lie on your back with your head to the north, and east is on your left. Without the flip, constellations would show back to front.
 
 Star dot size scales with brightness:
 
