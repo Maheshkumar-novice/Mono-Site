@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-name" content="Explore">
+    <meta name="app-section" content="Reading">
+    <title>Explore | Maheshkumar</title>
+    <meta name="description" content="Books, guides and things I want to read, learn and try, drawn as a night sky.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --border: #262626;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+
+            /* The sky */
+            --sky-top: #0e1726;
+            --sky-mid: #0a101b;
+            --sky-edge: #070709;
+            --want: #c7d7f5;
+            --exploring: #34d399;
+            --done: #fbbf24;
+            --line: rgba(148, 163, 184, 0.22);
+            --line-lit: rgba(167, 243, 208, 0.55);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        [hidden] { display: none !important; }
+
+        body {
+            font-family: var(--font-family);
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        /* Nav */
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+        .site-nav .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 3rem;
+        }
+
+        .page-head { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.5rem; }
+        .page-head h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; max-width: 60ch; }
+
+        .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; font-size: 0.8rem; color: var(--text-secondary); }
+        .key { display: inline-flex; align-items: center; gap: 0.45rem; }
+        .key b { font-weight: 500; color: var(--text-muted); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+
+        /* Star colours, shared by the map, the legend and the card */
+        .s-want { --c: var(--want); }
+        .s-exploring { --c: var(--exploring); }
+        .s-done { --c: var(--done); }
+
+        .sky {
+            position: relative;
+            height: 540px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            background: radial-gradient(ellipse at 50% 30%, var(--sky-top) 0%, var(--sky-mid) 50%, var(--sky-edge) 100%);
+        }
+        .sky svg { display: block; width: 100%; height: 100%; }
+        .sky-msg {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .bg-star { fill: #fff; }
+        .lines line { stroke: var(--line); stroke-width: 1; transition: stroke 200ms ease; }
+        .lines .lit line { stroke: var(--line-lit); }
+        .title {
+            fill: var(--text-muted);
+            font-size: var(--title-fs);
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            transition: fill 200ms ease;
+        }
+        .title.lit { fill: var(--text-secondary); }
+
+        .star { cursor: pointer; outline: none; }
+        .star .body { transition: transform 200ms ease; }
+        .star:hover .body, .star:focus-visible .body, .star.on .body { transform: scale(1.4); }
+        .star .core { fill: var(--c); }
+        .star .hit { fill: transparent; }
+        .star .halo { animation: twinkle var(--tw, 4s) ease-in-out var(--td, 0s) infinite; }
+        .label {
+            fill: var(--text-secondary);
+            font-size: var(--fs);
+            font-weight: 500;
+            text-anchor: middle;
+            paint-order: stroke;
+            stroke: var(--sky-edge);
+            stroke-width: 3px;
+            stroke-linejoin: round;
+            transition: fill 200ms ease;
+        }
+        .s-exploring .label, .s-done .label { fill: var(--text-primary); }
+        .star:hover .label, .star.on .label { fill: #fff; }
+        .star:focus-visible .label { fill: var(--accent-hover); text-decoration: underline; }
+        .glow stop { stop-color: var(--c); }
+
+        @keyframes twinkle { 50% { opacity: 0.45; } }
+
+        /* The card that opens on a star */
+        .card {
+            position: absolute;
+            z-index: 2;
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            padding: 1rem 1.1rem 1.05rem;
+            background: rgba(20, 20, 20, 0.94);
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+        }
+        .card-top { display: flex; align-items: center; gap: 0.5rem; }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.1rem 0.55rem;
+        }
+        .chip.status { color: var(--c); }
+        .chip.status i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+        .card-close {
+            margin-left: auto;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            font: inherit;
+            font-size: 1.3rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .card-close:hover { background: var(--border); color: var(--text-primary); }
+        .card h2 { font-size: 1.05rem; font-weight: 600; line-height: 1.35; }
+        .card-by { font-size: 0.85rem; color: var(--text-secondary); margin-top: -0.3rem; }
+        .card-note { font-size: 0.9rem; line-height: 1.55; color: #cfcfcf; }
+        .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
+        .card-group { font-size: 0.75rem; color: var(--text-muted); }
+        .card-link { font-size: 0.875rem; font-weight: 500; white-space: nowrap; }
+
+        @media (max-width: 600px) {
+            .container { padding: 1.5rem 1rem 2.5rem; }
+            .page-head h1 { font-size: 1.5rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .star .halo { animation: none; }
+            .star .body, .lines line, .title, .label { transition: none; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav">
+        <a href="/" class="nav-brand">Maheshkumar</a>
+    </nav>
+
+    <main class="container">
+        <header class="page-head">
+            <h1>Explore</h1>
+            <p class="subtitle">Books, guides and things I want to read, learn and try. Each constellation is one theme. Tap a star to see more.</p>
+            <div class="legend">
+                <span class="key s-want"><i class="dot"></i>Want to <b id="count-want"></b></span>
+                <span class="key s-exploring"><i class="dot"></i>Exploring <b id="count-exploring"></b></span>
+                <span class="key s-done"><i class="dot"></i>Done <b id="count-done"></b></span>
+            </div>
+        </header>
+
+        <div class="sky" id="sky">
+            <svg id="map" aria-label="Night sky of things to explore"></svg>
+            <p class="sky-msg" id="sky-msg">Loading the sky…</p>
+            <div class="card" id="card" hidden>
+                <div class="card-top">
+                    <span class="chip" id="card-kind"></span>
+                    <span class="chip status" id="card-status"><i></i><span></span></span>
+                    <button class="card-close" id="card-close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <h2 id="card-name"></h2>
+                <p class="card-by" id="card-by"></p>
+                <p class="card-note" id="card-note"></p>
+                <div class="card-foot">
+                    <span class="card-group" id="card-group"></span>
+                    <a class="card-link" id="card-link"></a>
+                </div>
+            </div>
+        </div>
+        <noscript><p class="subtitle">The sky needs JavaScript. The plain list is in <a href="list.txt">list.txt</a>.</p></noscript>
+    </main>
+
+    <script>
+    // The page reads list.txt and lays it out as constellations: one per theme, one star per
+    // thing. The layout is worked out in the browser, so nothing is placed by hand.
+    (() => {
+        const STATUS = { want: 'Want to', exploring: 'Exploring', done: 'Done' };
+        const KEYS = ['kind', 'status', 'by', 'link', 'note'];
+        const CORE = { want: 2.6, exploring: 3.6, done: 3.4 };
+        const HALO = { want: 10, exploring: 17, done: 13 };
+        const GLOW = { want: 0.35, exploring: 0.75, done: 0.6 };
+        const SVGNS = 'http://www.w3.org/2000/svg';
+
+        const sky = document.getElementById('sky');
+        const map = document.getElementById('map');
+        const msg = document.getElementById('sky-msg');
+        const card = document.getElementById('card');
+        let groups = [];
+        let items = [];
+        let width = 0;
+        let selected = null;
+
+        function parse(text) {
+            const found = [];
+            let group = null;
+            let item = null;
+            for (const raw of text.split(/\r?\n/)) {
+                const line = raw.trim();
+                if (!line) { item = null; continue; }
+                if (line.startsWith('#')) continue;
+                const head = line.match(/^\[(.+)\]$/);
+                if (head) {
+                    group = { name: head[1].trim(), items: [] };
+                    found.push(group);
+                    item = null;
+                    continue;
+                }
+                const pair = item && line.match(/^([a-z]+):\s*(.*)$/i);
+                if (pair && KEYS.includes(pair[1].toLowerCase())) {
+                    item[pair[1].toLowerCase()] = pair[2].trim();
+                    continue;
+                }
+                if (item) {
+                    // A line that isn't "key: value" carries on the note above it.
+                    item.note = item.note ? `${item.note} ${line}` : line;
+                    continue;
+                }
+                if (!group) {
+                    group = { name: 'Other', items: [] };
+                    found.push(group);
+                }
+                item = { name: line, group };
+                group.items.push(item);
+            }
+            for (const g of found) {
+                for (const it of g.items) {
+                    it.status = (it.status || 'want').toLowerCase();
+                    if (!STATUS[it.status]) {
+                        console.warn(`list.txt: "${it.name}" has status "${it.status}", shown as want`);
+                        it.status = 'want';
+                    }
+                }
+            }
+            return found.filter(g => g.items.length);
+        }
+
+        function hash(s) {
+            let h = 2166136261;
+            for (const c of s) h = Math.imul(h ^ c.codePointAt(0), 16777619);
+            return h >>> 0;
+        }
+
+        function random(seed) {
+            return () => {
+                seed = (seed + 0x6d2b79f5) | 0;
+                let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        const measure = document.createElement('canvas').getContext('2d');
+        function textWidth(text, font, spacing = 0) {
+            measure.font = font;
+            return measure.measureText(text).width + spacing * text.length;
+        }
+
+        // Long names go on two lines, split where the two halves are closest in width.
+        function wrap(name, font, max) {
+            if (textWidth(name, font) <= max) return [name];
+            const words = name.split(' ');
+            let best = [name];
+            let bestWidth = Infinity;
+            for (let i = 1; i < words.length; i++) {
+                const a = words.slice(0, i).join(' ');
+                const b = words.slice(i).join(' ');
+                const w = Math.max(textWidth(a, font), textWidth(b, font));
+                if (w < bestWidth) { bestWidth = w; best = [a, b]; }
+            }
+            return best;
+        }
+
+        // Every star (with its label under it) and every constellation name is a box.
+        function box(n) {
+            return { x: n.x, y: n.y + n.dy, w: n.w, h: n.h };
+        }
+
+        // A small force layout: things in one constellation pull together, everything
+        // pushes everything else away, and boxes never overlap or leave the sky. Starting
+        // points come from the names, so the same list always draws the same sky.
+        function layout(W, H) {
+            const nodes = [];
+            groups.forEach((g, gi) => {
+                const angle = (gi / groups.length) * 2 * Math.PI + 0.5;
+                const spread = groups.length > 1 ? 0.3 : 0;
+                const ax = W / 2 + Math.cos(angle) * W * spread;
+                const ay = H / 2 + Math.sin(angle) * H * spread;
+                for (const n of [g.title, ...g.items]) {
+                    const r = random(hash(`${g.name}|${n.name || ''}`));
+                    n.x = ax + (r() - 0.5) * 60;
+                    n.y = ay + (r() - 0.5) * 60;
+                    n.g = gi;
+                    nodes.push(n);
+                }
+            });
+
+            const k = Math.sqrt((W * H) / nodes.length) * 0.5;
+            const steps = 400;
+            const margin = 10;
+            for (let t = 0; t < steps; t++) {
+                const limit = k * 0.5 * (1 - t / steps) + 0.5;
+                for (const n of nodes) { n.fx = 0; n.fy = 0; }
+
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const a = nodes[i];
+                        const b = nodes[j];
+                        const dx = a.x - b.x;
+                        const dy = a.y - b.y;
+                        const d = Math.hypot(dx, dy) || 0.1;
+                        // Names only keep clear of things through the overlap check below.
+                        if (a.isTitle || b.isTitle) continue;
+                        const f = ((a.g === b.g ? 1 : 1.5) * k * k) / d;
+                        a.fx += (dx / d) * f; a.fy += (dy / d) * f;
+                        b.fx -= (dx / d) * f; b.fy -= (dy / d) * f;
+                    }
+                }
+
+                for (const g of groups) {
+                    const cx = g.items.reduce((s, n) => s + n.x, 0) / g.items.length;
+                    const cy = g.items.reduce((s, n) => s + n.y, 0) / g.items.length;
+                    for (const n of g.items) {
+                        const dx = cx - n.x;
+                        const dy = cy - n.y;
+                        const d = Math.hypot(dx, dy) || 0.1;
+                        const f = (d * d) / k;
+                        n.fx += (dx / d) * f; n.fy += (dy / d) * f;
+                    }
+                    // The name sits just above its constellation, or below it near the top edge.
+                    const top = Math.min(...g.items.map(n => n.y - 10));
+                    const bottom = Math.max(...g.items.map(n => n.y + n.h - 10));
+                    const above = top - g.title.h / 2 - 8;
+                    const ty = above - g.title.h / 2 < margin ? bottom + g.title.h / 2 + 8 : above;
+                    g.title.fx += (cx - g.title.x) * 2;
+                    g.title.fy += (ty - g.title.y) * 2;
+                }
+
+                // A gentle pull to the middle, weaker along the long side so the sky fills.
+                for (const n of nodes) {
+                    if (!n.isTitle) {
+                        n.fx += (W / 2 - n.x) * 1.5 * Math.min(1, H / W);
+                        n.fy += (H / 2 - n.y) * 1.5 * Math.min(1, W / H);
+                    }
+                    const f = Math.hypot(n.fx, n.fy) || 1;
+                    const s = Math.min(f, limit) / f;
+                    n.x += n.fx * s;
+                    n.y += n.fy * s;
+                }
+
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const a = box(nodes[i]);
+                        const b = box(nodes[j]);
+                        const ox = (a.w + b.w) / 2 + 6 - Math.abs(a.x - b.x);
+                        const oy = (a.h + b.h) / 2 + 6 - Math.abs(a.y - b.y);
+                        if (ox <= 0 || oy <= 0) continue;
+                        if (ox < oy) {
+                            const s = ((a.x < b.x ? -1 : 1) * ox) / 2;
+                            nodes[i].x += s; nodes[j].x -= s;
+                        } else {
+                            const s = ((a.y < b.y ? -1 : 1) * oy) / 2;
+                            nodes[i].y += s; nodes[j].y -= s;
+                        }
+                    }
+                }
+
+                for (const n of nodes) {
+                    n.x = Math.min(Math.max(n.x, margin + n.w / 2), W - margin - n.w / 2);
+                    const top = margin + n.h / 2 - n.dy;
+                    const bottom = H - margin - n.h / 2 - n.dy;
+                    n.y = Math.min(Math.max(n.y, top), bottom);
+                }
+            }
+        }
+
+        // Lines join each constellation's stars by the shortest links (a spanning tree).
+        function links(stars) {
+            const joined = [stars[0]];
+            const left = stars.slice(1);
+            const edges = [];
+            while (left.length) {
+                let best = null;
+                for (const a of joined) {
+                    for (const b of left) {
+                        const d = (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+                        if (!best || d < best.d) best = { a, b, d };
+                    }
+                }
+                edges.push(best);
+                joined.push(best.b);
+                left.splice(left.indexOf(best.b), 1);
+            }
+            return edges;
+        }
+
+        function svg(tag, attrs, parent) {
+            const node = document.createElementNS(SVGNS, tag);
+            for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+            if (parent) parent.appendChild(node);
+            return node;
+        }
+
+        function render() {
+            closeCard();
+            width = sky.clientWidth;
+            const W = width;
+            const phone = W < 560;
+            const H = (phone ? 540 : 520) + Math.max(0, items.length - 14) * 26;
+            const fs = phone ? 11.5 : 12.5;
+            const titleFs = phone ? 9.5 : 10;
+            const font = `500 ${fs}px Inter, sans-serif`;
+            const titleFont = `600 ${titleFs}px Inter, sans-serif`;
+            const lineHeight = fs * 1.25;
+
+            sky.style.height = `${H}px`;
+            map.setAttribute('viewBox', `0 0 ${W} ${H}`);
+            map.style.setProperty('--fs', `${fs}px`);
+            map.style.setProperty('--title-fs', `${titleFs}px`);
+            map.replaceChildren();
+
+            for (const it of items) {
+                it.lines = wrap(it.name, font, phone ? 118 : 160);
+                const labelWidth = Math.max(...it.lines.map(l => textWidth(l, font)));
+                const labelHeight = it.lines.length * lineHeight;
+                it.labelWidth = labelWidth;
+                it.w = Math.max(labelWidth, 24) + 12;
+                it.h = 27 + labelHeight;
+                it.dy = it.h / 2 - 10;
+            }
+            for (const g of groups) {
+                const text = g.name.toUpperCase();
+                g.title = { text, w: textWidth(text, titleFont, titleFs * 0.14) + 10, h: 18, dy: 0, isTitle: true };
+            }
+
+            layout(W, H);
+
+            const defs = svg('defs', {}, map);
+            for (const status of Object.keys(STATUS)) {
+                const grad = svg('radialGradient', { id: `glow-${status}`, class: `glow s-${status}` }, defs);
+                svg('stop', { offset: '0', 'stop-opacity': GLOW[status] }, grad);
+                svg('stop', { offset: '1', 'stop-opacity': 0 }, grad);
+            }
+
+            const dust = svg('g', { 'aria-hidden': 'true' }, map);
+            const r = random(7);
+            for (let i = Math.round((W * H) / 5000); i > 0; i--) {
+                svg('circle', {
+                    class: 'bg-star',
+                    cx: (r() * W).toFixed(1),
+                    cy: (r() * H).toFixed(1),
+                    r: (0.4 + r() * 0.7).toFixed(2),
+                    opacity: (0.12 + r() * 0.35).toFixed(2),
+                }, dust);
+            }
+
+            const gaps = svg('mask', { id: 'label-gaps', maskUnits: 'userSpaceOnUse' }, defs);
+            svg('rect', { width: W, height: H, fill: '#fff' }, gaps);
+            for (const it of items) {
+                svg('rect', {
+                    x: it.x - it.labelWidth / 2 - 4,
+                    y: it.y + 15 + fs - fs * 0.85 - 2,
+                    width: it.labelWidth + 8,
+                    height: it.lines.length * lineHeight + 4,
+                    rx: 4,
+                }, gaps);
+            }
+            for (const g of groups) {
+                svg('rect', { x: g.title.x - g.title.w / 2, y: g.title.y - 8, width: g.title.w, height: 16 }, gaps);
+            }
+
+            const lineLayer = svg('g', { class: 'lines', 'aria-hidden': 'true', mask: 'url(#label-gaps)' }, map);
+            const titleLayer = svg('g', { 'aria-hidden': 'true' }, map);
+            const starLayer = svg('g', {}, map);
+
+            for (const g of groups) {
+                g.lineGroup = svg('g', {}, lineLayer);
+                for (const { a, b } of links(g.items)) {
+                    svg('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y }, g.lineGroup);
+                }
+                g.titleNode = svg('text', { class: 'title', x: g.title.x, y: g.title.y }, titleLayer);
+                g.titleNode.textContent = g.title.text;
+            }
+
+            for (const it of items) {
+                const twinkle = random(hash(it.name));
+                const star = svg('g', {
+                    class: `star s-${it.status}`,
+                    transform: `translate(${it.x.toFixed(1)},${it.y.toFixed(1)})`,
+                    tabindex: '0',
+                    role: 'button',
+                    'aria-label': `${it.name}, ${STATUS[it.status]}`,
+                }, starLayer);
+                const body = svg('g', { class: 'body' }, star);
+                svg('circle', {
+                    class: 'halo',
+                    r: HALO[it.status],
+                    fill: `url(#glow-${it.status})`,
+                    style: `--tw:${(3 + twinkle() * 3).toFixed(2)}s;--td:${(-twinkle() * 5).toFixed(2)}s`,
+                }, body);
+                svg('circle', { class: 'core', r: CORE[it.status] }, body);
+                svg('circle', { class: 'hit', r: 20 }, star);
+                const label = svg('text', { class: 'label', y: (15 + fs).toFixed(1) }, star);
+                it.lines.forEach((line, i) => {
+                    svg('tspan', { x: 0, dy: i ? lineHeight : 0 }, label).textContent = line;
+                });
+
+                star.addEventListener('click', () => openCard(it, star));
+                star.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(it, star); }
+                });
+                star.addEventListener('mouseenter', () => light(it.group, true));
+                star.addEventListener('mouseleave', () => light(it.group, false));
+                it.node = star;
+            }
+        }
+
+        function light(group, on) {
+            const keep = selected && selected.group === group;
+            group.lineGroup.classList.toggle('lit', on || keep);
+            group.titleNode.classList.toggle('lit', on || keep);
+        }
+
+        function openCard(it, star) {
+            if (selected) { selected.node.classList.remove('on'); light(selected.group, false); }
+            selected = it;
+            star.classList.add('on');
+            light(it.group, true);
+
+            const set = (id, text) => {
+                const node = document.getElementById(id);
+                node.textContent = text || '';
+                node.hidden = !text;
+                return node;
+            };
+            set('card-kind', it.kind);
+            const status = document.getElementById('card-status');
+            status.className = `chip status s-${it.status}`;
+            status.lastElementChild.textContent = STATUS[it.status];
+            set('card-name', it.name);
+            set('card-by', it.by);
+            set('card-note', it.note);
+            set('card-group', it.group.name);
+
+            const link = document.getElementById('card-link');
+            const href = it.link || '';
+            const inside = href.startsWith('/') && !href.startsWith('//');
+            if (inside || /^https?:\/\//i.test(href)) {
+                link.href = href;
+                link.textContent = inside ? 'Read it here →' : 'Open ↗';
+                if (inside) { link.removeAttribute('target'); link.removeAttribute('rel'); }
+                else { link.target = '_blank'; link.rel = 'noopener'; }
+                link.hidden = false;
+            } else {
+                link.hidden = true;
+            }
+
+            // Keep the card clear of the star: on the other side, or the other half on phones.
+            const W = sky.clientWidth;
+            const H = sky.clientHeight;
+            const style = card.style;
+            style.left = style.right = style.top = style.bottom = style.width = '';
+            if (W < 560) {
+                style.left = style.right = '12px';
+                style.width = 'auto';
+            } else if (it.x > W / 2) {
+                style.left = '12px';
+            } else {
+                style.right = '12px';
+            }
+            if (it.y > H / 2) style.top = '12px';
+            else style.bottom = '12px';
+            card.hidden = false;
+        }
+
+        function closeCard() {
+            card.hidden = true;
+            if (!selected) return;
+            const was = selected;
+            selected = null;
+            was.node.classList.remove('on');
+            light(was.group, false);
+        }
+
+        document.getElementById('card-close').addEventListener('click', closeCard);
+        map.addEventListener('click', e => { if (!e.target.closest('.star')) closeCard(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+
+        let timer;
+        window.addEventListener('resize', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { if (items.length && sky.clientWidth !== width) render(); }, 150);
+        });
+
+        // Labels are measured in Inter, so wait for it (but not for long).
+        const fontsReady = document.fonts
+            ? Promise.race([
+                Promise.all([document.fonts.load('500 12px Inter'), document.fonts.load('600 10px Inter')]),
+                new Promise(done => setTimeout(done, 1500)),
+            ])
+            : Promise.resolve();
+
+        Promise.all([
+            fetch('list.txt', { cache: 'no-cache' }).then(res => {
+                if (!res.ok) throw new Error(`list.txt: ${res.status}`);
+                return res.text();
+            }),
+            fontsReady,
+        ]).then(([text]) => {
+            groups = parse(text);
+            items = groups.flatMap(g => g.items);
+            for (const status of Object.keys(STATUS)) {
+                document.getElementById(`count-${status}`).textContent =
+                    items.filter(it => it.status === status).length;
+            }
+            if (!items.length) { msg.textContent = 'Nothing on the list yet.'; return; }
+            msg.hidden = true;
+            render();
+        }).catch(err => {
+            console.error(err);
+            msg.textContent = "Couldn't load the list. Try again in a bit.";
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+# Things I want to read, learn and try. The Explore page draws this list as a night sky.
+#
+# [Name] starts a constellation: one theme, joined by lines.
+# Each thing under it is a star. Write its name on one line, then any of these:
+#   kind:    book, guide, project, practice ... anything short
+#   status:  want, exploring or done (want if left out)
+#   by:      who made it
+#   link:    a web address, or /enchiridion for a page on this site
+#   note:    a line about it
+# Put a blank line between stars. Lines starting with # are ignored.
+
+[Thinking machines]
+
+LLMs from Scratch
+kind: book
+by: Sebastian Raschka
+link: https://github.com/rasbt/LLMs-from-scratch
+note: Build a Large Language Model (From Scratch). Write a GPT-style model in PyTorch, one chapter at a time. Parked for now.
+
+The Complete Robot
+kind: book
+status: exploring
+by: Isaac Asimov
+link: https://en.wikipedia.org/wiki/The_Complete_Robot
+note: 31 robot short stories written from 1940 to 1976, where the Three Laws of Robotics come from. Reading it, one story at a time.
+
+[How the web works]
+
+CGI in C
+kind: project
+link: https://www.rfc-editor.org/rfc/rfc3875
+note: Write a small web server and CGI programs in C, to see what really happens on each request. Started, now parked.
+
+Beej's Guide to Networking
+kind: guide
+by: Brian "Beej" Hall
+link: https://beej.us/guide/bgnet/
+note: Beej's Guide to Network Programming. Sockets in C, the classic free guide.
+
+[Puzzles]
+
+LeetCode
+kind: practice
+status: exploring
+link: https://leetcode.com/
+note: Coding problems to keep the basics sharp. Trying to do them regularly.
+
+Advent of Code
+kind: practice
+by: Eric Wastl
+link: https://adventofcode.com/
+note: A programming puzzle a day every December. Did it before; back to it some December.
+
+[The mind]
+
+The Enchiridion
+kind: book
+status: exploring
+by: Epictetus
+link: /enchiridion
+note: A short Stoic handbook. Reading it here on the site.
+
+Thinking, Fast and Slow
+kind: book
+by: Daniel Kahneman
+link: https://en.wikipedia.org/wiki/Thinking,_Fast_and_Slow
+note: Two ways we think: fast and by instinct, or slow and with effort. Read part of it, now parked.
+
+[Just for fun]
+
+Chess
+kind: game
+status: exploring
+link: https://www.duolingo.com/
+note: On Duolingo, just for fun. No targets.
+
+A new language
+kind: language
+link: https://www.duolingo.com/
+note: On Duolingo. Parked for now.
