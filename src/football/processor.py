@@ -14,10 +14,12 @@ def normalize_match(match_data, competition_code=None, competition_name=None):
         away_team_data = match_data.get("awayTeam", {})
 
         home_team = {
+            "id": home_team_data.get("id"),
             "name": home_team_data.get("name", "N/A"),
             "crest": home_team_data.get("crest", ""),
         }
         away_team = {
+            "id": away_team_data.get("id"),
             "name": away_team_data.get("name", "N/A"),
             "crest": away_team_data.get("crest", ""),
         }

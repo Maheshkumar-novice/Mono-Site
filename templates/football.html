@@ -116,6 +116,25 @@
     color: var(--text-muted);
 }
 
+/* Favourite clubs */
+.match-card.fav {
+    background: var(--accent-glow);
+    box-shadow: inset 3px 0 0 var(--accent);
+    margin: 0 -0.6rem;
+    padding: 0.6rem;
+}
+
+.fav-team { font-weight: 600; }
+
+tr.fav td {
+    background: var(--accent-glow);
+    color: var(--text-primary);
+}
+
+tr.fav td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+tr.fav .team-col { font-weight: 600; }
+
 
 /* Scorers */
 .scorers-table, .standings-table {
@@ -185,14 +204,16 @@
     <h3 class="section-heading">Recent Matches</h3>
     {% if matches.get(code) %}
         {% for match in matches[code] %}
-        <div class="match-card">
+        {% set home_fav = match.home_team.id in favourite_teams %}
+        {% set away_fav = match.away_team.id in favourite_teams %}
+        <div class="match-card{% if home_fav or away_fav %} fav{% endif %}">
             <div class="match-date">{{ match.display_date }}</div>
             <div class="match-body">
                 <div class="match-team home">
                     {% if match.home_team.crest %}
                     <img src="{{ match.home_team.crest }}" alt="" class="team-crest">
                     {% endif %}
-                    <span>{{ match.home_team.name }}</span>
+                    <span{% if home_fav %} class="fav-team"{% endif %}>{{ match.home_team.name }}</span>
                 </div>
                 {% if match.status == 'FINISHED' %}
                 <div class="match-center">
@@ -206,7 +227,7 @@
                 <div class="match-center status">{{ match.status }}</div>
                 {% endif %}
                 <div class="match-team away">
-                    <span>{{ match.away_team.name }}</span>
+                    <span{% if away_fav %} class="fav-team"{% endif %}>{{ match.away_team.name }}</span>
                     {% if match.away_team.crest %}
                     <img src="{{ match.away_team.crest }}" alt="" class="team-crest">
                     {% endif %}
@@ -229,10 +250,10 @@
         </thead>
         <tbody>
             {% for scorer in scorers[code] %}
-            <tr>
+            <tr{% if scorer.team and scorer.team.id in favourite_teams %} class="fav"{% endif %}>
                 <td>{{ loop.index }}</td>
                 <td>{{ scorer.player.name if scorer.player else 'N/A' }}</td>
-                <td>{{ scorer.team.name if scorer.team else 'N/A' }}</td>
+                <td class="team-col">{{ scorer.team.name if scorer.team else 'N/A' }}</td>
                 <td>{{ scorer.goals }}</td>
                 <td>{{ scorer.assists if scorer.assists is defined and scorer.assists is not none else '-' }}</td>
             </tr>
@@ -254,7 +275,7 @@
         </thead>
         <tbody>
             {% for row in standings[code] %}
-            <tr>
+            <tr{% if row.team and row.team.id in favourite_teams %} class="fav"{% endif %}>
                 <td>{{ row.position }}</td>
                 <td class="team-col">{{ row.team.name if row.team else 'N/A' }}</td>
                 <td>{{ row.playedGames }}</td>

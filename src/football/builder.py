@@ -28,6 +28,13 @@ COMPETITION_NAMES = {
     "CL": "Champions League",
 }
 
+# Clubs highlighted on the page, by football-data.org team ID.
+# Names aren't safe to match: "Barcelona" is also in "RCD Espanyol de Barcelona".
+FAVOURITE_TEAMS = {
+    57: "Arsenal FC",
+    81: "FC Barcelona",
+}
+
 
 def build():
     load_dotenv(PROJECT_DIR / ".env")
@@ -55,6 +62,7 @@ def build():
         matches=matches,
         scorers=scorers,
         standings=standings,
+        favourite_teams=FAVOURITE_TEAMS,
         active="football",
         build_time=datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M IST"),
     )
