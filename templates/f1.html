@@ -104,6 +104,47 @@
     font-size: 0.875rem;
 }
 
+/* Followed driver and his team */
+.following {
+    margin-bottom: 1.5rem;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.follow-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.result-row.fav {
+    margin: 0 -0.6rem;
+    padding: 0.25rem 0.6rem;
+}
+
+.result-row.fav, tr.fav td {
+    background: var(--accent-glow);
+    color: var(--text-primary);
+}
+
+.result-row.fav, tr.fav td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+.fav-name { font-weight: 600; }
+
 @media (max-width: 640px) {
     .f1-grid { grid-template-columns: 1fr; }
 }
@@ -111,6 +152,29 @@
 
 {% block content %}
 <h1 class="page-title">Formula 1</h1>
+
+{% set team_id = following.team_id if following else none %}
+{% if following %}
+<!-- The followed driver at a glance -->
+<div class="f1-card following">
+    <h3>Following</h3>
+    <div class="race-name">{{ following.name }}</div>
+    <div class="race-detail">{{ following.team_name }}</div>
+    <div class="follow-stats">
+        <div><span class="stat">P{{ following.position }}</span><span class="stat-label">Championship</span></div>
+        <div><span class="stat">{{ following.points }}</span><span class="stat-label">Points</span></div>
+        {% if following.position != '1' %}
+        <div><span class="stat">{{ following.behind }}</span><span class="stat-label">Behind the leader</span></div>
+        {% endif %}
+        {% if following.last_finish %}
+        <div><span class="stat">{{ following.last_finish }}</span><span class="stat-label">Last race: {{ following.last_race }}</span></div>
+        {% endif %}
+        {% if following.team_position %}
+        <div><span class="stat">P{{ following.team_position }}</span><span class="stat-label">{{ following.team_name }}, {{ following.team_points }} pts</span></div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 <!-- Next Race & Last Race cards -->
 <div class="f1-grid">
@@ -132,9 +196,9 @@
         <div class="race-name">{{ last_race.raceName }}</div>
         <div class="race-detail" style="margin-bottom:0.5rem">{{ last_race.Circuit.circuitName if last_race.Circuit else '' }}</div>
         {% for result in last_race.Results[:10] %}
-        <div class="result-row">
+        <div class="result-row{% if team_id and result.Constructor and result.Constructor.constructorId == team_id %} fav{% endif %}">
             <span class="result-pos {% if result.position == '1' %}pos-1{% elif result.position == '2' %}pos-2{% elif result.position == '3' %}pos-3{% endif %}">{{ result.position }}</span>
-            <span class="result-driver">{{ result.Driver.givenName + ' ' + result.Driver.familyName if result.Driver else 'N/A' }}</span>
+            <span class="result-driver{% if result.Driver and result.Driver.driverId == followed_driver %} fav-name{% endif %}">{{ result.Driver.givenName + ' ' + result.Driver.familyName if result.Driver else 'N/A' }}</span>
             <span class="result-time">{{ result.Constructor.name if result.Constructor else '' }}</span>
         </div>
         {% endfor %}
@@ -153,9 +217,9 @@
     </thead>
     <tbody>
         {% for d in driver_standings %}
-        <tr>
+        <tr{% if following and d.Driver and d.Driver.driverId in following.team_drivers %} class="fav"{% endif %}>
             <td class="{% if d.position == '1' %}pos-1{% elif d.position == '2' %}pos-2{% elif d.position == '3' %}pos-3{% endif %}">{{ d.position }}</td>
-            <td>{{ d.Driver.givenName + ' ' + d.Driver.familyName if d.Driver else 'N/A' }}</td>
+            <td{% if d.Driver and d.Driver.driverId == followed_driver %} class="fav-name"{% endif %}>{{ d.Driver.givenName + ' ' + d.Driver.familyName if d.Driver else 'N/A' }}</td>
             <td>{{ d.Constructors[0].name if d.Constructors else 'N/A' }}</td>
             <td>{{ d.points }}</td>
         </tr>
@@ -175,9 +239,10 @@
     </thead>
     <tbody>
         {% for c in constructor_standings %}
-        <tr>
+        {% set ours = team_id and c.Constructor and c.Constructor.constructorId == team_id %}
+        <tr{% if ours %} class="fav"{% endif %}>
             <td class="{% if c.position == '1' %}pos-1{% elif c.position == '2' %}pos-2{% elif c.position == '3' %}pos-3{% endif %}">{{ c.position }}</td>
-            <td>{{ c.Constructor.name if c.Constructor else 'N/A' }}</td>
+            <td{% if ours %} class="fav-name"{% endif %}>{{ c.Constructor.name if c.Constructor else 'N/A' }}</td>
             <td>{{ c.wins }}</td>
             <td>{{ c.points }}</td>
         </tr>

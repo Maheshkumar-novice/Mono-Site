@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 CACHE_TTL_STANDINGS = 3600  # 1 hour
 CACHE_TTL_SCHEDULE = 3600  # 1 hour
-CACHE_TTL_RESULTS = 86400  # 24 hours
+CACHE_TTL_RESULTS = 3600  # 1 hour, so a new race result shows on the next build
 
 
 def _get_cached(key, ttl):
