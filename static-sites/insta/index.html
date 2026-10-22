@@ -171,6 +171,7 @@
         /* ---------- one chat ---------- */
 
         .chat-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+        #back { white-space: nowrap; flex-shrink: 0; }
         .chat-title { min-width: 0; }
         .chat-title #chat-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -342,6 +343,95 @@
         .msg-row.flash .bubble { outline: 2px solid var(--accent); outline-offset: 2px; }
         .viewer-info .goto { margin-top: 0.6rem; }
 
+        /* ---------- search ---------- */
+
+        .search-form { display: flex; gap: 0.5rem; }
+        .search-form input { flex: 1; min-width: 0; }
+        .search-status { margin-top: 0.6rem; }
+
+        .results { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+
+        .result {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.15rem;
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .result .top { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.75rem; color: var(--text-muted); }
+        .result .top .where { color: var(--text-secondary); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .result .top .when { white-space: nowrap; }
+        .result .snippet { font-size: 0.9rem; overflow-wrap: anywhere; }
+        .result .who { color: var(--text-muted); }
+        .result mark { background: rgba(16, 185, 129, 0.3); color: var(--text-primary); border-radius: 3px; padding: 0 2px; }
+
+        /* ---------- stats ---------- */
+
+        .stats { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.6rem; }
+        .stat-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+
+        .stat {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.65rem 0.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.1rem;
+            text-align: left;
+            min-width: 0;
+        }
+
+        button.stat { font-size: inherit; justify-content: flex-start; }
+        button.stat:hover { border-color: var(--accent); }
+        .stat .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+        .stat .value { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); }
+        .stat .note { font-size: 0.78rem; color: var(--text-secondary); }
+        button.stat .note::after { content: ' →'; color: var(--accent); }
+
+        .box { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--border-radius); padding: 0.85rem 0.9rem; min-width: 0; }
+        .box h3 { font-size: 0.8rem; font-weight: 600; margin: 0 0 0.6rem; color: var(--text-secondary); }
+
+        .sender-row { display: grid; grid-template-columns: minmax(0, 7rem) 1fr auto; gap: 0.6rem; align-items: center; font-size: 0.85rem; padding: 0.15rem 0; }
+        .sender-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sender-row .count { color: var(--text-secondary); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+        .bar-track { height: 10px; background: var(--bg-raised); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+
+        .first-msg { display: flex; flex-direction: column; gap: 0.3rem; }
+        .first-msg .quote { border-left: 3px solid var(--accent); padding-left: 0.6rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .first-msg .meta { font-size: 0.78rem; color: var(--text-muted); }
+        .first-msg button { align-self: flex-start; }
+
+        .chart { width: 100%; }
+        .chart svg { display: block; overflow: visible; }
+        .chart .bar { fill: var(--accent); }
+        .chart .bar.hot { fill: var(--accent-hover); }
+        .chart .axis { stroke: var(--border-strong); stroke-width: 1; }
+        .chart .grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; }
+        .chart text { fill: var(--text-muted); font-size: 10px; font-family: var(--font-family); }
+        .chart .hit { fill: transparent; cursor: pointer; }
+        .chart-note { margin-top: 0.4rem; }
+
+        .tip {
+            position: fixed;
+            z-index: 30;
+            pointer-events: none;
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.3rem 0.55rem;
+            font-size: 0.78rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
         /* ---------- full-screen viewer ---------- */
 
         .viewer {
@@ -427,6 +517,7 @@
 
         <div class="tabs" id="tabs" role="tablist" hidden>
             <button type="button" role="tab" data-tab="chats">Chats</button>
+            <button type="button" role="tab" data-tab="search">Search</button>
             <button type="button" role="tab" data-tab="media">Media</button>
             <button type="button" class="close-export" id="close-export">Close</button>
         </div>
@@ -450,6 +541,8 @@
             <div class="chat-tabs">
                 <button type="button" data-view="messages">Messages</button>
                 <button type="button" data-view="media" id="chat-media-btn">Media</button>
+                <button type="button" data-view="search">Search</button>
+                <button type="button" data-view="stats">Stats</button>
             </div>
             <div class="sticky">
                 <div class="datebar">
@@ -463,6 +556,26 @@
             <div class="messages" id="messages"></div>
             <button type="button" class="load" id="load-later">Later messages</button>
             <div class="media-grid" id="chat-media" hidden></div>
+            <div id="chat-search" hidden>
+                <form class="search-form" id="chat-search-form">
+                    <input type="search" id="chat-search-q" placeholder="Search this chat" aria-label="Search this chat" enterkeyhint="search">
+                    <button type="submit" class="btn-primary">Search</button>
+                </form>
+                <p class="hint search-status" id="chat-search-status"></p>
+                <ul class="results" id="chat-search-results"></ul>
+                <button type="button" class="load" id="chat-search-more" hidden>Show more</button>
+            </div>
+            <div class="stats" id="chat-stats" hidden></div>
+        </section>
+
+        <section id="search" hidden>
+            <form class="search-form" id="search-form">
+                <input type="search" id="search-q" placeholder="Search all messages" aria-label="Search all messages" enterkeyhint="search">
+                <button type="submit" class="btn-primary">Search</button>
+            </form>
+            <p class="hint search-status" id="search-status"></p>
+            <ul class="results" id="search-results"></ul>
+            <button type="button" class="load" id="search-more" hidden>Show more</button>
         </section>
 
         <section id="media" hidden>
@@ -485,6 +598,8 @@
         </div>
         <button type="button" class="close" id="viewer-close" aria-label="Close">✕</button>
     </div>
+
+    <div class="tip" id="tip" hidden></div>
 
     <input type="file" id="zips" accept=".zip,application/zip" multiple>
 
@@ -631,8 +746,8 @@
         }
 
         function show(section) {
-            for (const id of ['start', 'chats', 'chat', 'media']) $(id).hidden = id !== section;
-            $('tabs').hidden = section !== 'chats' && section !== 'media';
+            for (const id of ['start', 'chats', 'chat', 'search', 'media']) $(id).hidden = id !== section;
+            $('tabs').hidden = !['chats', 'search', 'media'].includes(section);
             document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === section));
         }
 
@@ -720,7 +835,9 @@
             setTab(chats.length ? 'chats' : 'media');
         }
 
+        let lastTab = 'chats';   // the tab to come back to after a chat
         function setTab(tab) {
+            lastTab = tab;
             show(tab);
             if (tab === 'media' && !mediaRendered) { renderMedia(); mediaRendered = true; }
         }
@@ -728,6 +845,13 @@
 
         function closeExport() {
             closeChat();
+            exportGen++;
+            searchIndex = null;
+            $('search-q').value = '';
+            $('search-status').textContent = '';
+            $('search-results').textContent = '';
+            $('search-more').hidden = true;
+            lastTab = 'chats';
             entries = new Map();
             byName = null;
             chats = [];
@@ -799,22 +923,28 @@
         const sizeOf = i => current.days[i].end - current.days[i].start;
         const BATCH = 40;  // roughly how many messages to add at a time
 
+        // All of a chat's messages, oldest first.
+        async function loadMessages(c) {
+            const all = [];
+            for (const f of c.files) {
+                const j = await readJson(f.e);
+                for (const m of j.messages || []) all.push(m);
+            }
+            return all.sort((a, b) => (a.timestamp_ms || 0) - (b.timestamp_ms || 0));
+        }
+
         async function openChat(c, push = true) {
             const summary = $('chat-summary').textContent;
             if (!c.messages) {
                 $('chat-summary').textContent = 'Opening chat…';
-                const all = [];
+                let all;
                 try {
-                    for (const f of c.files) {
-                        const j = await readJson(f.e);
-                        for (const m of j.messages || []) all.push(m);
-                    }
+                    all = await loadMessages(c);
                 } catch (err) {
                     $('chat-summary').textContent = `Couldn't open "${c.title}".`;
                     return;
                 }
                 $('chat-summary').textContent = summary;
-                all.sort((a, b) => (a.timestamp_ms || 0) - (b.timestamp_ms || 0));
                 c.messages = all;
                 c.days = [];
                 c.dayIndex = new Map();
@@ -840,6 +970,11 @@
             $('date-btn').setAttribute('aria-expanded', 'false');
             show('chat');
             c.mediaRendered = false;
+            c.statsRendered = false;
+            $('chat-search-q').value = '';
+            $('chat-search-status').textContent = '';
+            $('chat-search-results').textContent = '';
+            $('chat-search-more').hidden = true;
             $('chat-media-btn').textContent = `Media ${c.media.length.toLocaleString()}`;
             $('chat-media-btn').disabled = !c.media.length;
             setChatView('messages');
@@ -855,6 +990,9 @@
             $('calendar').hidden = true;
             chatThumbs.clear();
             $('chat-media').textContent = '';
+            $('chat-stats').textContent = '';
+            $('chat-search-results').textContent = '';
+            hideTip();
             if (current) { current.messages = null; current.days = null; current.dayIndex = null; current.media = null; }
             current = null;
         }
@@ -1158,6 +1296,337 @@
         $('load-earlier').addEventListener('click', loadEarlier);
         $('load-later').addEventListener('click', loadLater);
 
+        // ---------- search ----------
+
+        let searchIndex = null;   // per chat, the messages with text; built on the first search
+        let exportGen = 0;        // bumps when an export is closed, so a slow search stops
+        const PAGE = 100;
+
+        const textOf = m => [m.content, m.share && m.share.share_text].filter(Boolean).join('\n');
+
+        // Open the chat if needed, then show one message highlighted.
+        function showMessage(i) {
+            setChatView('messages');
+            jumpToDay(current.dayIndex.get(dayKey(current.messages[i].timestamp_ms || 0)));
+            const row = $('messages').querySelector(`[data-i="${i}"]`);
+            if (!row) return;
+            row.scrollIntoView({ block: 'center' });
+            row.classList.add('flash');
+            setTimeout(() => row.classList.remove('flash'), 2500);
+        }
+
+        async function goToMessage(c, i, ts) {
+            if (current !== c) await openChat(c);
+            if (current !== c) return;
+            if (!c.messages[i] || (c.messages[i].timestamp_ms || 0) !== ts) i = c.messages.findIndex(m => (m.timestamp_ms || 0) === ts);
+            if (i >= 0) showMessage(i);
+        }
+
+        async function buildSearchIndex(status) {
+            if (searchIndex) return searchIndex;
+            const gen = exportGen;
+            const index = [];
+            for (let k = 0; k < chats.length; k++) {
+                const c = chats[k];
+                let msgs;
+                try { msgs = c.messages || await loadMessages(c); } catch (err) { continue; }
+                if (gen !== exportGen) return null;
+                const items = [];
+                msgs.forEach((m, i) => {
+                    const text = textOf(m);
+                    if (text) items.push({ chat: c, i, ts: m.timestamp_ms || 0, sender: m.sender_name || '', text });
+                });
+                index.push(items);
+                if (k % 10 === 9) {
+                    status(`Getting chats ready for search… ${k + 1} of ${chats.length}`);
+                    await new Promise(r => setTimeout(r));
+                }
+            }
+            searchIndex = index;
+            return index;
+        }
+
+        function snippet(prefix, text, q) {
+            const div = el('div', 'snippet');
+            if (prefix) div.append(el('span', 'who', prefix));
+            const at = text.toLowerCase().indexOf(q.toLowerCase());
+            if (at < 0) { div.append(text.slice(0, 160)); return div; }
+            const start = Math.max(0, at - 60), end = Math.min(text.length, at + q.length + 100);
+            div.append((start > 0 ? '…' : '') + text.slice(start, at), el('mark', '', text.slice(at, at + q.length)), text.slice(at + q.length, end) + (end < text.length ? '…' : ''));
+            return div;
+        }
+
+        function resultItem(h, q, showChat) {
+            const li = el('li');
+            const b = el('button', 'result');
+            b.type = 'button';
+            const top = el('div', 'top');
+            top.append(el('span', 'where', showChat ? h.chat.title : h.sender), el('span', 'when', `${listDate(h.ts)}, ${clock(h.ts)}`));
+            b.append(top, snippet(showChat && h.sender ? `${h.sender}: ` : '', h.text, q));
+            b.addEventListener('click', () => goToMessage(h.chat, h.i, h.ts));
+            li.append(b);
+            return li;
+        }
+
+        // Newest first, a page at a time.
+        function renderResults(ul, more, hits, q, showChat) {
+            ul.textContent = '';
+            let done = 0;
+            const page = () => {
+                const frag = document.createDocumentFragment();
+                hits.slice(done, done + PAGE).forEach(h => frag.append(resultItem(h, q, showChat)));
+                done = Math.min(hits.length, done + PAGE);
+                ul.append(frag);
+                more.hidden = done >= hits.length;
+            };
+            more.onclick = page;
+            page();
+        }
+
+        const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+
+        $('search-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const q = $('search-q').value.trim();
+            const status = t => { $('search-status').textContent = t; };
+            if (q.length < 2) { status('Type at least 2 letters.'); return; }
+            const gen = exportGen;
+            const index = await buildSearchIndex(status);
+            if (!index || gen !== exportGen) return;
+            const ql = q.toLowerCase();
+            const hits = [];
+            index.forEach(items => items.forEach(x => { if (x.text.toLowerCase().includes(ql)) hits.push(x); }));
+            hits.sort((a, b) => b.ts - a.ts);
+            const inChats = new Set(hits.map(h => h.chat)).size;
+            status(hits.length ? `${plural(hits.length, 'message')} in ${plural(inChats, 'chat')}, newest first` : `No messages with "${q}".`);
+            renderResults($('search-results'), $('search-more'), hits, q, true);
+        });
+
+        $('chat-search-form').addEventListener('submit', e => {
+            e.preventDefault();
+            const q = $('chat-search-q').value.trim();
+            if (q.length < 2) { $('chat-search-status').textContent = 'Type at least 2 letters.'; return; }
+            const ql = q.toLowerCase();
+            const hits = [];
+            current.messages.forEach((m, i) => {
+                const text = textOf(m);
+                if (text && text.toLowerCase().includes(ql)) hits.push({ chat: current, i, ts: m.timestamp_ms || 0, sender: m.sender_name || '', text });
+            });
+            hits.reverse();
+            $('chat-search-status').textContent = hits.length ? `${plural(hits.length, 'message')}, newest first` : `No messages with "${q}".`;
+            renderResults($('chat-search-results'), $('chat-search-more'), hits, q, false);
+        });
+
+        // ---------- chat stats ----------
+
+        const SVG = 'http://www.w3.org/2000/svg';
+        function svgEl(tag, attrs) {
+            const n = document.createElementNS(SVG, tag);
+            for (const k in attrs) n.setAttribute(k, attrs[k]);
+            return n;
+        }
+
+        function statTile(label, value, note, onClick) {
+            const t = el(onClick ? 'button' : 'div', 'stat');
+            if (onClick) { t.type = 'button'; t.addEventListener('click', onClick); }
+            t.append(el('span', 'label', label), el('span', 'value', value), el('span', 'note', note));
+            return t;
+        }
+
+        const monthName = key => keyDate(key + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        const firstDayOfMonth = key => current.days.findIndex(d => d.key.startsWith(key));
+
+        function renderStats(c) {
+            const box = $('chat-stats');
+            box.textContent = '';
+            const msgs = c.messages;
+            if (!msgs.length) { box.append(el('p', 'hint', 'No messages in this chat.')); return; }
+
+            const senders = new Map();
+            const hours = new Array(24).fill(0);
+            const months = new Map();
+            let shared = 0, voice = 0;
+            for (const m of msgs) {
+                const who = m.sender_name || 'Unknown';
+                senders.set(who, (senders.get(who) || 0) + 1);
+                const d = new Date(m.timestamp_ms || 0);
+                hours[d.getHours()]++;
+                const k = monthKey(d.getFullYear(), d.getMonth());
+                months.set(k, (months.get(k) || 0) + 1);
+                shared += (m.photos || []).length + (m.videos || []).length;
+                voice += (m.audio_files || []).length;
+            }
+
+            let busyDay = 0;
+            c.days.forEach((d, i) => { if (sizeOf(i) > sizeOf(busyDay)) busyDay = i; });
+            let busyMonth = null, busyMonthN = 0;
+            months.forEach((n, k) => { if (n > busyMonthN) { busyMonthN = n; busyMonth = k; } });
+
+            // Longest run of days in a row with messages.
+            let best = { len: 1, start: 0 }, run = 1;
+            for (let i = 1; i < c.days.length; i++) {
+                const prev = keyDate(c.days[i - 1].key);
+                const next = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
+                if (dayKey(next.getTime()) === c.days[i].key) {
+                    run++;
+                    if (run > best.len) best = { len: run, start: i - run + 1 };
+                } else {
+                    run = 1;
+                }
+            }
+
+            const firstDay = keyDate(c.days[0].key), lastDay = keyDate(c.days[c.days.length - 1].key);
+            const topHour = hours.indexOf(Math.max(...hours));
+            const hourLabel = new Date(2000, 0, 1, topHour).toLocaleTimeString(undefined, { hour: 'numeric', hour12: true });
+
+            const tiles = el('div', 'stat-tiles');
+            tiles.append(
+                statTile('Messages', msgs.length.toLocaleString(), `on ${plural(c.days.length, 'day')}`),
+                statTile('Chatting since', listDate(msgs[0].timestamp_ms), `last message ${listDate(msgs[msgs.length - 1].timestamp_ms)}`),
+                statTile('Busiest day', shortDay(c.days[busyDay].key), plural(sizeOf(busyDay), 'message'), () => { setChatView('messages'); jumpToDay(busyDay); }),
+                statTile('Busiest month', monthName(busyMonth), plural(busyMonthN, 'message'), () => { setChatView('messages'); jumpToDay(firstDayOfMonth(busyMonth)); }),
+                statTile('Longest streak', plural(best.len, 'day'), best.len > 1 ? `from ${shortDay(c.days[best.start].key)}` : 'no days in a row yet', best.len > 1 ? () => { setChatView('messages'); jumpToDay(best.start); } : null),
+                statTile('Usual time', hourLabel, 'most messages around then'),
+                statTile('On a chatting day', (msgs.length / c.days.length).toFixed(1), 'messages on average'),
+                statTile('Photos & videos', shared.toLocaleString(), plural(voice, 'voice message'))
+            );
+            box.append(tiles);
+
+            // Who sends more
+            const who = el('div', 'box');
+            who.append(el('h3', '', c.group ? 'Who sends the most' : 'Who sends more'));
+            const ranked = [...senders.entries()].sort((a, b) => b[1] - a[1]);
+            const top = ranked.slice(0, 8);
+            if (ranked.length > 8) top.push(['Others', ranked.slice(8).reduce((s, r) => s + r[1], 0)]);
+            const most = top[0][1];
+            top.forEach(([name, n]) => {
+                const row = el('div', 'sender-row');
+                const track = el('div', 'bar-track');
+                const fill = el('div', 'bar-fill');
+                fill.style.width = `${(n / most) * 100}%`;
+                track.append(fill);
+                row.append(el('span', 'name', name === owner ? 'You' : name), track, el('span', 'count', `${n.toLocaleString()} · ${Math.round((n / msgs.length) * 100)}%`));
+                who.append(row);
+            });
+            box.append(who);
+
+            // First message
+            const firstIdx = Math.max(0, msgs.findIndex(m => textOf(m)));
+            const fm = msgs[firstIdx];
+            const first = el('div', 'box first-msg');
+            first.append(el('h3', '', 'Your first message together'));
+            first.append(el('div', 'quote', (textOf(fm) || 'A photo or attachment').slice(0, 300)));
+            first.append(el('div', 'meta', `${fm.sender_name === owner ? 'You' : fm.sender_name || ''} · ${longDay(dayKey(fm.timestamp_ms || 0))}, ${clock(fm.timestamp_ms || 0)}`));
+            const go = el('button', '', 'Show in chat');
+            go.type = 'button';
+            go.addEventListener('click', () => showMessage(firstIdx));
+            first.append(go);
+            box.append(first);
+
+            // Messages per month, every month from the first to the last
+            const series = [];
+            let y = firstDay.getFullYear(), mo = firstDay.getMonth();
+            const endKey = monthKey(lastDay.getFullYear(), lastDay.getMonth());
+            for (;;) {
+                const k = monthKey(y, mo);
+                series.push({ k, n: months.get(k) || 0 });
+                if (k === endKey) break;
+                if (++mo === 12) { mo = 0; y++; }
+            }
+            const chartBox = el('div', 'box');
+            chartBox.append(el('h3', '', 'Messages per month'));
+            const chart = el('div', 'chart');
+            chart._series = series;
+            chartBox.append(chart, el('p', 'hint chart-note', 'Tap a month to read it.'));
+            box.append(chartBox);
+            drawChart(chart);
+        }
+
+        function drawChart(chart) {
+            const series = chart._series;
+            chart.textContent = '';
+            const W = Math.max(240, chart.clientWidth || 600), H = 150, top = 14, bottom = 20;
+            const base = H - bottom;
+            const max = Math.max(1, ...series.map(s => s.n));
+            const step = W / series.length;
+            const gap = step >= 6 ? 2 : 0;
+            const bw = Math.max(1, step - gap);
+            const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img' });
+            const peak = series.reduce((a, b) => (b.n > a.n ? b : a));
+            svg.setAttribute('aria-label', `Messages per month from ${monthName(series[0].k)} to ${monthName(series[series.length - 1].k)}. Busiest: ${monthName(peak.k)} with ${peak.n}.`);
+
+            svg.append(svgEl('line', { class: 'grid', x1: 0, x2: W, y1: top, y2: top }));
+            const maxLabel = svgEl('text', { x: 0, y: top - 4 });
+            maxLabel.textContent = max.toLocaleString();
+            svg.append(maxLabel);
+
+            const bars = [];
+            series.forEach((s, i) => {
+                const x = i * step + gap / 2;
+                if (s.n > 0) {
+                    const h = Math.max(1, (base - top) * s.n / max);
+                    const yTop = base - h;
+                    const r = Math.min(4, bw / 2, h);
+                    bars[i] = svgEl('path', { class: 'bar', d: `M${x},${base} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + bw - r} Q${x + bw},${yTop} ${x + bw},${yTop + r} V${base} Z` });
+                    svg.append(bars[i]);
+                }
+            });
+            svg.append(svgEl('line', { class: 'axis', x1: 0, x2: W, y1: base, y2: base }));
+
+            // Year labels under January, spaced so they never collide.
+            const every = Math.max(1, Math.ceil(36 / (step * 12)));
+            const firstYear = Number(series[0].k.slice(0, 4));
+            series.forEach((s, i) => {
+                const yr = Number(s.k.slice(0, 4));
+                const isJan = s.k.endsWith('-01');
+                if (!(isJan || i === 0) || (yr - firstYear) % every) return;
+                if (i === 0 && !isJan && (13 - Number(s.k.slice(5))) * step < 36) return;
+                const t = svgEl('text', { x: i * step, y: H - 5 });
+                t.textContent = String(yr);
+                svg.append(t);
+            });
+
+            // Hit areas: the whole column, wider than the bar.
+            series.forEach((s, i) => {
+                const hit = svgEl('rect', { class: 'hit', x: i * step, y: 0, width: Math.max(step, 1), height: base });
+                hit.addEventListener('pointerenter', e => { if (bars[i]) bars[i].classList.add('hot'); showTip(e, `${monthName(s.k)} · ${plural(s.n, 'message')}`); });
+                hit.addEventListener('pointermove', e => moveTip(e));
+                hit.addEventListener('pointerleave', () => { if (bars[i]) bars[i].classList.remove('hot'); hideTip(); });
+                hit.addEventListener('click', () => {
+                    if (!s.n) return;
+                    hideTip();
+                    setChatView('messages');
+                    jumpToDay(firstDayOfMonth(s.k));
+                });
+                svg.append(hit);
+            });
+            chart.append(svg);
+        }
+
+        function showTip(e, text) {
+            $('tip').textContent = text;
+            $('tip').hidden = false;
+            moveTip(e);
+        }
+        function moveTip(e) {
+            const tip = $('tip');
+            const w = tip.offsetWidth, h = tip.offsetHeight;
+            tip.style.left = `${Math.min(window.innerWidth - w - 8, Math.max(8, e.clientX - w / 2))}px`;
+            tip.style.top = `${Math.max(8, e.clientY - h - 12)}px`;
+        }
+        function hideTip() { $('tip').hidden = true; }
+
+        let redrawQueued = false;
+        window.addEventListener('resize', () => {
+            if (redrawQueued) return;
+            redrawQueued = true;
+            requestAnimationFrame(() => {
+                redrawQueued = false;
+                const chart = $('chat-stats').querySelector('.chart');
+                if (chart && !$('chat-stats').hidden) drawChart(chart);
+            });
+        });
+
         // ---------- media browser ----------
 
         const TYPES = { posts: 'Posts', stories: 'Stories', reels: 'Reels', profile: 'Profile', archived: 'Archived', videos: 'Videos', other: 'Other' };
@@ -1317,22 +1786,30 @@
 
         function setChatView(view) {
             const c = current;
-            const showMedia = view === 'media';
             document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
             toggleCalendar(false);
-            $('chat').querySelector('.sticky').hidden = showMedia || !c.messages.length;
-            $('messages').hidden = showMedia;
-            $('chat-media').hidden = !showMedia;
-            if (showMedia) {
-                $('load-earlier').hidden = $('load-later').hidden = true;
-                if (!c.mediaRendered) {
-                    renderGrid($('chat-media'), c.media, chatThumbs, m => `${m.sender}, ${listDate(m.ts)}`, i => openMediaViewer(i, c.media));
-                    c.mediaRendered = true;
-                }
-                window.scrollTo(0, 0);
-            } else if (c.days && c.days.length) {
-                updateLoadButtons();
+            hideTip();
+            const messages = view === 'messages';
+            $('chat').querySelector('.sticky').hidden = !messages || !c.messages.length;
+            $('messages').hidden = !messages;
+            $('chat-media').hidden = view !== 'media';
+            $('chat-search').hidden = view !== 'search';
+            $('chat-stats').hidden = view !== 'stats';
+            if (messages) {
+                if (c.days && c.days.length) updateLoadButtons();
+                return;
             }
+            $('load-earlier').hidden = $('load-later').hidden = true;
+            if (view === 'media' && !c.mediaRendered) {
+                renderGrid($('chat-media'), c.media, chatThumbs, m => `${m.sender}, ${listDate(m.ts)}`, i => openMediaViewer(i, c.media));
+                c.mediaRendered = true;
+            }
+            if (view === 'stats' && !c.statsRendered) {
+                renderStats(c);
+                c.statsRendered = true;
+            }
+            window.scrollTo(0, 0);
+            if (view === 'search') $('chat-search-q').focus();
         }
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setChatView(b.dataset.view)));
 
@@ -1463,13 +1940,7 @@
             const m = viewList[viewIndex];
             if (!m || m.msgIndex === undefined || !current || !current.messages) return;
             closeViewer();
-            setChatView('messages');
-            jumpToDay(current.dayIndex.get(dayKey(current.messages[m.msgIndex].timestamp_ms || 0)));
-            const row = $('messages').querySelector(`[data-i="${m.msgIndex}"]`);
-            if (!row) return;
-            row.scrollIntoView({ block: 'center' });
-            row.classList.add('flash');
-            setTimeout(() => row.classList.remove('flash'), 2500);
+            showMessage(m.msgIndex);
         });
         $('viewer-prev').addEventListener('click', () => stepViewer(-1));
         $('viewer-next').addEventListener('click', () => stepViewer(1));
@@ -1501,7 +1972,7 @@
         function backToList() {
             closeViewer();
             closeChat();
-            show('chats');
+            show(lastTab);
         }
         $('back').addEventListener('click', () => {
             if (history.state && history.state.chat) history.back();
