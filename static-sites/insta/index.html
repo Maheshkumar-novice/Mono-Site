@@ -494,7 +494,9 @@
         .wrap-msg:empty { display: none; }
 
         .wrap-actions { display: flex; gap: 0.5rem; justify-content: center; padding: 0.6rem max(12px, env(safe-area-inset-left, 0px)) 0.8rem; }
-        .wrap-actions button { flex: 0 1 12rem; }
+        .wrap-actions button { flex: 1 1 0; max-width: 11rem; white-space: nowrap; padding-inline: 0.4rem; }
+        .wrap-note { text-align: center; color: var(--text-secondary); font-size: 0.8rem; margin: -0.3rem 0 0.7rem; padding: 0 1rem; }
+        .wrap-note:empty { display: none; }
         .stats-wrap { width: 100%; justify-content: center; }
         .stats-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
         .stats-actions .stats-wrap:only-child { grid-column: 1 / -1; }
@@ -874,9 +876,11 @@
             <p class="wrap-msg" id="wrap-msg"></p>
         </div>
         <div class="wrap-actions">
-            <button type="button" class="btn-primary" id="wrap-save">Save this card</button>
+            <button type="button" class="btn-primary" id="wrap-save">Save card</button>
             <button type="button" id="wrap-save-all">Save all</button>
+            <button type="button" id="wrap-video">Save video</button>
         </div>
+        <p class="wrap-note" id="wrap-note"></p>
     </div>
 
     <div class="tip" id="tip" hidden></div>
@@ -2512,7 +2516,10 @@
             buildWrap();
         }
 
+        const wrapNote = t => { $('wrap-note').textContent = t || ''; };
+
         function buildWrap() {
+            wrapNote('');
             wrapped.cards = buildCards(wrapped.chat, wrapped.year);
             wrapped.at = 0;
             pendingWrap = null;
@@ -2521,9 +2528,10 @@
         }
 
         function setWrapButtons(on) {
-            $('wrap-save').disabled = $('wrap-save-all').disabled = !on;
-            $('wrap-save').textContent = 'Save this card';
+            $('wrap-save').disabled = $('wrap-save-all').disabled = $('wrap-video').disabled = !on;
+            $('wrap-save').textContent = 'Save card';
             $('wrap-save-all').textContent = 'Save all';
+            $('wrap-video').textContent = 'Save video';
         }
 
         function showCard() {
@@ -2553,6 +2561,7 @@
         }
 
         function closeWrap() {
+            wrapNote('');
             $('wrap').hidden = true;
             $('wrap-msg').textContent = '';
             wrapped = null;
@@ -2637,6 +2646,7 @@
             pendingWrap = null;
             $('wrap-title').textContent = `Birthday pack · ${chat.title}`;
             $('wrap-year').hidden = true;
+            wrapNote('');
             $('wrap-msg').textContent = '';
             const st = history.state || {};
             history.pushState({ ...st, depth: current ? ++chatDepth : st.depth, wrap: true }, '');
@@ -2667,7 +2677,7 @@
                 files = [];
                 for (const [c, i] of picks) files.push(await cardFile(c, i));
                 btn.disabled = false;
-                btn.textContent = all ? 'Save all' : 'Save this card';
+                btn.textContent = all ? 'Save all' : 'Save card';
                 if (files.some(f => !f)) { btn.textContent = "Couldn't save"; return; }
             }
             // On a computer, all the cards come as one zip instead of many downloads.
@@ -2686,6 +2696,110 @@
                 setTimeout(() => { if (wrapped) setWrapButtons(true); }, 2000);
             }
         }
+
+        // ---------- wrapped: the cards as a video ----------
+
+        let VIDEO_HOLD = 3000, VIDEO_FADE = 600;   // how long each card shows, and the fade into the next (ms)
+        const VIDEO_W = 720, VIDEO_H = 1280;
+
+        function videoType() {
+            if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) return null;
+            return ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+                .find(t => MediaRecorder.isTypeSupported(t)) || null;
+        }
+
+        // Plays the cards on a hidden canvas and records it, in real time.
+        async function makeVideo(progress) {
+            const type = videoType();
+            if (!type) throw new Error('no recorder');
+            const cards = wrapped.cards;
+            const frames = cards.map(card => {
+                const c = document.createElement('canvas');
+                c.width = WRAP_W;
+                c.height = WRAP_H;
+                drawCard(c.getContext('2d'), card);
+                return c;
+            });
+            const out = document.createElement('canvas');
+            out.width = VIDEO_W;
+            out.height = VIDEO_H;
+            const g = out.getContext('2d');
+            const per = VIDEO_HOLD + VIDEO_FADE;
+            const total = cards.length * VIDEO_HOLD + (cards.length - 1) * VIDEO_FADE;
+            const layer = (frame, alpha, t) => {
+                const z = 1 + 0.03 * t;   // a slow zoom while each card shows
+                g.globalAlpha = alpha;
+                g.drawImage(frame, (VIDEO_W - VIDEO_W * z) / 2, (VIDEO_H - VIDEO_H * z) / 2, VIDEO_W * z, VIDEO_H * z);
+                g.globalAlpha = 1;
+            };
+            const paint = ms => {
+                const i = Math.min(cards.length - 1, Math.floor(ms / per));
+                const local = ms - i * per;
+                g.fillStyle = '#000';
+                g.fillRect(0, 0, VIDEO_W, VIDEO_H);
+                layer(frames[i], 1, Math.min(1, local / per));
+                if (local > VIDEO_HOLD && i + 1 < cards.length) layer(frames[i + 1], (local - VIDEO_HOLD) / VIDEO_FADE, 0);
+            };
+
+            paint(0);
+            const stream = out.captureStream(30);
+            const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 4000000 });
+            const chunks = [];
+            rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+            const stopped = new Promise(res => { rec.onstop = res; });
+            const forThis = wrapped;
+            rec.start(250);
+            const start = performance.now();
+            await new Promise(resolve => {
+                const tick = () => {
+                    const ms = performance.now() - start;
+                    if (wrapped !== forThis) { resolve(); return; }
+                    paint(Math.min(ms, total));
+                    progress(Math.min(99, Math.round(ms / total * 100)));
+                    if (ms >= total + 250) resolve();
+                    else requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            });
+            rec.stop();
+            await stopped;
+            stream.getTracks().forEach(t => t.stop());
+            frames.forEach(f => { f.width = f.height = 0; });
+            if (wrapped !== forThis || !chunks.length) return null;
+            const mime = type.split(';')[0];
+            return new File([new Blob(chunks, { type: mime })], `${wrapName()}.${mime === 'video/mp4' ? 'mp4' : 'webm'}`, { type: mime });
+        }
+
+        $('wrap-video').addEventListener('click', async () => {
+            if (!wrapped || !wrapped.cards.length) return;
+            const btn = $('wrap-video');
+            let file = pendingWrap && pendingWrap.video ? pendingWrap.files[0] : null;
+            pendingWrap = null;
+            if (!file) {
+                if (!videoType()) { wrapNote("This browser can't make videos. Try Safari or Chrome on your phone."); return; }
+                setWrapButtons(false);
+                btn.textContent = 'Making… 0%';
+                wrapNote('Keep this screen open while the video is made.');
+                try {
+                    file = await makeVideo(p => { btn.textContent = `Making… ${p}%`; });
+                } catch (err) {
+                    file = null;
+                    wrapNote("Couldn't make the video on this device.");
+                }
+                if (!wrapped) return;
+                setWrapButtons(true);
+                if (!file) return;
+                wrapNote(file.type === 'video/webm' ? 'Made as a WebM video. Some apps (like WhatsApp) may not take WebM; making it on your phone gives an MP4.' : '');
+            }
+            const result = await shareOrSave([file]);
+            if (result === 'tap') {
+                pendingWrap = { video: true, files: [file] };
+                btn.textContent = 'Tap to save';
+            } else if (result === 'saved') {
+                btn.textContent = 'Saved';
+                setTimeout(() => { if (wrapped) setWrapButtons(true); }, 2000);
+            }
+        });
 
         $('wrap-card').addEventListener('click', () => openWrap(null));
         $('wrap-close').addEventListener('click', requestCloseWrap);
