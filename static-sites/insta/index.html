@@ -60,6 +60,8 @@
         .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
 
         .page-head h1 { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.25rem; }
+        .head-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .close-top { font-size: 0.8rem; padding: 0.3rem 0.65rem; display: none; }
         .subtitle { color: var(--text-secondary); margin: 0 0 1.5rem; }
 
         button, .btn {
@@ -577,6 +579,8 @@
             .chat-tabs button { font-size: 0.82rem; padding-inline: 0.15rem; }
             #back { width: 2.5rem; height: 2.5rem; padding: 0; font-size: 1.3rem; }
             #back .back-label { display: none; }
+            .close-top { display: inline-flex; }
+            .tabs .close-export { display: none; }
             .site-nav { padding: 1rem 24px; }
             .container { padding: 1.5rem 24px 2.5rem; }
             .msg-row { max-width: 88%; }
@@ -589,7 +593,10 @@
 
     <main class="container">
         <header class="page-head">
-            <h1>Insta Viewer</h1>
+            <div class="head-row">
+                <h1>Insta Viewer</h1>
+                <button type="button" class="close-top" id="close-top" hidden>Close</button>
+            </div>
             <p class="subtitle" id="subtitle">Open your Instagram export to read old chats by date and browse your posts, stories and reels. Everything stays on your device.</p>
         </header>
 
@@ -883,6 +890,7 @@
             $('subtitle').hidden = section !== 'start';
             $('tabs').hidden = !['chats', 'otd', 'top', 'search', 'media'].includes(section);
             $('keep-note').hidden = $('tabs').hidden;
+            $('close-top').hidden = $('tabs').hidden;
             const tab = section === 'otd' ? 'chats' : section;   // On this day sits under Chats
             document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
         }
@@ -1139,12 +1147,14 @@
         }
 
         $('filter').addEventListener('input', renderList);
-        $('close-export').addEventListener('click', () => {
+        function closeAndForget() {
             closeExport();
             forgetKept();
             setMsg('');
             show('start');
-        });
+        }
+        $('close-export').addEventListener('click', closeAndForget);
+        $('close-top').addEventListener('click', closeAndForget);
 
         $('zips').addEventListener('change', e => {
             openExport(e.target.files);
