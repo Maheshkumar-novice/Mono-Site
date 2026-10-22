@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-name" content="Insta Viewer">
+    <meta name="app-section" content="Tools">
+    <title>Insta Viewer</title>
+    <meta name="description" content="Open your Instagram export and read old chats by date. Everything stays on your device.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-raised: #1c1c1c;
+            --bubble: #1f1f1f;
+            --bubble-me: #0f3d2e;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --border: #262626;
+            --border-strong: #3a3a3a;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .nav-brand:hover { color: var(--accent); }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+        .page-head h1 { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.25rem; }
+        .subtitle { color: var(--text-secondary); margin: 0 0 1.5rem; }
+
+        button, .btn {
+            font: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:hover, .btn:hover { border-color: var(--text-muted); }
+        button:disabled { opacity: 0.4; cursor: default; }
+        button:disabled:hover { border-color: var(--border-strong); }
+
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #04140d; font-weight: 600; }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        input[type=search], select {
+            font: inherit;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.6rem;
+        }
+
+        input[type=search]:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        .hint { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+        .msg { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
+        .msg.warn { color: #fbbf24; }
+        .msg:empty { display: none; }
+
+        /* ---------- start ---------- */
+
+        .start { display: flex; flex-direction: column; gap: 1rem; }
+
+        .drop {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            text-align: center;
+            padding: 2.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--border-radius);
+        }
+
+        .drop.dragover { border-color: var(--accent); }
+        .drop .hint { max-width: 40ch; }
+
+        .how {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .how summary { cursor: pointer; color: var(--text-primary); }
+        .how ol { margin: 0.75rem 0 0.25rem; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem; }
+
+        /* ---------- chat list ---------- */
+
+        .list-head { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .list-head input { flex: 1; min-width: 0; }
+
+        .chat-list { list-style: none; margin: 0.75rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+
+        .chat-item {
+            width: 100%;
+            justify-content: space-between;
+            gap: 1rem;
+            text-align: left;
+            padding: 0.7rem 0.9rem;
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+        }
+
+        .chat-item .who { min-width: 0; display: flex; flex-direction: column; }
+        .chat-item .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chat-item .sub { color: var(--text-muted); font-size: 0.78rem; }
+        .chat-item .when { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
+
+        .tag {
+            display: inline-block;
+            font-size: 0.68rem;
+            padding: 0 0.4rem;
+            border: 1px solid var(--border-strong);
+            border-radius: 999px;
+            margin-left: 0.35rem;
+            color: var(--text-secondary);
+            vertical-align: 1px;
+        }
+
+        /* ---------- one chat ---------- */
+
+        .chat-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+        .chat-title { min-width: 0; }
+        .chat-title #chat-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .sticky {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--bg-primary);
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .datebar { display: flex; gap: 0.5rem; align-items: center; }
+        .datebar .date-btn { flex: 1; font-weight: 500; }
+        .datebar .step { width: 2.6rem; font-size: 1.1rem; }
+
+        .calendar {
+            margin: 0.6rem auto 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            max-width: 360px;
+        }
+
+        .cal-head { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.6rem; }
+        .cal-head select { flex: 1; min-width: 0; }
+        .cal-head button { width: 2.2rem; padding-inline: 0; }
+
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; text-align: center; }
+        .cal-grid .wd { font-size: 0.7rem; color: var(--text-muted); padding-bottom: 0.15rem; }
+
+        .cal-day {
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+        }
+
+        .cal-day:disabled { opacity: 0.5; }
+        .cal-day.l1 { color: var(--text-primary); background: rgba(16, 185, 129, 0.14); }
+        .cal-day.l2 { color: var(--text-primary); background: rgba(16, 185, 129, 0.3); }
+        .cal-day.l3 { color: #04140d; background: var(--accent); font-weight: 600; }
+        .cal-day.sel { border-color: var(--text-primary); }
+        .cal-note { text-align: center; margin-top: 0.5rem; }
+
+        .load { display: flex; margin: 0.75rem auto; }
+
+        .messages { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.25rem 0; }
+
+        .day-sep {
+            align-self: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: var(--bg-raised);
+            border-radius: 999px;
+            padding: 0.2rem 0.75rem;
+            margin: 0.9rem 0 0.3rem;
+            scroll-margin-top: 4.5rem;
+        }
+
+        .msg-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 80%; }
+        .msg-row.me { align-self: flex-end; align-items: flex-end; }
+
+        .sender { font-size: 0.72rem; color: var(--text-muted); margin: 0 0 0.1rem 0.7rem; }
+
+        .bubble {
+            background: var(--bubble);
+            border-radius: 16px;
+            padding: 0.45rem 0.7rem 0.3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .me .bubble { background: var(--bubble-me); }
+        .bubble .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+        .bubble .muted { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
+        .bubble .time { font-size: 0.66rem; color: var(--text-muted); align-self: flex-end; line-height: 1; padding-bottom: 0.1rem; }
+
+        .bubble img.photo {
+            display: block;
+            width: 260px;
+            max-width: 100%;
+            min-height: 120px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #2a2a2a;
+            cursor: zoom-in;
+        }
+
+        .bubble img.photo.ready { min-height: 0; height: auto; }
+        .bubble video, .bubble audio { width: 280px; max-width: 100%; border-radius: 10px; }
+
+        .share {
+            border-left: 3px solid var(--accent);
+            padding-left: 0.55rem;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            overflow-wrap: anywhere;
+        }
+
+        .share .owner { color: var(--text-muted); font-size: 0.75rem; }
+
+        .reactions { font-size: 0.75rem; color: var(--text-secondary); margin: 0.1rem 0.5rem 0; }
+
+        .viewer {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.94);
+            display: grid;
+            place-items: center;
+        }
+
+        .viewer img { max-width: 100vw; max-height: 100vh; object-fit: contain; }
+
+        .viewer .close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            font-size: 1.1rem;
+        }
+
+        input[type=file] { display: none; }
+        [hidden] { display: none !important; }
+
+        @media (max-width: 600px) {
+            .site-nav { padding: 1rem 24px; }
+            .container { padding: 1.5rem 24px 2.5rem; }
+            .msg-row { max-width: 88%; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav"><a href="/" class="nav-brand">Maheshkumar</a></nav>
+
+    <main class="container">
+        <header class="page-head">
+            <h1>Insta Viewer</h1>
+            <p class="subtitle">Open your Instagram export and read old chats by date. Everything stays on your device.</p>
+        </header>
+
+        <section class="start" id="start">
+            <div class="drop" id="drop">
+                <label class="btn btn-primary" for="zips">Open export (.zip)</label>
+                <p class="hint">No need to unzip. If Instagram split it into several zips, pick them all together. You can also drop them here.</p>
+            </div>
+            <details class="how">
+                <summary>How to get your export</summary>
+                <ol>
+                    <li>In Instagram, open Settings, then Accounts Center, then Your information and permissions, then Download your information.</li>
+                    <li>Pick your Instagram account and "All available information". Choose the format <strong>JSON</strong>.</li>
+                    <li>When Instagram says it's ready, download the zip file(s) and open them here.</li>
+                </ol>
+            </details>
+            <p class="msg" id="msg" role="status"></p>
+        </section>
+
+        <section id="chats" hidden>
+            <div class="list-head">
+                <input type="search" id="filter" placeholder="Search chats" aria-label="Search chats">
+                <button type="button" id="close-export">Close</button>
+            </div>
+            <p class="hint" id="chat-summary"></p>
+            <ul class="chat-list" id="chat-list"></ul>
+        </section>
+
+        <section id="chat" hidden>
+            <div class="chat-head">
+                <button type="button" id="back">‹ Chats</button>
+                <div class="chat-title">
+                    <div id="chat-name"></div>
+                    <div class="hint" id="chat-info"></div>
+                </div>
+            </div>
+            <div class="sticky">
+                <div class="datebar">
+                    <button type="button" class="step" id="prev-day" aria-label="Earlier day with messages">‹</button>
+                    <button type="button" class="date-btn" id="date-btn" aria-expanded="false"></button>
+                    <button type="button" class="step" id="next-day" aria-label="Later day with messages">›</button>
+                </div>
+                <div class="calendar" id="calendar" hidden></div>
+            </div>
+            <button type="button" class="load" id="load-earlier">Earlier messages</button>
+            <div class="messages" id="messages"></div>
+            <button type="button" class="load" id="load-later">Later messages</button>
+        </section>
+    </main>
+
+    <div class="viewer" id="viewer" hidden>
+        <img id="viewer-img" alt="">
+        <button type="button" class="close" id="viewer-close" aria-label="Close">✕</button>
+    </div>
+
+    <input type="file" id="zips" accept=".zip,application/zip" multiple>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', mp4: 'video/mp4', mov: 'video/quicktime', m4a: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav' };
+
+        let entries = new Map();   // path inside the zip(s) -> entry
+        let byName = null;         // file name -> paths, for links that don't match exactly
+        let chats = [];
+        let owner = '';            // the export's own account name
+        let current = null;        // the open chat
+        let shown = { first: 0, last: -1 };   // range of days on screen
+        let urls = [];             // object URLs made for the open chat
+        let calMonth = null;       // { y, m } shown in the calendar
+
+        // ---------- reading the zip without unzipping it all ----------
+
+        // Reads only the zip's table of contents; each file is read later, when needed.
+        async function readZip(file) {
+            const tailLen = Math.min(file.size, 65557 + 20);
+            const tail = new DataView(await file.slice(file.size - tailLen).arrayBuffer());
+            let eocd = -1;
+            for (let i = tailLen - 22; i >= 0; i--) {
+                if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+            }
+            if (eocd < 0) throw new Error('not a zip');
+            let count = tail.getUint16(eocd + 10, true);
+            let cdSize = tail.getUint32(eocd + 12, true);
+            let cdOffset = tail.getUint32(eocd + 16, true);
+
+            // Exports over 4 GB use the ZIP64 record instead.
+            if (count === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) {
+                const loc = eocd - 20;
+                if (loc < 0 || tail.getUint32(loc, true) !== 0x07064b50) throw new Error('bad zip64');
+                const at = Number(tail.getBigUint64(loc + 8, true));
+                const z = new DataView(await file.slice(at, at + 56).arrayBuffer());
+                if (z.getUint32(0, true) !== 0x06064b50) throw new Error('bad zip64');
+                count = Number(z.getBigUint64(32, true));
+                cdSize = Number(z.getBigUint64(40, true));
+                cdOffset = Number(z.getBigUint64(48, true));
+            }
+
+            const cd = new DataView(await file.slice(cdOffset, cdOffset + cdSize).arrayBuffer());
+            const decoder = new TextDecoder();
+            const found = new Map();
+            let p = 0;
+            for (let i = 0; i < count && p + 46 <= cd.byteLength; i++) {
+                if (cd.getUint32(p, true) !== 0x02014b50) break;
+                const method = cd.getUint16(p + 10, true);
+                let csize = cd.getUint32(p + 20, true);
+                let usize = cd.getUint32(p + 24, true);
+                const nameLen = cd.getUint16(p + 28, true);
+                const extraLen = cd.getUint16(p + 30, true);
+                const commentLen = cd.getUint16(p + 32, true);
+                let offset = cd.getUint32(p + 42, true);
+                const name = decoder.decode(new Uint8Array(cd.buffer, p + 46, nameLen));
+
+                if (csize === 0xffffffff || usize === 0xffffffff || offset === 0xffffffff) {
+                    let q = p + 46 + nameLen;
+                    const end = q + extraLen;
+                    while (q + 4 <= end) {
+                        const id = cd.getUint16(q, true), size = cd.getUint16(q + 2, true);
+                        if (id === 1) {
+                            let r = q + 4;
+                            if (usize === 0xffffffff) { usize = Number(cd.getBigUint64(r, true)); r += 8; }
+                            if (csize === 0xffffffff) { csize = Number(cd.getBigUint64(r, true)); r += 8; }
+                            if (offset === 0xffffffff) { offset = Number(cd.getBigUint64(r, true)); }
+                            break;
+                        }
+                        q += 4 + size;
+                    }
+                }
+                if (!name.endsWith('/')) found.set(name, { file, name, method, csize, offset });
+                p += 46 + nameLen + extraLen + commentLen;
+            }
+            return found;
+        }
+
+        async function entryBlob(e) {
+            const head = new DataView(await e.file.slice(e.offset, e.offset + 30).arrayBuffer());
+            const start = e.offset + 30 + head.getUint16(26, true) + head.getUint16(28, true);
+            const raw = e.file.slice(start, start + e.csize);
+            const type = MIME[e.name.split('.').pop().toLowerCase()] || '';
+            if (e.method === 0) return new Blob([raw], { type });
+            if (e.method !== 8) throw new Error('unsupported');
+            const out = await new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+            return new Blob([out], { type });
+        }
+
+        // Instagram writes emoji and non-English text as mangled bytes; put them back.
+        function fixText(s) {
+            if (!/[\u0080-ÿ]/.test(s) || /[^\u0000-ÿ]/.test(s)) return s;
+            const bytes = new Uint8Array(s.length);
+            for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+            try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (err) { return s; }
+        }
+
+        async function readJson(e) {
+            const text = await (await entryBlob(e)).text();
+            return JSON.parse(text, (k, v) => typeof v === 'string' ? fixText(v) : v);
+        }
+
+        // Links inside the export are usually exact paths; fall back to matching the file name.
+        function findEntry(uri) {
+            if (!uri || /^https?:/i.test(uri)) return null;
+            const clean = uri.replace(/^\.?\/+/, '');
+            if (entries.has(clean)) return entries.get(clean);
+            if (!byName) {
+                byName = new Map();
+                for (const name of entries.keys()) {
+                    const base = name.slice(name.lastIndexOf('/') + 1);
+                    if (!byName.has(base)) byName.set(base, []);
+                    byName.get(base).push(name);
+                }
+            }
+            const list = byName.get(clean.slice(clean.lastIndexOf('/') + 1)) || [];
+            const hit = list.find(n => n.endsWith('/' + clean) || clean.endsWith('/' + n)) || (list.length === 1 ? list[0] : null);
+            return hit ? entries.get(hit) : null;
+        }
+
+        // ---------- dates ----------
+
+        const pad = n => String(n).padStart(2, '0');
+        function dayKey(ms) {
+            const d = new Date(ms);
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+        function keyDate(key) {
+            const [y, m, d] = key.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+        const longDay = key => keyDate(key).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const shortDay = key => keyDate(key).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const listDate = ms => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        const clock = ms => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+        // ---------- opening an export ----------
+
+        function setMsg(text, warn) {
+            $('msg').textContent = text || '';
+            $('msg').classList.toggle('warn', !!warn);
+        }
+
+        function show(section) {
+            for (const id of ['start', 'chats', 'chat']) $(id).hidden = id !== section;
+        }
+
+        async function guessOwner(list) {
+            const info = [...entries.keys()].find(n => /personal_information\.json$/.test(n));
+            if (info) {
+                try {
+                    const j = await readJson(entries.get(info));
+                    const name = j.profile_user?.[0]?.string_map_data?.Name?.value;
+                    if (name) return name;
+                } catch (err) { /* fall back below */ }
+            }
+            // Otherwise: the one name that is in (nearly) every chat.
+            const seen = new Map();
+            list.forEach(c => c.participants.forEach(n => seen.set(n, (seen.get(n) || 0) + 1)));
+            let best = '', most = 0;
+            seen.forEach((v, n) => { if (v > most) { most = v; best = n; } });
+            return list.length > 1 && most > list.length / 2 ? best : (list[0]?.participants.slice(-1)[0] || '');
+        }
+
+        async function openExport(fileList) {
+            const files = [...fileList].filter(f => /\.zip$/i.test(f.name) || /zip/.test(f.type));
+            if (!files.length) { setMsg('Please pick the .zip file(s) Instagram gave you.', true); return; }
+            if (typeof DecompressionStream === 'undefined') { setMsg('This browser is too old to open zip files. Please update it and try again.', true); return; }
+            closeExport();
+            setMsg('Opening…');
+
+            const merged = new Map();
+            for (const f of files) {
+                try {
+                    (await readZip(f)).forEach((v, k) => merged.set(k, v));
+                } catch (err) {
+                    setMsg(`"${f.name}" doesn't look like a zip file.`, true);
+                    return;
+                }
+            }
+            entries = merged;
+
+            const folders = new Map();
+            for (const name of entries.keys()) {
+                const m = name.match(/(?:^|\/)messages\/(inbox|message_requests)\/([^/]+)\/message_(\d+)\.json$/);
+                if (!m) continue;
+                const id = `${m[1]}/${m[2]}`;
+                if (!folders.has(id)) folders.set(id, { id, request: m[1] === 'message_requests', files: [] });
+                folders.get(id).files.push({ n: Number(m[3]), e: entries.get(name) });
+            }
+            if (!folders.size) {
+                const html = [...entries.keys()].some(n => /messages\/inbox\/.+\.html$/.test(n));
+                setMsg(html
+                    ? 'This export is in HTML format. Ask Instagram for a new one in JSON format.'
+                    : 'No chats found. If Instagram split your export into several zips, pick them all together.', true);
+                return;
+            }
+
+            const list = [...folders.values()];
+            for (let i = 0; i < list.length; i++) {
+                const c = list[i];
+                c.files.sort((a, b) => a.n - b.n);
+                try {
+                    const j = await readJson(c.files[0].e);
+                    c.participants = (j.participants || []).map(p => p.name).filter(Boolean);
+                    c.title = j.title || '';
+                    c.last = (j.messages || []).reduce((mx, m) => Math.max(mx, m.timestamp_ms || 0), 0);
+                } catch (err) {
+                    c.broken = true;
+                }
+                if (i % 20 === 19) setMsg(`Reading chats… ${i + 1} of ${list.length}`);
+            }
+            chats = list.filter(c => !c.broken).sort((a, b) => b.last - a.last);
+            owner = await guessOwner(chats);
+            chats.forEach(c => {
+                const others = c.participants.filter(n => n !== owner);
+                if (!c.title) c.title = others.join(', ') || 'Chat';
+                c.group = c.participants.length > 2;
+            });
+
+            setMsg('');
+            $('filter').value = '';
+            const skipped = list.length - chats.length;
+            $('chat-summary').textContent = `${chats.length} chat${chats.length === 1 ? '' : 's'}` + (skipped ? ` (${skipped} couldn't be read)` : '');
+            renderList();
+            show('chats');
+        }
+
+        function closeExport() {
+            closeChat();
+            entries = new Map();
+            byName = null;
+            chats = [];
+            owner = '';
+            $('chat-list').textContent = '';
+        }
+
+        // ---------- chat list ----------
+
+        function el(tag, cls, text) {
+            const n = document.createElement(tag);
+            if (cls) n.className = cls;
+            if (text !== undefined) n.textContent = text;
+            return n;
+        }
+
+        function renderList() {
+            const q = $('filter').value.trim().toLowerCase();
+            const ul = $('chat-list');
+            ul.textContent = '';
+            const frag = document.createDocumentFragment();
+            chats.filter(c => !q || c.title.toLowerCase().includes(q) || c.participants.some(n => n.toLowerCase().includes(q)))
+                .forEach(c => {
+                    const li = el('li');
+                    const b = el('button', 'chat-item');
+                    b.type = 'button';
+                    const who = el('span', 'who');
+                    const name = el('span', 'name', c.title);
+                    if (c.request) name.append(el('span', 'tag', 'Request'));
+                    who.append(name);
+                    if (c.group) who.append(el('span', 'sub', `Group · ${c.participants.length} people`));
+                    b.append(who, el('span', 'when', c.last ? listDate(c.last) : ''));
+                    b.addEventListener('click', () => openChat(c));
+                    li.append(b);
+                    frag.append(li);
+                });
+            ul.append(frag);
+            if (!ul.children.length) ul.append(el('li', 'hint', 'No chats match.'));
+        }
+
+        $('filter').addEventListener('input', renderList);
+        $('close-export').addEventListener('click', () => { closeExport(); setMsg(''); show('start'); });
+
+        $('zips').addEventListener('change', e => {
+            openExport(e.target.files);
+            e.target.value = '';
+        });
+
+        const drop = $('drop');
+        const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+        document.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); drop.classList.add('dragover'); } });
+        document.addEventListener('dragleave', e => { if (e.target === document.documentElement || !e.relatedTarget) drop.classList.remove('dragover'); });
+        document.addEventListener('drop', e => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            drop.classList.remove('dragover');
+            openExport(e.dataTransfer.files);
+        });
+
+        // ---------- one chat ----------
+
+        let visible = 0;   // index of the day at the top of the screen
+        let chatGen = 0;   // bumps on every open/close so late loads from an old chat are dropped
+        const sizeOf = i => current.days[i].end - current.days[i].start;
+        const BATCH = 40;  // roughly how many messages to add at a time
+
+        async function openChat(c, push = true) {
+            const summary = $('chat-summary').textContent;
+            if (!c.messages) {
+                $('chat-summary').textContent = 'Opening chat…';
+                const all = [];
+                try {
+                    for (const f of c.files) {
+                        const j = await readJson(f.e);
+                        for (const m of j.messages || []) all.push(m);
+                    }
+                } catch (err) {
+                    $('chat-summary').textContent = `Couldn't open "${c.title}".`;
+                    return;
+                }
+                $('chat-summary').textContent = summary;
+                all.sort((a, b) => (a.timestamp_ms || 0) - (b.timestamp_ms || 0));
+                c.messages = all;
+                c.days = [];
+                c.dayIndex = new Map();
+                all.forEach((m, i) => {
+                    const key = dayKey(m.timestamp_ms || 0);
+                    const last = c.days[c.days.length - 1];
+                    if (last && last.key === key) last.end = i + 1;
+                    else { c.dayIndex.set(key, c.days.length); c.days.push({ key, start: i, end: i + 1 }); }
+                });
+                c.months = [...new Set(c.days.map(d => d.key.slice(0, 7)))];
+            }
+
+            current = c;
+            chatGen++;
+            if (push) history.pushState({ chat: c.id }, '');
+            $('chat-name').textContent = c.title;
+            const n = c.messages.length;
+            $('chat-info').textContent = n
+                ? `${n.toLocaleString()} message${n === 1 ? '' : 's'} · ${listDate(c.messages[0].timestamp_ms)} – ${listDate(c.messages[n - 1].timestamp_ms)}`
+                : 'No messages';
+            $('calendar').hidden = true;
+            $('date-btn').setAttribute('aria-expanded', 'false');
+            show('chat');
+            $('chat').querySelector('.sticky').hidden = !n;
+            if (n) jumpToDay(c.days.length - 1, true);
+            else { $('load-earlier').hidden = $('load-later').hidden = true; }
+        }
+
+        function closeChat() {
+            chatGen++;
+            urls.forEach(u => URL.revokeObjectURL(u));
+            urls = [];
+            $('messages').textContent = '';
+            $('calendar').hidden = true;
+            if (current) { current.messages = null; current.days = null; current.dayIndex = null; }
+            current = null;
+        }
+
+        function renderDay(d) {
+            const frag = document.createDocumentFragment();
+            const sep = el('div', 'day-sep', longDay(d.key));
+            sep.dataset.day = d.key;
+            frag.append(sep);
+            for (let i = d.start; i < d.end; i++) frag.append(renderMessage(current.messages[i]));
+            return frag;
+        }
+
+        // Show day i: from the end (latest messages, scrolled to the bottom) or as the first day on screen.
+        function jumpToDay(i, fromEnd) {
+            urls.forEach(u => URL.revokeObjectURL(u));
+            urls = [];
+            chatGen++;
+            $('messages').textContent = '';
+            const days = current.days;
+            shown = { first: i, last: i };
+            let count = sizeOf(i);
+            if (fromEnd) while (shown.first > 0 && count < BATCH) count += sizeOf(--shown.first);
+            else while (shown.last < days.length - 1 && count < BATCH) count += sizeOf(++shown.last);
+            const frag = document.createDocumentFragment();
+            for (let k = shown.first; k <= shown.last; k++) frag.append(renderDay(days[k]));
+            $('messages').append(frag);
+            updateLoadButtons();
+            selectDay(i);
+            if (fromEnd) {
+                window.scrollTo(0, document.documentElement.scrollHeight);
+            } else {
+                $('messages').querySelector(`[data-day="${days[i].key}"]`).scrollIntoView({ block: 'start' });
+            }
+        }
+
+        function loadEarlier() {
+            if (!current || shown.first <= 0) return;
+            const before = document.documentElement.scrollHeight;
+            let k = shown.first, count = 0;
+            while (k > 0 && count < BATCH) count += sizeOf(--k);
+            const frag = document.createDocumentFragment();
+            for (let j = k; j < shown.first; j++) frag.append(renderDay(current.days[j]));
+            shown.first = k;
+            $('messages').prepend(frag);
+            window.scrollBy(0, document.documentElement.scrollHeight - before);
+            updateLoadButtons();
+        }
+
+        function loadLater() {
+            if (!current || shown.last >= current.days.length - 1) return;
+            let k = shown.last, count = 0;
+            const frag = document.createDocumentFragment();
+            while (k < current.days.length - 1 && count < BATCH) {
+                count += sizeOf(++k);
+                frag.append(renderDay(current.days[k]));
+            }
+            shown.last = k;
+            $('messages').append(frag);
+            updateLoadButtons();
+        }
+
+        function updateLoadButtons() {
+            $('load-earlier').hidden = shown.first <= 0;
+            $('load-later').hidden = shown.last >= current.days.length - 1;
+        }
+
+        function selectDay(i) {
+            visible = i;
+            $('date-btn').textContent = shortDay(current.days[i].key) + '  ▾';
+            $('prev-day').disabled = i <= 0;
+            $('next-day').disabled = i >= current.days.length - 1;
+            if (!$('calendar').hidden) renderCalendar();
+        }
+
+        // Keep the date bar showing the day at the top of the screen.
+        let scrollQueued = false;
+        window.addEventListener('scroll', () => {
+            if (!current || !current.days || scrollQueued) return;
+            scrollQueued = true;
+            requestAnimationFrame(() => {
+                scrollQueued = false;
+                if (!current || !current.days) return;
+                const line = $('chat').querySelector('.sticky').getBoundingClientRect().bottom + 8;
+                let key = null;
+                for (const sep of $('messages').querySelectorAll('.day-sep')) {
+                    if (sep.getBoundingClientRect().top <= line) key = sep.dataset.day;
+                    else break;
+                }
+                if (!key) { const first = $('messages').querySelector('.day-sep'); key = first && first.dataset.day; }
+                const i = current.dayIndex.get(key);
+                if (i !== undefined && i !== visible) selectDay(i);
+            });
+        }, { passive: true });
+
+        // ---------- messages ----------
+
+        function linkOut(href, text) {
+            const a = el('a', '', text);
+            a.href = href;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            return a;
+        }
+
+        function textNode(s) {
+            const span = el('span', 'text');
+            const re = /https?:\/\/[^\s]+/g;
+            let last = 0, m;
+            while ((m = re.exec(s))) {
+                span.append(s.slice(last, m.index), linkOut(m[0], m[0]));
+                last = m.index + m[0].length;
+            }
+            span.append(s.slice(last));
+            return span;
+        }
+
+        const lazy = new IntersectionObserver(items => items.forEach(it => {
+            if (!it.isIntersecting) return;
+            lazy.unobserve(it.target);
+            loadPhoto(it.target);
+        }), { rootMargin: '600px 0px' });
+
+        async function loadPhoto(img) {
+            const gen = chatGen;
+            try {
+                const url = URL.createObjectURL(await entryBlob(img._entry));
+                if (gen !== chatGen) { URL.revokeObjectURL(url); return; }
+                urls.push(url);
+                img.onload = () => img.classList.add('ready');
+                img.onerror = () => img.replaceWith(el('span', 'muted', "This photo can't be shown in this browser"));
+                img.src = url;
+            } catch (err) {
+                if (gen === chatGen) img.replaceWith(el('span', 'muted', "Couldn't open this photo"));
+            }
+        }
+
+        function photo(uri) {
+            const e = findEntry(uri);
+            if (!e) return el('span', 'muted', /^https?:/i.test(uri || '') ? 'GIF or sticker (online only)' : 'Photo not in this export');
+            const img = el('img', 'photo');
+            img.alt = 'Photo';
+            img._entry = e;
+            img.addEventListener('click', () => { if (img.src) openViewer(img.src); });
+            lazy.observe(img);
+            return img;
+        }
+
+        // Videos and voice notes load only when tapped, to save memory.
+        function playable(uri, kind) {
+            const label = kind === 'video' ? 'Video' : 'Voice message';
+            const e = findEntry(uri);
+            if (!e) return el('span', 'muted', `${label} not in this export`);
+            const b = el('button', '', `▶ ${label}`);
+            b.type = 'button';
+            b.addEventListener('click', async () => {
+                const gen = chatGen;
+                b.disabled = true;
+                b.textContent = 'Loading…';
+                try {
+                    const url = URL.createObjectURL(await entryBlob(e));
+                    if (gen !== chatGen) { URL.revokeObjectURL(url); return; }
+                    urls.push(url);
+                    const media = el(kind);
+                    media.controls = true;
+                    media.playsInline = true;
+                    media.src = url;
+                    b.replaceWith(media);
+                    media.play().catch(() => {});
+                } catch (err) {
+                    b.replaceWith(el('span', 'muted', `Couldn't open this ${kind}`));
+                }
+            });
+            return b;
+        }
+
+        function shareCard(s) {
+            const box = el('div', 'share');
+            if (s.original_content_owner) box.append(el('span', 'owner', s.original_content_owner));
+            if (s.share_text) box.append(el('span', '', s.share_text));
+            if (s.link && /^https?:/i.test(s.link)) box.append(linkOut(s.link, s.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60)));
+            if (!box.children.length) box.append(el('span', 'owner', 'Shared post'));
+            return box;
+        }
+
+        function renderMessage(m) {
+            const me = !!owner && m.sender_name === owner;
+            const row = el('div', 'msg-row' + (me ? ' me' : ''));
+            if (current.group && !me && m.sender_name) row.append(el('div', 'sender', m.sender_name));
+            const bubble = el('div', 'bubble');
+            if (m.content) bubble.append(textNode(m.content));
+            (m.photos || []).forEach(p => bubble.append(photo(p.uri)));
+            (m.videos || []).forEach(v => bubble.append(playable(v.uri, 'video')));
+            (m.audio_files || []).forEach(a => bubble.append(playable(a.uri, 'audio')));
+            (m.gifs || []).forEach(g => bubble.append(photo(g.uri)));
+            if (m.sticker && m.sticker.uri) bubble.append(photo(m.sticker.uri));
+            if (m.share) bubble.append(shareCard(m.share));
+            if (!bubble.children.length) bubble.append(el('span', 'muted', m.call_duration !== undefined ? 'Call' : 'Message with no text'));
+            bubble.append(el('span', 'time', clock(m.timestamp_ms || 0)));
+            row.append(bubble);
+            if (m.reactions && m.reactions.length) {
+                row.append(el('div', 'reactions', m.reactions.map(r => `${r.reaction || ''} ${r.actor || ''}`.trim()).join('   ')));
+            }
+            return row;
+        }
+
+        // ---------- calendar ----------
+
+        const monthKey = (y, m) => `${y}-${pad(m + 1)}`;
+
+        function toggleCalendar(open) {
+            $('calendar').hidden = !open;
+            $('date-btn').setAttribute('aria-expanded', open);
+            if (!open) return;
+            const d = keyDate(current.days[visible].key);
+            calMonth = { y: d.getFullYear(), m: d.getMonth() };
+            renderCalendar();
+        }
+
+        function setMonth(key) {
+            const [y, m] = key.split('-').map(Number);
+            calMonth = { y, m: m - 1 };
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const c = current, cal = $('calendar');
+            const { y, m } = calMonth;
+            const here = monthKey(y, m);
+            cal.textContent = '';
+
+            const head = el('div', 'cal-head');
+            const earlier = c.months.filter(k => k < here).pop();
+            const later = c.months.find(k => k > here);
+            const prev = el('button', '', '‹');
+            prev.type = 'button';
+            prev.setAttribute('aria-label', 'Earlier month with messages');
+            prev.disabled = !earlier;
+            prev.addEventListener('click', () => setMonth(earlier));
+            const next = el('button', '', '›');
+            next.type = 'button';
+            next.setAttribute('aria-label', 'Later month with messages');
+            next.disabled = !later;
+            next.addEventListener('click', () => setMonth(later));
+
+            const monthSel = el('select');
+            monthSel.setAttribute('aria-label', 'Month');
+            MONTHS.forEach((name, i) => {
+                const o = el('option', '', name);
+                o.value = i;
+                monthSel.append(o);
+            });
+            monthSel.value = m;
+            monthSel.addEventListener('change', () => { calMonth.m = Number(monthSel.value); renderCalendar(); });
+
+            const yearSel = el('select');
+            yearSel.setAttribute('aria-label', 'Year');
+            const firstYear = Number(c.days[0].key.slice(0, 4)), lastYear = Number(c.days[c.days.length - 1].key.slice(0, 4));
+            for (let yy = firstYear; yy <= lastYear; yy++) {
+                const o = el('option', '', String(yy));
+                o.value = yy;
+                yearSel.append(o);
+            }
+            yearSel.value = y;
+            yearSel.addEventListener('change', () => { calMonth.y = Number(yearSel.value); renderCalendar(); });
+            head.append(prev, monthSel, yearSel, next);
+
+            const grid = el('div', 'cal-grid');
+            ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].forEach(w => grid.append(el('div', 'wd', w)));
+            const blanks = (new Date(y, m, 1).getDay() + 6) % 7;
+            for (let i = 0; i < blanks; i++) grid.append(el('div'));
+            let any = false;
+            const daysIn = new Date(y, m + 1, 0).getDate();
+            for (let d = 1; d <= daysIn; d++) {
+                const idx = c.dayIndex.get(`${y}-${pad(m + 1)}-${pad(d)}`);
+                const b = el('button', 'cal-day', String(d));
+                b.type = 'button';
+                if (idx === undefined) {
+                    b.disabled = true;
+                } else {
+                    any = true;
+                    const n = sizeOf(idx);
+                    b.classList.add(n >= 50 ? 'l3' : n >= 10 ? 'l2' : 'l1');
+                    if (idx === visible) b.classList.add('sel');
+                    b.title = `${n} message${n === 1 ? '' : 's'}`;
+                    b.addEventListener('click', () => { toggleCalendar(false); jumpToDay(idx); });
+                }
+                grid.append(b);
+            }
+            cal.append(head, grid);
+            if (!any) cal.append(el('p', 'hint cal-note', 'No messages this month.'));
+        }
+
+        $('date-btn').addEventListener('click', () => toggleCalendar($('calendar').hidden));
+        $('prev-day').addEventListener('click', () => { toggleCalendar(false); jumpToDay(visible - 1); });
+        $('next-day').addEventListener('click', () => { toggleCalendar(false); jumpToDay(visible + 1); });
+        $('load-earlier').addEventListener('click', loadEarlier);
+        $('load-later').addEventListener('click', loadLater);
+
+        // ---------- photo viewer and going back ----------
+
+        function openViewer(src) {
+            $('viewer-img').src = src;
+            $('viewer').hidden = false;
+        }
+        function closeViewer() {
+            $('viewer').hidden = true;
+            $('viewer-img').removeAttribute('src');
+        }
+        $('viewer-close').addEventListener('click', closeViewer);
+        $('viewer').addEventListener('click', e => { if (e.target === $('viewer')) closeViewer(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { if (!$('viewer').hidden) closeViewer(); else if (!$('calendar').hidden) toggleCalendar(false); }
+        });
+
+        function backToList() {
+            closeViewer();
+            closeChat();
+            show('chats');
+        }
+        $('back').addEventListener('click', () => {
+            if (history.state && history.state.chat) history.back();
+            else backToList();
+        });
+        window.addEventListener('popstate', () => { if (current) backToList(); });
+        history.replaceState({}, '');
+    </script>
+</body>
+</html>
