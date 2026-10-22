@@ -706,6 +706,15 @@
             try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (err) { return s; }
         }
 
+        // Instagram adds an extra "Liked a message" line for every like. The like itself is
+        // already shown under the message it was for, so these lines are dropped.
+        const REACTION_LINE = /^(liked a message|reacted .{1,20} to (your|a) message|.{1,80} (liked|reacted .{1,20} to) (your|a) message)$/iu;
+        const ATTACHMENT_LINE = /^.{0,80}sent an attachment\.?$/iu;
+        const hasParts = m => !!((m.photos && m.photos.length) || (m.videos && m.videos.length) || (m.audio_files && m.audio_files.length) || (m.gifs && m.gifs.length) || m.sticker || m.share);
+        const isReactionLine = m => typeof m.content === 'string' && !hasParts(m) && REACTION_LINE.test(m.content.trim());
+        // The message text, minus "sent an attachment." when the attachment itself is shown.
+        const bodyText = m => (m.content && !(hasParts(m) && ATTACHMENT_LINE.test(m.content.trim())) ? m.content : '');
+
         async function readJson(e) {
             const text = await (await entryBlob(e)).text();
             return JSON.parse(text, (k, v) => typeof v === 'string' ? fixText(v) : v);
@@ -821,7 +830,7 @@
                     const j = await readJson(c.files[0].e);
                     c.participants = (j.participants || []).map(p => p.name).filter(Boolean);
                     c.title = j.title || '';
-                    c.last = (j.messages || []).reduce((mx, m) => Math.max(mx, m.timestamp_ms || 0), 0);
+                    c.last = (j.messages || []).reduce((mx, m) => (isReactionLine(m) ? mx : Math.max(mx, m.timestamp_ms || 0)), 0);
                 } catch (err) {
                     c.broken = true;
                 }
@@ -1033,7 +1042,7 @@
             const all = [];
             for (const f of c.files) {
                 const j = await readJson(f.e);
-                for (const m of j.messages || []) all.push(m);
+                for (const m of j.messages || []) if (!isReactionLine(m)) all.push(m);
             }
             return all.sort((a, b) => (a.timestamp_ms || 0) - (b.timestamp_ms || 0));
         }
@@ -1292,7 +1301,8 @@
             const row = el('div', 'msg-row' + (me ? ' me' : ''));
             if (current.group && !me && m.sender_name) row.append(el('div', 'sender', m.sender_name));
             const bubble = el('div', 'bubble');
-            if (m.content) bubble.append(textNode(m.content));
+            const body = bodyText(m);
+            if (body) bubble.append(textNode(body));
             (m.photos || []).forEach(p => bubble.append(photo(p.uri)));
             (m.videos || []).forEach(v => bubble.append(playable(v.uri, 'video')));
             (m.audio_files || []).forEach(a => bubble.append(playable(a.uri, 'audio')));
@@ -1407,7 +1417,7 @@
         let exportGen = 0;        // bumps when an export is closed, so a slow search stops
         const PAGE = 100;
 
-        const textOf = m => [m.content, m.share && m.share.share_text].filter(Boolean).join('\n');
+        const textOf = m => [bodyText(m), m.share && m.share.share_text].filter(Boolean).join('\n');
 
         // Open the chat if needed, then show one message highlighted.
         function showMessage(i) {
@@ -1891,7 +1901,7 @@
             c.messages.forEach((m, i) => {
                 const add = (uri, video) => {
                     const e = findEntry(uri);
-                    if (e) out.push({ entry: e, ts: m.timestamp_ms || 0, caption: m.content || '', video, sender: m.sender_name || '', msgIndex: i });
+                    if (e) out.push({ entry: e, ts: m.timestamp_ms || 0, caption: bodyText(m), video, sender: m.sender_name || '', msgIndex: i });
                 };
                 (m.photos || []).forEach(p => add(p.uri, isVideo(p.uri || '')));
                 (m.videos || []).forEach(v => add(v.uri, true));
