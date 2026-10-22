@@ -336,6 +336,12 @@
         .tile.video::after { content: '▶'; font-size: 1.4rem; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
         .tile.broken::after { content: 'No preview'; font-size: 0.7rem; color: var(--text-muted); }
 
+        .chat-tabs { display: flex; gap: 0.4rem; margin: 0.6rem 0 0.1rem; }
+        .chat-tabs button[aria-pressed="true"] { border-color: var(--accent); background: rgba(16, 185, 129, 0.12); color: var(--accent-hover); }
+        #chat-media { margin-top: 0.25rem; }
+        .msg-row.flash .bubble { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .viewer-info .goto { margin-top: 0.6rem; }
+
         /* ---------- full-screen viewer ---------- */
 
         .viewer {
@@ -441,6 +447,10 @@
                     <div class="hint" id="chat-info"></div>
                 </div>
             </div>
+            <div class="chat-tabs">
+                <button type="button" data-view="messages">Messages</button>
+                <button type="button" data-view="media" id="chat-media-btn">Media</button>
+            </div>
             <div class="sticky">
                 <div class="datebar">
                     <button type="button" class="step" id="prev-day" aria-label="Earlier day with messages">‹</button>
@@ -452,6 +462,7 @@
             <button type="button" class="load" id="load-earlier">Earlier messages</button>
             <div class="messages" id="messages"></div>
             <button type="button" class="load" id="load-later">Later messages</button>
+            <div class="media-grid" id="chat-media" hidden></div>
         </section>
 
         <section id="media" hidden>
@@ -470,6 +481,7 @@
         <div class="viewer-info" id="viewer-info" hidden>
             <div class="when" id="viewer-when"></div>
             <div id="viewer-caption"></div>
+            <button type="button" class="goto" id="viewer-goto" hidden>Show in chat</button>
         </div>
         <button type="button" class="close" id="viewer-close" aria-label="Close">✕</button>
     </div>
@@ -721,7 +733,7 @@
             chats = [];
             owner = '';
             $('chat-list').textContent = '';
-            clearThumbs();
+            mainThumbs.clear();
             media = [];
             mediaShown = [];
             mediaRendered = false;
@@ -813,6 +825,7 @@
                     else { c.dayIndex.set(key, c.days.length); c.days.push({ key, start: i, end: i + 1 }); }
                 });
                 c.months = [...new Set(c.days.map(d => d.key.slice(0, 7)))];
+                c.media = chatMedia(c);
             }
 
             current = c;
@@ -826,7 +839,10 @@
             $('calendar').hidden = true;
             $('date-btn').setAttribute('aria-expanded', 'false');
             show('chat');
-            $('chat').querySelector('.sticky').hidden = !n;
+            c.mediaRendered = false;
+            $('chat-media-btn').textContent = `Media ${c.media.length.toLocaleString()}`;
+            $('chat-media-btn').disabled = !c.media.length;
+            setChatView('messages');
             if (n) jumpToDay(c.days.length - 1, true);
             else { $('load-earlier').hidden = $('load-later').hidden = true; }
         }
@@ -837,7 +853,9 @@
             urls = [];
             $('messages').textContent = '';
             $('calendar').hidden = true;
-            if (current) { current.messages = null; current.days = null; current.dayIndex = null; }
+            chatThumbs.clear();
+            $('chat-media').textContent = '';
+            if (current) { current.messages = null; current.days = null; current.dayIndex = null; current.media = null; }
             current = null;
         }
 
@@ -846,7 +864,11 @@
             const sep = el('div', 'day-sep', longDay(d.key));
             sep.dataset.day = d.key;
             frag.append(sep);
-            for (let i = d.start; i < d.end; i++) frag.append(renderMessage(current.messages[i]));
+            for (let i = d.start; i < d.end; i++) {
+                const row = renderMessage(current.messages[i]);
+                row.dataset.i = i;
+                frag.append(row);
+            }
             return frag;
         }
 
@@ -1143,8 +1165,6 @@
         let mediaFilter = 'all';
         let mediaShown = [];     // media after the filter
         let mediaRendered = false;
-        let thumbUrls = [];
-        let thumbGen = 0;
         let thumbsRunning = 0;
         const thumbQueue = [];
 
@@ -1222,40 +1242,99 @@
             return monthKey(d.getFullYear(), d.getMonth());
         };
 
-        function renderMedia() {
-            clearThumbs();
-            renderFilters();
-            const grid = $('media-grid');
+        // Each grid keeps its own thumbnails, so clearing one never blanks the other.
+        function thumbPool() {
+            const pool = { urls: [], gen: 0 };
+            pool.io = new IntersectionObserver(items => items.forEach(it => {
+                if (!it.isIntersecting) return;
+                pool.io.unobserve(it.target);
+                thumbQueue.push(it.target);
+                pumpThumbs();
+            }), { rootMargin: '400px 0px' });
+            pool.clear = () => {
+                pool.gen++;
+                pool.io.disconnect();
+                for (let i = thumbQueue.length - 1; i >= 0; i--) if (thumbQueue[i]._pool === pool) thumbQueue.splice(i, 1);
+                pool.urls.forEach(u => URL.revokeObjectURL(u));
+                pool.urls = [];
+            };
+            return pool;
+        }
+        const mainThumbs = thumbPool();
+        const chatThumbs = thumbPool();
+
+        // A month-by-month grid of tiles; photos get small thumbnails as they scroll into view.
+        function renderGrid(grid, items, pool, label, open) {
+            pool.clear();
             grid.textContent = '';
-            if (!media.length) { grid.append(el('p', 'hint', 'No posts, stories or reels in this export.')); return; }
-            mediaShown = media.filter(m => mediaFilter === 'all' || m.type === mediaFilter);
             const perMonth = new Map();
-            mediaShown.forEach(m => { const k = monthOf(m.ts); perMonth.set(k, (perMonth.get(k) || 0) + 1); });
+            items.forEach(m => { const k = monthOf(m.ts); perMonth.set(k, (perMonth.get(k) || 0) + 1); });
             const frag = document.createDocumentFragment();
             let month = null;
-            mediaShown.forEach((m, i) => {
+            items.forEach((m, i) => {
                 const k = monthOf(m.ts);
                 if (k !== month) {
                     month = k;
-                    const label = k === 'unknown' ? 'Date unknown' : keyDate(k + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-                    frag.append(el('h2', 'month', `${label} · ${perMonth.get(k)}`));
+                    const name = k === 'unknown' ? 'Date unknown' : keyDate(k + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                    frag.append(el('h2', 'month', `${name} · ${perMonth.get(k)}`));
                 }
                 const tile = el('button', 'tile' + (m.video ? ' video' : ''));
                 tile.type = 'button';
-                tile.setAttribute('aria-label', `${TYPES[m.type]}${m.ts ? ', ' + listDate(m.ts) : ''}`);
-                tile.addEventListener('click', () => openMediaViewer(i));
-                if (!m.video) { tile._item = m; thumbs.observe(tile); }
+                tile.setAttribute('aria-label', label(m));
+                tile.addEventListener('click', () => open(i));
+                if (!m.video) { tile._item = m; tile._pool = pool; pool.io.observe(tile); }
                 frag.append(tile);
             });
             grid.append(frag);
         }
 
-        const thumbs = new IntersectionObserver(items => items.forEach(it => {
-            if (!it.isIntersecting) return;
-            thumbs.unobserve(it.target);
-            thumbQueue.push(it.target);
-            pumpThumbs();
-        }), { rootMargin: '400px 0px' });
+        function renderMedia() {
+            renderFilters();
+            const grid = $('media-grid');
+            if (!media.length) {
+                mainThumbs.clear();
+                grid.textContent = '';
+                grid.append(el('p', 'hint', 'No posts, stories or reels in this export.'));
+                return;
+            }
+            mediaShown = media.filter(m => mediaFilter === 'all' || m.type === mediaFilter);
+            renderGrid(grid, mediaShown, mainThumbs, m => `${TYPES[m.type]}${m.ts ? ', ' + listDate(m.ts) : ''}`, i => openMediaViewer(i, mediaShown));
+        }
+
+        // Photos and videos shared in one chat, newest first.
+        function chatMedia(c) {
+            const out = [];
+            c.messages.forEach((m, i) => {
+                const add = (uri, video) => {
+                    const e = findEntry(uri);
+                    if (e) out.push({ entry: e, ts: m.timestamp_ms || 0, caption: m.content || '', video, sender: m.sender_name || '', msgIndex: i });
+                };
+                (m.photos || []).forEach(p => add(p.uri, isVideo(p.uri || '')));
+                (m.videos || []).forEach(v => add(v.uri, true));
+            });
+            return out.reverse();
+        }
+
+        function setChatView(view) {
+            const c = current;
+            const showMedia = view === 'media';
+            document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
+            toggleCalendar(false);
+            $('chat').querySelector('.sticky').hidden = showMedia || !c.messages.length;
+            $('messages').hidden = showMedia;
+            $('chat-media').hidden = !showMedia;
+            if (showMedia) {
+                $('load-earlier').hidden = $('load-later').hidden = true;
+                if (!c.mediaRendered) {
+                    renderGrid($('chat-media'), c.media, chatThumbs, m => `${m.sender}, ${listDate(m.ts)}`, i => openMediaViewer(i, c.media));
+                    c.mediaRendered = true;
+                }
+                window.scrollTo(0, 0);
+            } else if (c.days && c.days.length) {
+                updateLoadButtons();
+            }
+        }
+        document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setChatView(b.dataset.view)));
 
         // A few at a time, so a phone never holds many full-size photos at once.
         function pumpThumbs() {
@@ -1276,11 +1355,11 @@
         }
 
         async function makeThumb(tile) {
-            const gen = thumbGen;
+            const pool = tile._pool, gen = pool.gen;
             let full = null;
             try {
                 full = URL.createObjectURL(await entryBlob(tile._item.entry));
-                if (gen !== thumbGen) return;
+                if (gen !== pool.gen) return;
                 const img = await loadImage(full);
                 const scale = Math.min(1, 320 / Math.min(img.naturalWidth, img.naturalHeight));
                 const c = document.createElement('canvas');
@@ -1289,29 +1368,22 @@
                 c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
                 const small = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
                 c.width = c.height = 0;
-                if (gen !== thumbGen || !small) return;
+                if (gen !== pool.gen || !small) return;
                 const url = URL.createObjectURL(small);
-                thumbUrls.push(url);
+                pool.urls.push(url);
                 tile.style.backgroundImage = `url("${url}")`;
                 tile.classList.add('ready');
             } catch (err) {
-                if (gen === thumbGen) tile.classList.add('broken');
+                if (gen === pool.gen) tile.classList.add('broken');
             } finally {
                 if (full) URL.revokeObjectURL(full);
             }
         }
 
-        function clearThumbs() {
-            thumbGen++;
-            thumbQueue.length = 0;
-            thumbs.disconnect();
-            thumbUrls.forEach(u => URL.revokeObjectURL(u));
-            thumbUrls = [];
-        }
-
         // ---------- full-screen viewer ----------
 
-        let viewIndex = -1;   // place in mediaShown while browsing media; -1 for a chat photo
+        let viewList = [];    // the media being browsed: all media, or one chat's
+        let viewIndex = -1;   // place in viewList; -1 for a single chat photo
         let viewUrl = null;   // object URL the viewer made itself
         let viewGen = 0;
 
@@ -1338,18 +1410,22 @@
             $('viewer').hidden = false;
         }
 
-        async function openMediaViewer(i) {
+        async function openMediaViewer(i, list = viewList) {
             releaseView();
             const gen = viewGen;
+            viewList = list;
             viewIndex = i;
-            const m = mediaShown[i];
+            const m = list[i];
             $('viewer').hidden = false;
             $('viewer-info').hidden = false;
             $('viewer-prev').hidden = $('viewer-next').hidden = false;
             $('viewer-prev').disabled = i <= 0;
-            $('viewer-next').disabled = i >= mediaShown.length - 1;
-            $('viewer-when').textContent = [TYPES[m.type], m.ts ? new Date(m.ts).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '', `${i + 1} of ${mediaShown.length}`].filter(Boolean).join(' · ');
+            $('viewer-next').disabled = i >= list.length - 1;
+            const date = m.ts ? new Date(m.ts).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+            const head = m.sender !== undefined ? [m.sender, date && `${date}, ${clock(m.ts)}`] : [TYPES[m.type], date];
+            $('viewer-when').textContent = [...head, `${i + 1} of ${list.length}`].filter(Boolean).join(' · ');
             $('viewer-caption').textContent = m.caption;
+            $('viewer-goto').hidden = m.msgIndex === undefined;
             try {
                 const url = URL.createObjectURL(await entryBlob(m.entry));
                 if (gen !== viewGen) { URL.revokeObjectURL(url); return; }
@@ -1370,7 +1446,7 @@
 
         function stepViewer(d) {
             const i = viewIndex + d;
-            if (viewIndex < 0 || i < 0 || i >= mediaShown.length) return;
+            if (viewIndex < 0 || i < 0 || i >= viewList.length) return;
             openMediaViewer(i);
         }
 
@@ -1381,6 +1457,20 @@
         }
 
         $('viewer-close').addEventListener('click', closeViewer);
+
+        // From a chat's media, jump to the message it came in.
+        $('viewer-goto').addEventListener('click', () => {
+            const m = viewList[viewIndex];
+            if (!m || m.msgIndex === undefined || !current || !current.messages) return;
+            closeViewer();
+            setChatView('messages');
+            jumpToDay(current.dayIndex.get(dayKey(current.messages[m.msgIndex].timestamp_ms || 0)));
+            const row = $('messages').querySelector(`[data-i="${m.msgIndex}"]`);
+            if (!row) return;
+            row.scrollIntoView({ block: 'center' });
+            row.classList.add('flash');
+            setTimeout(() => row.classList.remove('flash'), 2500);
+        });
         $('viewer-prev').addEventListener('click', () => stepViewer(-1));
         $('viewer-next').addEventListener('click', () => stepViewer(1));
         $('viewer').addEventListener('click', e => { if (e.target === $('viewer') || e.target === $('viewer-stage')) closeViewer(); });
