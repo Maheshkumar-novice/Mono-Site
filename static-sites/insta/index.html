@@ -558,7 +558,7 @@
             <div class="media-grid" id="chat-media" hidden></div>
             <div id="chat-search" hidden>
                 <form class="search-form" id="chat-search-form">
-                    <input type="search" id="chat-search-q" placeholder="Search this chat" aria-label="Search this chat" enterkeyhint="search">
+                    <input type="search" id="chat-search-q" placeholder="Search this chat" aria-label="Search this chat" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
                     <button type="submit" class="btn-primary">Search</button>
                 </form>
                 <p class="hint search-status" id="chat-search-status"></p>
@@ -570,7 +570,7 @@
 
         <section id="search" hidden>
             <form class="search-form" id="search-form">
-                <input type="search" id="search-q" placeholder="Search all messages" aria-label="Search all messages" enterkeyhint="search">
+                <input type="search" id="search-q" placeholder="Search all messages" aria-label="Search all messages" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
                 <button type="submit" class="btn-primary">Search</button>
             </form>
             <p class="hint search-status" id="search-status"></p>
@@ -1346,35 +1346,45 @@
             return index;
         }
 
-        function snippet(prefix, text, q) {
+        // Spaces count: a space inside matches any space or line break, and a space at
+        // either end also matches the start or end of the message ("also " skips "also,").
+        function queryRegex(q) {
+            const core = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+            const lead = /^\s/.test(q) ? '(?:^|\\s)' : '';
+            const trail = /\s$/.test(q) ? '(?=\\s|$)' : '';
+            return new RegExp(lead + core + trail, 'iu');
+        }
+
+        function snippet(prefix, text, re) {
             const div = el('div', 'snippet');
             if (prefix) div.append(el('span', 'who', prefix));
-            const at = text.toLowerCase().indexOf(q.toLowerCase());
-            if (at < 0) { div.append(text.slice(0, 160)); return div; }
-            const start = Math.max(0, at - 60), end = Math.min(text.length, at + q.length + 100);
-            div.append((start > 0 ? '…' : '') + text.slice(start, at), el('mark', '', text.slice(at, at + q.length)), text.slice(at + q.length, end) + (end < text.length ? '…' : ''));
+            const m = re.exec(text);
+            if (!m) { div.append(text.slice(0, 160)); return div; }
+            const at = m.index, len = m[0].length;
+            const start = Math.max(0, at - 60), end = Math.min(text.length, at + len + 100);
+            div.append((start > 0 ? '…' : '') + text.slice(start, at), el('mark', '', text.slice(at, at + len)), text.slice(at + len, end) + (end < text.length ? '…' : ''));
             return div;
         }
 
-        function resultItem(h, q, showChat) {
+        function resultItem(h, re, showChat) {
             const li = el('li');
             const b = el('button', 'result');
             b.type = 'button';
             const top = el('div', 'top');
             top.append(el('span', 'where', showChat ? h.chat.title : h.sender), el('span', 'when', `${listDate(h.ts)}, ${clock(h.ts)}`));
-            b.append(top, snippet(showChat && h.sender ? `${h.sender}: ` : '', h.text, q));
+            b.append(top, snippet(showChat && h.sender ? `${h.sender}: ` : '', h.text, re));
             b.addEventListener('click', () => goToMessage(h.chat, h.i, h.ts));
             li.append(b);
             return li;
         }
 
         // Newest first, a page at a time.
-        function renderResults(ul, more, hits, q, showChat) {
+        function renderResults(ul, more, hits, re, showChat) {
             ul.textContent = '';
             let done = 0;
             const page = () => {
                 const frag = document.createDocumentFragment();
-                hits.slice(done, done + PAGE).forEach(h => frag.append(resultItem(h, q, showChat)));
+                hits.slice(done, done + PAGE).forEach(h => frag.append(resultItem(h, re, showChat)));
                 done = Math.min(hits.length, done + PAGE);
                 ul.append(frag);
                 more.hidden = done >= hits.length;
@@ -1387,34 +1397,34 @@
 
         $('search-form').addEventListener('submit', async e => {
             e.preventDefault();
-            const q = $('search-q').value.trim();
+            const q = $('search-q').value;
             const status = t => { $('search-status').textContent = t; };
-            if (q.length < 2) { status('Type at least 2 letters.'); return; }
+            if (!q.trim() || q.length < 2) { status('Type at least 2 letters.'); return; }
             const gen = exportGen;
             const index = await buildSearchIndex(status);
             if (!index || gen !== exportGen) return;
-            const ql = q.toLowerCase();
+            const re = queryRegex(q);
             const hits = [];
-            index.forEach(items => items.forEach(x => { if (x.text.toLowerCase().includes(ql)) hits.push(x); }));
+            index.forEach(items => items.forEach(x => { if (re.test(x.text)) hits.push(x); }));
             hits.sort((a, b) => b.ts - a.ts);
             const inChats = new Set(hits.map(h => h.chat)).size;
             status(hits.length ? `${plural(hits.length, 'message')} in ${plural(inChats, 'chat')}, newest first` : `No messages with "${q}".`);
-            renderResults($('search-results'), $('search-more'), hits, q, true);
+            renderResults($('search-results'), $('search-more'), hits, re, true);
         });
 
         $('chat-search-form').addEventListener('submit', e => {
             e.preventDefault();
-            const q = $('chat-search-q').value.trim();
-            if (q.length < 2) { $('chat-search-status').textContent = 'Type at least 2 letters.'; return; }
-            const ql = q.toLowerCase();
+            const q = $('chat-search-q').value;
+            if (!q.trim() || q.length < 2) { $('chat-search-status').textContent = 'Type at least 2 letters.'; return; }
+            const re = queryRegex(q);
             const hits = [];
             current.messages.forEach((m, i) => {
                 const text = textOf(m);
-                if (text && text.toLowerCase().includes(ql)) hits.push({ chat: current, i, ts: m.timestamp_ms || 0, sender: m.sender_name || '', text });
+                if (text && re.test(text)) hits.push({ chat: current, i, ts: m.timestamp_ms || 0, sender: m.sender_name || '', text });
             });
             hits.reverse();
             $('chat-search-status').textContent = hits.length ? `${plural(hits.length, 'message')}, newest first` : `No messages with "${q}".`;
-            renderResults($('chat-search-results'), $('chat-search-more'), hits, q, false);
+            renderResults($('chat-search-results'), $('chat-search-more'), hits, re, false);
         });
 
         // ---------- chat stats ----------
