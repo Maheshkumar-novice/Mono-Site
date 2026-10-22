@@ -119,6 +119,11 @@
         }
 
         .drop.dragover { border-color: var(--accent); }
+
+        .check { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); cursor: pointer; }
+        .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+        .keep-note { margin: -0.5rem 0 0.75rem; }
+        .keep-note:empty { display: none; }
         .drop .hint { max-width: 40ch; }
 
         .how {
@@ -503,6 +508,7 @@
             <div class="drop" id="drop">
                 <label class="btn btn-primary" for="zips">Open export (.zip)</label>
                 <p class="hint">No need to unzip. If Instagram split it into several zips, pick them all together. You can also drop them here.</p>
+                <label class="check"><input type="checkbox" id="keep"> Keep it on this device for next time</label>
             </div>
             <details class="how">
                 <summary>How to get your export</summary>
@@ -521,6 +527,7 @@
             <button type="button" role="tab" data-tab="media">Media</button>
             <button type="button" class="close-export" id="close-export">Close</button>
         </div>
+        <p class="hint keep-note" id="keep-note" hidden></p>
 
         <section id="chats" hidden>
             <div class="list-head">
@@ -748,6 +755,7 @@
         function show(section) {
             for (const id of ['start', 'chats', 'chat', 'search', 'media']) $(id).hidden = id !== section;
             $('tabs').hidden = !['chats', 'search', 'media'].includes(section);
+            $('keep-note').hidden = $('tabs').hidden;
             document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === section));
         }
 
@@ -768,10 +776,11 @@
             return list.length > 1 && most > list.length / 2 ? best : (list[0]?.participants.slice(-1)[0] || '');
         }
 
-        async function openExport(fileList) {
+        // Returns true when the export opened. fromKept: it came from the copy kept on this device.
+        async function openExport(fileList, fromKept = false) {
             const files = [...fileList].filter(f => /\.zip$/i.test(f.name) || /zip/.test(f.type));
-            if (!files.length) { setMsg('Please pick the .zip file(s) Instagram gave you.', true); return; }
-            if (typeof DecompressionStream === 'undefined') { setMsg('This browser is too old to open zip files. Please update it and try again.', true); return; }
+            if (!files.length) { setMsg('Please pick the .zip file(s) Instagram gave you.', true); return false; }
+            if (typeof DecompressionStream === 'undefined') { setMsg('This browser is too old to open zip files. Please update it and try again.', true); return false; }
             closeExport();
             setMsg('Opening…');
 
@@ -781,7 +790,7 @@
                     (await readZip(f)).forEach((v, k) => merged.set(k, v));
                 } catch (err) {
                     setMsg(`"${f.name}" doesn't look like a zip file.`, true);
-                    return;
+                    return false;
                 }
             }
             entries = merged;
@@ -801,7 +810,7 @@
                     ? 'This export is in HTML format. Ask Instagram for a new one in JSON format.'
                     : 'No chats or media found. If Instagram split your export into several zips, pick them all together.', true);
                 closeExport();
-                return;
+                return false;
             }
 
             const list = [...folders.values()];
@@ -833,6 +842,11 @@
             renderList();
             mediaFilter = 'all';
             setTab(chats.length ? 'chats' : 'media');
+            if (!fromKept) {
+                if (keepWanted()) keepExport(files);
+                else forgetKept();
+            }
+            return true;
         }
 
         let lastTab = 'chats';   // the tab to come back to after a chat
@@ -852,6 +866,7 @@
             $('search-results').textContent = '';
             $('search-more').hidden = true;
             lastTab = 'chats';
+            $('keep-note').textContent = '';
             entries = new Map();
             byName = null;
             chats = [];
@@ -863,6 +878,91 @@
             mediaRendered = false;
             $('media-grid').textContent = '';
         }
+
+        // ---------- keeping the export on this device ----------
+
+        // The zip is copied into this browser's own storage (IndexedDB) on this device only.
+        const KEEP_KEY = 'insta:keep';
+        const DB_NAME = 'insta-viewer', STORE = 'kept';
+        let keepGen = 0;   // bumps when the copy is forgotten, so a save still running is undone
+
+        function keepWanted() {
+            try { return localStorage.getItem(KEEP_KEY) === '1'; } catch (err) { return false; }
+        }
+        const keepNote = text => { $('keep-note').textContent = text || ''; };
+
+        function openDb() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // Runs one step on the store and waits until it is safely written.
+        async function inStore(mode, step) {
+            const db = await openDb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, mode);
+                const req = step(tx.objectStore(STORE));
+                tx.oncomplete = () => { db.close(); resolve(req && req.result); };
+                tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('not saved')); };
+            });
+        }
+
+        const dropKept = () => inStore('readwrite', st => st.delete('export')).catch(() => {});
+
+        function forgetKept() {
+            keepGen++;
+            if (window.indexedDB) dropKept();
+        }
+
+        async function keepExport(files) {
+            if (!window.indexedDB) { keepNote("This browser can't keep a copy, so open the zip again next time."); return; }
+            const gen = ++keepGen;
+            const total = files.reduce((sum, f) => sum + f.size, 0);
+            try {
+                await dropKept();
+                if (navigator.storage && navigator.storage.estimate) {
+                    const { quota = 0, usage = 0 } = await navigator.storage.estimate();
+                    if (quota && total > (quota - usage) * 0.9) {
+                        keepNote('This export is too big to keep on this device, so open the zip again next time.');
+                        return;
+                    }
+                }
+                if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+                keepNote('Keeping a copy on this device…');
+                await inStore('readwrite', st => st.put({ files: files.map(f => ({ name: f.name, blob: f })), size: total, savedAt: Date.now() }, 'export'));
+                if (gen !== keepGen) { await dropKept(); return; }
+                keepNote('Kept on this device for next time. Close forgets it.');
+            } catch (err) {
+                if (gen !== keepGen) return;
+                dropKept();
+                keepNote("Couldn't keep a copy on this device, so open the zip again next time.");
+            }
+        }
+
+        async function openKept() {
+            if (!keepWanted() || !window.indexedDB) return;
+            let rec;
+            try { rec = await inStore('readonly', st => st.get('export')); } catch (err) { return; }
+            if (!rec || !rec.files || !rec.files.length) return;
+            setMsg('Opening the export kept on this device…');
+            const files = rec.files.map(f => new File([f.blob], f.name, { type: 'application/zip' }));
+            if (await openExport(files, true)) {
+                keepNote('Opened from this device. Close forgets it.');
+            } else {
+                forgetKept();
+                setMsg("The copy kept on this device couldn't be opened. Please open the zip again.", true);
+            }
+        }
+
+        $('keep').checked = keepWanted();
+        $('keep').addEventListener('change', e => {
+            try { localStorage.setItem(KEEP_KEY, e.target.checked ? '1' : '0'); } catch (err) { /* storage blocked */ }
+            if (!e.target.checked) forgetKept();
+        });
 
         // ---------- chat list ----------
 
@@ -898,7 +998,12 @@
         }
 
         $('filter').addEventListener('input', renderList);
-        $('close-export').addEventListener('click', () => { closeExport(); setMsg(''); show('start'); });
+        $('close-export').addEventListener('click', () => {
+            closeExport();
+            forgetKept();
+            setMsg('');
+            show('start');
+        });
 
         $('zips').addEventListener('change', e => {
             openExport(e.target.files);
@@ -1990,6 +2095,7 @@
         });
         window.addEventListener('popstate', () => { if (current) backToList(); });
         history.replaceState({}, '');
+        openKept();
     </script>
 </body>
 </html>
