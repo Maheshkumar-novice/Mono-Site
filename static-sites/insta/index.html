@@ -398,6 +398,44 @@
         .result .who { color: var(--text-muted); }
         .result mark { background: rgba(16, 185, 129, 0.3); color: var(--text-primary); border-radius: 3px; padding: 0 2px; }
 
+        /* ---------- on this day ---------- */
+
+        .otd-card {
+            width: 100%;
+            justify-content: space-between;
+            gap: 1rem;
+            text-align: left;
+            padding: 0.7rem 0.9rem;
+            margin-bottom: 0.75rem;
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .otd-card .otd-text { display: flex; flex-direction: column; min-width: 0; }
+        .otd-card .otd-title { font-weight: 600; font-size: 0.95rem; }
+        .otd-card .otd-sub { color: var(--text-secondary); font-size: 0.82rem; }
+        .otd-card .go { color: var(--accent); }
+
+        .otd-bar { display: flex; gap: 0.5rem; align-items: center; }
+        .otd-bar input[type=date] {
+            flex: 1;
+            min-width: 0;
+            font: inherit;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            color-scheme: dark;
+        }
+        .otd-bar .step { width: 2.6rem; font-size: 1.1rem; }
+
+        .otd-year { font-size: 0.95rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+        .otd-year .ago { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; }
+        .otd-media { margin-bottom: 0.5rem; }
+
         /* ---------- top people ---------- */
 
         .top-head { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
@@ -582,6 +620,10 @@
         <p class="hint keep-note" id="keep-note" hidden></p>
 
         <section id="chats" hidden>
+            <button type="button" class="otd-card" id="otd-card">
+                <span class="otd-text"><span class="otd-title">On this day</span><span class="otd-sub" id="otd-sub"></span></span>
+                <span class="go" aria-hidden="true">→</span>
+            </button>
             <div class="list-head">
                 <input type="search" id="filter" placeholder="Search chats" aria-label="Search chats">
             </div>
@@ -627,6 +669,17 @@
                 <button type="button" class="load" id="chat-search-more" hidden>Show more</button>
             </div>
             <div class="stats" id="chat-stats" hidden></div>
+        </section>
+
+        <section id="otd" hidden>
+            <div class="otd-bar">
+                <button type="button" class="step" id="otd-prev" aria-label="Day before">‹</button>
+                <input type="date" id="otd-date" aria-label="Day to look at">
+                <button type="button" class="step" id="otd-next" aria-label="Day after">›</button>
+                <button type="button" id="otd-today">Today</button>
+            </div>
+            <p class="hint search-status" id="otd-status"></p>
+            <div id="otd-list"></div>
         </section>
 
         <section id="top" hidden>
@@ -826,11 +879,12 @@
         }
 
         function show(section) {
-            for (const id of ['start', 'chats', 'chat', 'top', 'search', 'media']) $(id).hidden = id !== section;
+            for (const id of ['start', 'chats', 'chat', 'otd', 'top', 'search', 'media']) $(id).hidden = id !== section;
             $('subtitle').hidden = section !== 'start';
-            $('tabs').hidden = !['chats', 'top', 'search', 'media'].includes(section);
+            $('tabs').hidden = !['chats', 'otd', 'top', 'search', 'media'].includes(section);
             $('keep-note').hidden = $('tabs').hidden;
-            document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === section));
+            const tab = section === 'otd' ? 'chats' : section;   // On this day sits under Chats
+            document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
         }
 
         async function guessOwner(list) {
@@ -914,6 +968,7 @@
             const skipped = list.length - chats.length;
             $('chat-summary').textContent = `${chats.length} chat${chats.length === 1 ? '' : 's'}` + (skipped ? ` (${skipped} couldn't be read)` : '');
             renderList();
+            $('otd-sub').textContent = `${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long' })} in past years`;
             mediaFilter = 'all';
             setTab(chats.length ? 'chats' : 'media');
             if (!fromKept) {
@@ -929,6 +984,7 @@
             show(tab);
             if (tab === 'media' && !mediaRendered) { renderMedia(); mediaRendered = true; }
             if (tab === 'top' && !topRendered) renderTop();
+            if (tab === 'otd') renderOtd();
         }
         document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
@@ -942,6 +998,10 @@
             $('search-more').hidden = true;
             topRendered = false;
             topShowAll = false;
+            otdDate = null;
+            $('otd-list').textContent = '';
+            $('otd-status').textContent = '';
+            otdThumbs.clear();
             $('top-list').textContent = '';
             $('top-status').textContent = '';
             $('top-year').length = 1;
@@ -1533,13 +1593,20 @@
                 if (gen !== exportGen) return null;
                 const items = [];
                 const years = {};
+                const perDay = new Map();
+                const firstWords = new Map();
                 msgs.forEach((m, i) => {
                     const text = textOf(m);
                     if (text) items.push({ chat: c, i, ts: m.timestamp_ms || 0, sender: m.sender_name || '', text });
-                    const y = new Date(m.timestamp_ms || 0).getFullYear();
+                    const key = dayKey(m.timestamp_ms || 0);
+                    const y = Number(key.slice(0, 4));
                     years[y] = (years[y] || 0) + 1;
+                    perDay.set(key, (perDay.get(key) || 0) + 1);
+                    if (text && !firstWords.has(key)) firstWords.set(key, { sender: m.sender_name || '', text: text.slice(0, 140) });
                 });
                 c.counts = { total: msgs.length, years };
+                c.perDay = perDay;
+                c.firstWords = firstWords;
                 index.push(items);
                 if (k % 10 === 9) {
                     status(`${label}… ${k + 1} of ${chats.length} chats`);
@@ -1629,6 +1696,122 @@
             hits.reverse();
             $('chat-search-status').textContent = hits.length ? `${plural(hits.length, 'message')}, newest first` : `No messages with "${q}".`;
             renderResults($('chat-search-results'), $('chat-search-more'), hits, re, false);
+        });
+
+        // ---------- on this day ----------
+
+        let otdDate = null;   // the day being looked at; only its month and day matter
+
+        const otdInputValue = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        async function renderOtd() {
+            if (!otdDate) otdDate = new Date();
+            $('otd-date').value = otdInputValue(otdDate);
+            const status = t => { $('otd-status').textContent = t; };
+            const gen = exportGen;
+            if (!searchIndex) { $('otd-list').textContent = ''; status('Looking through your chats…'); }
+            const index = await scanChats(status, 'Looking through your chats');
+            if (!index || gen !== exportGen) return;
+            drawOtd();
+        }
+
+        function drawOtd() {
+            const mmdd = `${pad(otdDate.getMonth() + 1)}-${pad(otdDate.getDate())}`;
+            const thisYear = new Date().getFullYear();
+            const years = new Map();
+            const yearOf = y => {
+                if (!years.has(y)) years.set(y, { chats: [], media: [] });
+                return years.get(y);
+            };
+            chats.forEach(c => {
+                if (!c.perDay) return;
+                c.perDay.forEach((n, key) => {
+                    const y = Number(key.slice(0, 4));
+                    if (key.slice(5) === mmdd && y < thisYear) yearOf(y).chats.push({ c, n, key, first: c.firstWords.get(key) });
+                });
+            });
+            media.forEach(m => {
+                if (!m.ts || m.monthOnly) return;
+                const key = dayKey(m.ts);
+                const y = Number(key.slice(0, 4));
+                if (key.slice(5) === mmdd && y < thisYear) yearOf(y).media.push(m);
+            });
+
+            otdThumbs.clear();
+            const list = $('otd-list');
+            list.textContent = '';
+            const dayName = otdDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+            if (!years.size) {
+                $('otd-status').textContent = `Nothing from ${dayName} in past years.`;
+                return;
+            }
+            let msgs = 0, shots = 0;
+            [...years.keys()].sort((a, b) => b - a).forEach(y => {
+                const { chats: inChats, media: shared } = years.get(y);
+                const ago = thisYear - y;
+                const head = el('h2', 'otd-year', `${y} `);
+                head.append(el('span', 'ago', `· ${plural(ago, 'year')} ago`));
+                list.append(head);
+                if (shared.length) {
+                    shots += shared.length;
+                    const grid = el('div', 'media-grid otd-media');
+                    list.append(grid);
+                    renderGrid(grid, shared, otdThumbs, m => `${TYPES[m.type]}, ${listDate(m.ts)}`, i => openMediaViewer(i, shared), { months: false, clear: false });
+                }
+                if (inChats.length) {
+                    const ul = el('ul', 'results');
+                    inChats.sort((a, b) => b.n - a.n).forEach(r => {
+                        msgs += r.n;
+                        const li = el('li');
+                        const b = el('button', 'result');
+                        b.type = 'button';
+                        const top = el('div', 'top');
+                        top.append(el('span', 'where', r.c.title), el('span', 'when', plural(r.n, 'message')));
+                        const words = el('div', 'snippet');
+                        if (r.first) {
+                            if (r.c.group || r.first.sender) words.append(el('span', 'who', `${r.first.sender === owner ? 'You' : r.first.sender}: `));
+                            words.append(r.first.text + (r.first.text.length >= 140 ? '…' : ''));
+                        } else {
+                            words.append(el('span', 'who', 'Photos or attachments'));
+                        }
+                        b.append(top, words);
+                        b.addEventListener('click', () => openChatOnDay(r.c, r.key));
+                        li.append(b);
+                        ul.append(li);
+                    });
+                    list.append(ul);
+                }
+            });
+            const parts = [];
+            if (msgs) parts.push(plural(msgs, 'message'));
+            if (shots) parts.push(shots === 1 ? '1 post or story' : `${shots.toLocaleString()} posts and stories`);
+            $('otd-status').textContent = `${dayName} in past years: ${parts.join(' · ')}`;
+        }
+
+        async function openChatOnDay(c, key) {
+            await openChat(c);
+            if (current !== c) return;
+            const idx = c.dayIndex.get(key);
+            if (idx !== undefined) jumpToDay(idx);
+        }
+
+        function setOtdDay(d) {
+            otdDate = d;
+            $('otd-date').value = otdInputValue(d);
+            drawOtd();
+        }
+        const stepOtd = n => setOtdDay(new Date(otdDate.getFullYear(), otdDate.getMonth(), otdDate.getDate() + n));
+        $('otd-prev').addEventListener('click', () => stepOtd(-1));
+        $('otd-next').addEventListener('click', () => stepOtd(1));
+        $('otd-today').addEventListener('click', () => setOtdDay(new Date()));
+        $('otd-date').addEventListener('change', e => {
+            if (!e.target.value) return;
+            const [y, m, d] = e.target.value.split('-').map(Number);
+            setOtdDay(new Date(y, m - 1, d));
+        });
+        $('otd-card').addEventListener('click', () => {
+            history.pushState({ otd: true }, '');
+            setTab('otd');
         });
 
         // ---------- top people ----------
@@ -1972,7 +2155,7 @@
                 if (!m) continue;
                 const folder = m[1].toLowerCase();
                 const type = ['posts', 'stories', 'reels'].includes(folder) ? folder : folder.startsWith('profile') ? 'profile' : folder.startsWith('archived') ? 'archived' : 'other';
-                out.push({ entry: e, type, ts: m[2] ? new Date(Number(m[2]), Number(m[3]) - 1, 1).getTime() : 0, caption: '', video: isVideo(name) });
+                out.push({ entry: e, type, ts: m[2] ? new Date(Number(m[2]), Number(m[3]) - 1, 1).getTime() : 0, caption: '', video: isVideo(name), monthOnly: true });
             }
             return out.sort((a, b) => b.ts - a.ts);
         }
@@ -2019,10 +2202,12 @@
         }
         const mainThumbs = thumbPool();
         const chatThumbs = thumbPool();
+        const otdThumbs = thumbPool();
 
         // A month-by-month grid of tiles; photos get small thumbnails as they scroll into view.
-        function renderGrid(grid, items, pool, label, open) {
-            pool.clear();
+        // months: show month headings. clear: drop the pool's old thumbnails first.
+        function renderGrid(grid, items, pool, label, open, { months = true, clear = true } = {}) {
+            if (clear) pool.clear();
             grid.textContent = '';
             const perMonth = new Map();
             items.forEach(m => { const k = monthOf(m.ts); perMonth.set(k, (perMonth.get(k) || 0) + 1); });
@@ -2030,7 +2215,7 @@
             let month = null;
             items.forEach((m, i) => {
                 const k = monthOf(m.ts);
-                if (k !== month) {
+                if (months && k !== month) {
                     month = k;
                     const name = k === 'unknown' ? 'Date unknown' : keyDate(k + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
                     frag.append(el('h2', 'month', `${name} · ${perMonth.get(k)}`));
@@ -2308,6 +2493,8 @@
                 setChatView(st.view || 'messages');
             } else if (current) {
                 backToList();
+            } else if (!$('otd').hidden && !st.otd) {
+                setTab('chats');
             }
         });
         history.replaceState({}, '');
