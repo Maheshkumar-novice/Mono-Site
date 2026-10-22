@@ -229,6 +229,22 @@
 
         .load { display: flex; margin: 0.75rem auto; }
 
+        .save-panel {
+            margin: 0.6rem auto 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .save-panel .save-title { font-size: 0.9rem; font-weight: 500; }
+        .save-actions { display: flex; gap: 0.5rem; }
+        .save-actions button { flex: 1; }
+
         .messages { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.25rem 0; }
 
         .day-sep {
@@ -658,8 +674,17 @@
                     <button type="button" class="step" id="prev-day" aria-label="Earlier day with messages">‹</button>
                     <button type="button" class="date-btn" id="date-btn" aria-expanded="false"></button>
                     <button type="button" class="step" id="next-day" aria-label="Later day with messages">›</button>
+                    <button type="button" id="save-day" aria-expanded="false">Save</button>
                 </div>
                 <div class="calendar" id="calendar" hidden></div>
+                <div class="save-panel" id="save-panel" hidden>
+                    <div class="save-title" id="save-title"></div>
+                    <div class="save-actions">
+                        <button type="button" class="btn-primary" id="save-picture">As a picture</button>
+                        <button type="button" id="save-text">As text</button>
+                    </div>
+                    <p class="hint" id="save-status"></p>
+                </div>
                 </div>
             </div>
             <button type="button" class="load" id="load-earlier">Earlier messages</button>
@@ -1254,6 +1279,7 @@
             urls = [];
             $('messages').textContent = '';
             $('calendar').hidden = true;
+            $('save-panel').hidden = true;
             chatThumbs.clear();
             $('chat-media').textContent = '';
             $('chat-stats').textContent = '';
@@ -1279,6 +1305,7 @@
 
         // Show day i: from the end (latest messages, scrolled to the bottom) or as the first day on screen.
         function jumpToDay(i, fromEnd) {
+            if (!$('save-panel').hidden) toggleSave(false);
             urls.forEach(u => URL.revokeObjectURL(u));
             urls = [];
             chatGen++;
@@ -1479,6 +1506,7 @@
             $('calendar').hidden = !open;
             $('date-btn').setAttribute('aria-expanded', open);
             if (!open) return;
+            toggleSave(false);
             const d = keyDate(current.days[visible].key);
             calMonth = { y: d.getFullYear(), m: d.getMonth() };
             renderCalendar();
@@ -1898,6 +1926,356 @@
         $('top-groups').addEventListener('change', () => { topShowAll = false; drawTop(); });
         $('top-more').addEventListener('click', () => { topShowAll = true; drawTop(); });
 
+        // ---------- save a day ----------
+
+        let saveIdx = -1;          // the day the Save panel is for
+        let pendingFiles = null;   // pictures made but not yet shared: phones want a fresh tap
+        let MAX_PAGE_H = 14000;    // phones can't make taller pictures, so longer days are split
+
+        const PIC = { W: 1080, pad: 48, font: 34, line: 46, small: 24, padX: 26, padY: 18, radius: 30, gap: 14, photoW: 620, photoH: 820 };
+        const INK = { bg: '#0a0a0a', bubble: '#1f1f1f', me: '#0f3d2e', text: '#e5e5e5', muted: '#8a8a8a', soft: '#a3a3a3', accent: '#10b981', card: '#2a2a2a', rule: '#262626' };
+        const FACE = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        const F = {
+            title: `600 40px ${FACE}`,
+            sub: `400 28px ${FACE}`,
+            text: `400 ${PIC.font}px ${FACE}`,
+            small: `400 ${PIC.small}px ${FACE}`,
+            note: `italic 400 30px ${FACE}`,
+            share: `400 30px ${FACE}`,
+            box: `500 30px ${FACE}`
+        };
+
+        const nameOf = n => (n === owner ? 'You' : n || 'Unknown');
+        const isPhone = () => window.matchMedia('(pointer: coarse)').matches;
+        const saveStatus = t => { $('save-status').textContent = t || ''; };
+
+        function toggleSave(open) {
+            $('save-panel').hidden = !open;
+            $('save-day').setAttribute('aria-expanded', open);
+            pendingFiles = null;
+            $('save-picture').textContent = 'As a picture';
+            saveStatus('');
+            if (!open) return;
+            toggleCalendar(false);
+            saveIdx = visible;
+            $('save-title').textContent = `Save ${longDay(current.days[saveIdx].key)}`;
+        }
+
+        function dayMessages() {
+            const d = current.days[saveIdx];
+            return current.messages.slice(d.start, d.end);
+        }
+
+        function fileBase() {
+            const slug = current.title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+            return `chat-${slug ? slug + '-' : ''}${current.days[saveIdx].key}`;
+        }
+
+        function dayAsText() {
+            const lines = [`Chat with ${current.title}`, longDay(current.days[saveIdx].key), ''];
+            for (const m of dayMessages()) {
+                const parts = [];
+                const body = bodyText(m);
+                if (body) parts.push(body);
+                (m.photos || []).forEach(p => parts.push(findEntry(p.uri) ? '[Photo]' : '[Photo not in this export]'));
+                (m.videos || []).forEach(() => parts.push('[Video]'));
+                (m.audio_files || []).forEach(() => parts.push('[Voice message]'));
+                (m.gifs || []).forEach(() => parts.push('[GIF]'));
+                if (m.sticker) parts.push('[Sticker]');
+                if (m.share) parts.push(`[Shared${m.share.share_text ? ': ' + m.share.share_text : ''}${m.share.link ? ' ' + m.share.link : ''}]`);
+                if (!parts.length) parts.push(m.call_duration !== undefined ? '[Call]' : '[Message with no text]');
+                let line = `${clock(m.timestamp_ms || 0)} ${nameOf(m.sender_name)}: ${parts.join(' ')}`;
+                if (m.reactions && m.reactions.length) line += `  (${m.reactions.map(r => `${r.reaction || ''} ${nameOf(r.actor)}`.trim()).join(', ')})`;
+                lines.push(line);
+            }
+            return lines.join('\n') + '\n';
+        }
+
+        function download(blob, name) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        }
+
+        // Phones get the share sheet (Save Image, WhatsApp…); computers download.
+        async function shareOrSave(files) {
+            if (isPhone() && navigator.canShare && navigator.canShare({ files })) {
+                try {
+                    await navigator.share({ files });
+                    return 'shared';
+                } catch (err) {
+                    if (err.name === 'AbortError') return 'shared';
+                    if (err.name === 'NotAllowedError') return 'tap';
+                }
+            }
+            files.forEach(f => download(f, f.name));
+            return 'saved';
+        }
+
+        // Breaks text into lines that fit maxW, splitting very long words.
+        function wrap(ctx, text, maxW) {
+            const out = [];
+            for (const para of String(text).split('\n')) {
+                let line = '';
+                for (const word of para.split(/(\s+)/)) {
+                    if (!word) continue;
+                    if (ctx.measureText(line + word).width <= maxW) { line += word; continue; }
+                    if (line.trim()) out.push(line.trimEnd());
+                    line = '';
+                    if (/^\s+$/.test(word)) continue;
+                    for (const ch of word) {
+                        if (line && ctx.measureText(line + ch).width > maxW) { out.push(line); line = ''; }
+                        line += ch;
+                    }
+                }
+                out.push(line.trimEnd());
+            }
+            return out;
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        function headerBlock(ctx) {
+            ctx.font = F.title;
+            const title = wrap(ctx, current.title, PIC.W - PIC.pad * 2).slice(0, 2);
+            const h = title.length * 52 + 40 + 40;
+            return {
+                h,
+                draw(g, y) {
+                    g.textBaseline = 'top';
+                    g.font = F.title;
+                    g.fillStyle = INK.text;
+                    title.forEach((l, i) => g.fillText(l, PIC.pad, y + i * 52));
+                    g.font = F.sub;
+                    g.fillStyle = INK.muted;
+                    g.fillText(longDay(current.days[saveIdx].key), PIC.pad, y + title.length * 52 + 4);
+                    g.fillStyle = INK.rule;
+                    g.fillRect(PIC.pad, y + h - 22, PIC.W - PIC.pad * 2, 2);
+                }
+            };
+        }
+
+        function notePart(ctx, text) {
+            ctx.font = F.note;
+            return { kind: 'note', text, w: ctx.measureText(text).width, h: 40 };
+        }
+
+        function messageBlock(ctx, msg, images) {
+            const me = !!owner && msg.sender_name === owner;
+            const maxBubble = Math.round((PIC.W - PIC.pad * 2) * 0.78);
+            const inner = maxBubble - PIC.padX * 2;
+            const parts = [];
+            const body = bodyText(msg);
+            if (body) {
+                ctx.font = F.text;
+                const lines = wrap(ctx, body, inner);
+                parts.push({ kind: 'text', lines, w: Math.max(...lines.map(l => ctx.measureText(l).width)), h: lines.length * PIC.line });
+            }
+            (msg.photos || []).forEach(p => {
+                const img = images.get(p.uri);
+                if (img) {
+                    const sc = Math.min(1, PIC.photoW / img.naturalWidth, PIC.photoH / img.naturalHeight);
+                    parts.push({ kind: 'img', img, w: Math.round(img.naturalWidth * sc), h: Math.round(img.naturalHeight * sc) });
+                } else {
+                    parts.push(notePart(ctx, img === null ? 'Photo not in this export' : "Photo can't be shown"));
+                }
+            });
+            (msg.videos || []).forEach(() => parts.push({ kind: 'box', label: '▶  Video', w: 420, h: 236 }));
+            (msg.audio_files || []).forEach(() => parts.push(notePart(ctx, '▶  Voice message')));
+            if (msg.share) {
+                const rows = [];
+                const sh = msg.share;
+                if (sh.original_content_owner) rows.push({ font: F.small, color: INK.muted, text: sh.original_content_owner, h: 34 });
+                if (sh.share_text) { ctx.font = F.share; wrap(ctx, sh.share_text, inner - 20).slice(0, 6).forEach(t => rows.push({ font: F.share, color: INK.text, text: t, h: 40 })); }
+                if (sh.link) rows.push({ font: F.small, color: INK.accent, text: sh.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 48), h: 34 });
+                if (!rows.length) rows.push({ font: F.small, color: INK.muted, text: 'Shared post', h: 34 });
+                const w = Math.min(inner, 20 + Math.max(...rows.map(r => { ctx.font = r.font; return ctx.measureText(r.text).width; })));
+                parts.push({ kind: 'share', rows, w, h: rows.reduce((t, r) => t + r.h, 0) });
+            }
+            if (!parts.length) parts.push(notePart(ctx, msg.call_duration !== undefined ? 'Call' : 'Message with no text'));
+
+            ctx.font = F.small;
+            const time = clock(msg.timestamp_ms || 0);
+            const bubbleW = Math.min(maxBubble, Math.max(ctx.measureText(time).width, ...parts.map(p => p.w)) + PIC.padX * 2);
+            const partsH = parts.reduce((t, p) => t + p.h, 0) + (parts.length - 1) * 12;
+            const bubbleH = PIC.padY * 2 + partsH + 8 + PIC.small;
+            const showName = current.group && !me && msg.sender_name;
+            const nameH = showName ? PIC.small + 10 : 0;
+            const reacts = msg.reactions && msg.reactions.length ? msg.reactions.map(r => `${r.reaction || ''} ${nameOf(r.actor)}`.trim()).join('   ') : '';
+            const reactH = reacts ? PIC.small + 12 : 0;
+            return {
+                h: nameH + bubbleH + reactH + PIC.gap,
+                draw(g, y) {
+                    const x = me ? PIC.W - PIC.pad - bubbleW : PIC.pad;
+                    g.textBaseline = 'top';
+                    if (showName) { g.font = F.small; g.fillStyle = INK.muted; g.fillText(msg.sender_name, x + 16, y); y += nameH; }
+                    g.fillStyle = me ? INK.me : INK.bubble;
+                    roundRect(g, x, y, bubbleW, bubbleH, PIC.radius);
+                    g.fill();
+                    let py = y + PIC.padY;
+                    const px = x + PIC.padX;
+                    parts.forEach(p => {
+                        if (p.kind === 'text') {
+                            g.font = F.text;
+                            g.fillStyle = INK.text;
+                            p.lines.forEach((l, i) => g.fillText(l, px, py + i * PIC.line + 6));
+                        } else if (p.kind === 'img') {
+                            g.save();
+                            roundRect(g, px, py, p.w, p.h, 18);
+                            g.clip();
+                            g.drawImage(p.img, px, py, p.w, p.h);
+                            g.restore();
+                        } else if (p.kind === 'box') {
+                            g.fillStyle = INK.card;
+                            roundRect(g, px, py, p.w, p.h, 18);
+                            g.fill();
+                            g.font = F.box;
+                            g.fillStyle = INK.text;
+                            g.textAlign = 'center';
+                            g.fillText(p.label, px + p.w / 2, py + p.h / 2 - 16);
+                            g.textAlign = 'left';
+                        } else if (p.kind === 'note') {
+                            g.font = F.note;
+                            g.fillStyle = INK.muted;
+                            g.fillText(p.text, px, py + 4);
+                        } else if (p.kind === 'share') {
+                            g.fillStyle = INK.accent;
+                            g.fillRect(px, py, 4, p.h);
+                            let ry = py;
+                            p.rows.forEach(r => { g.font = r.font; g.fillStyle = r.color; g.fillText(r.text, px + 18, ry + 4); ry += r.h; });
+                        }
+                        py += p.h + 12;
+                    });
+                    g.font = F.small;
+                    g.fillStyle = INK.muted;
+                    g.textAlign = 'right';
+                    g.fillText(time, x + bubbleW - PIC.padX, y + PIC.padY + partsH + 8);
+                    g.textAlign = 'left';
+                    if (reacts) {
+                        g.fillStyle = INK.soft;
+                        g.textAlign = me ? 'right' : 'left';
+                        g.fillText(reacts, me ? x + bubbleW - 12 : x + 12, y + bubbleH + 8);
+                        g.textAlign = 'left';
+                    }
+                }
+            };
+        }
+
+        // One tall picture of the day, or a few when the day is very long.
+        async function dayPictures() {
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+            const msgs = dayMessages();
+            const made = [];
+            const images = new Map();   // photo path -> image, null (not in export) or undefined (can't show)
+            try {
+                for (const m of msgs) {
+                    for (const p of m.photos || []) {
+                        if (images.has(p.uri)) continue;
+                        const e = findEntry(p.uri);
+                        if (!e) { images.set(p.uri, null); continue; }
+                        try {
+                            const url = URL.createObjectURL(await entryBlob(e));
+                            made.push(url);
+                            images.set(p.uri, await loadImage(url));
+                        } catch (err) {
+                            images.set(p.uri, undefined);
+                        }
+                    }
+                }
+                const ctx = document.createElement('canvas').getContext('2d');
+                const blocks = [headerBlock(ctx), ...msgs.map(m => messageBlock(ctx, m, images))];
+                const pages = [];
+                let page = [], h = 0;
+                blocks.forEach(b => {
+                    if (page.length && PIC.pad * 2 + h + b.h > MAX_PAGE_H) { pages.push(page); page = []; h = 0; }
+                    page.push(b);
+                    h += b.h;
+                });
+                pages.push(page);
+
+                const files = [];
+                for (let k = 0; k < pages.length; k++) {
+                    const c = document.createElement('canvas');
+                    c.width = PIC.W;
+                    c.height = Math.ceil(PIC.pad * 2 + pages[k].reduce((t, b) => t + b.h, 0));
+                    const g = c.getContext('2d');
+                    g.fillStyle = INK.bg;
+                    g.fillRect(0, 0, c.width, c.height);
+                    let y = PIC.pad;
+                    pages[k].forEach(b => { b.draw(g, y); y += b.h; });
+                    const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+                    c.width = c.height = 0;
+                    if (!blob) throw new Error('picture too big');
+                    files.push(new File([blob], `${fileBase()}${pages.length > 1 ? `-part${k + 1}` : ''}.png`, { type: 'image/png' }));
+                }
+                return files;
+            } finally {
+                made.forEach(u => URL.revokeObjectURL(u));
+            }
+        }
+
+        $('save-day').addEventListener('click', () => toggleSave($('save-panel').hidden));
+
+        $('save-text').addEventListener('click', async () => {
+            const text = dayAsText();
+            if (isPhone() && navigator.share) {
+                try {
+                    await navigator.share({ title: `Chat with ${current.title}`, text });
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
+                }
+            }
+            const name = `${fileBase()}.txt`;
+            download(new Blob([text], { type: 'text/plain;charset=utf-8' }), name);
+            saveStatus(`Saved ${name}`);
+        });
+
+        $('save-picture').addEventListener('click', async () => {
+            const btn = $('save-picture');
+            let files = pendingFiles;
+            pendingFiles = null;
+            if (!files) {
+                const chat = current;
+                btn.disabled = true;
+                btn.textContent = 'Making…';
+                saveStatus('');
+                try {
+                    files = await dayPictures();
+                } catch (err) {
+                    saveStatus("Couldn't make the picture on this device.");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'As a picture';
+                }
+                if (!files || current !== chat) return;
+            }
+            const result = await shareOrSave(files);
+            if (result === 'tap') {
+                pendingFiles = files;
+                btn.textContent = 'Tap to save';
+                saveStatus('Ready. Tap once more to save it.');
+            } else if (result === 'saved') {
+                saveStatus(files.length > 1 ? `Saved ${files.length} pictures (a long day, split in parts)` : `Saved ${files[0].name}`);
+            } else {
+                btn.textContent = 'As a picture';
+                saveStatus('');
+            }
+        });
+
         // ---------- chat stats ----------
 
         const SVG = 'http://www.w3.org/2000/svg';
@@ -2280,6 +2658,7 @@
             chatView = view;
             document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
             toggleCalendar(false);
+            toggleSave(false);
             hideTip();
             const messages = view === 'messages';
             $('dateblock').hidden = !messages || !c.messages.length;
