@@ -537,6 +537,19 @@
             place-items: center;
             padding: 0 0.3rem;
         }
+        #moments-q {
+            font: inherit;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.6rem;
+        }
+        #moments-q:focus { outline: none; border-color: var(--accent); }
+        .moments { margin-top: 0; }
+        .moments .result.picked { border-color: var(--accent); background: rgba(16, 185, 129, 0.08); }
+        .moments .result.picked .when { color: var(--accent-hover); font-weight: 600; }
         .bday-make { position: sticky; bottom: 0; padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to bottom, transparent, var(--bg-primary) 35%); }
         .bday-make button { width: 100%; padding: 0.7rem; font-size: 1rem; }
 
@@ -795,12 +808,18 @@
             <div class="stats" id="chat-stats" hidden></div>
             <div class="bday" id="chat-bday" hidden>
                 <h2 id="bday-title">Birthday pack</h2>
+                <p class="hint">Leave the birthday empty to skip the "every birthday" card.</p>
                 <div class="bday-fields">
                     <label class="field">Their birthday<input type="date" id="bday-date"></label>
                     <label class="field">Name on the cards<input type="text" id="bday-name" maxlength="30" autocomplete="off"></label>
                 </div>
+                <div class="bday-photos-head"><span class="title">Choose moments</span><span class="hint" id="moments-count"></span></div>
+                <p class="hint" id="moments-hint"></p>
+                <input type="search" id="moments-q" placeholder="Search this chat to add any message" aria-label="Search this chat for a moment" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search">
+                <ul class="results moments" id="moments-list"></ul>
+                <button type="button" class="load" id="moments-more" hidden>Show more</button>
                 <div class="bday-photos-head"><span class="title">Choose photos</span><span class="hint" id="bday-count"></span></div>
-                <p class="hint" id="bday-hint">Tap photos from your chat to put them in the pack. Leave the birthday empty to skip the "every birthday" card.</p>
+                <p class="hint" id="bday-hint">Tap photos from your chat to put them in the pack.</p>
                 <div class="media-grid" id="bday-grid"></div>
                 <div class="bday-make"><button type="button" class="btn-primary" id="bday-make">Make the birthday pack</button></div>
             </div>
@@ -2123,7 +2142,26 @@
             'b-years': ['#4a0d2e', '#f9a8d4'], 'b-loved': ['#3b0a2a', '#fda4af'], 'b-photos': ['#1c1917', '#fcd34d'], 'b-end': ['#3b1d06', '#fcd34d']
         };
 
-        function bdayCards(c, name, bday, imgs) {
+        // Messages they reacted to (or, if they never did, ones either of you did).
+        function reactedPool(c) {
+            const all = [], theirs = [];
+            c.messages.forEach((m, i) => {
+                if (!(m.reactions && m.reactions.length && bodyText(m))) return;
+                all.push(i);
+                if (m.reactions.some(r => r.actor && r.actor !== owner)) theirs.push(i);
+            });
+            return theirs.length ? { list: theirs, byThem: true } : { list: all, byThem: false };
+        }
+
+        // The page's own picks: most reactions first, then the longer messages.
+        function autoMoments(c) {
+            const m = c.messages;
+            return [...reactedPool(c).list]
+                .sort((a, b) => m[b].reactions.length - m[a].reactions.length || bodyText(m[b]).length - bodyText(m[a]).length)
+                .slice(0, 3);
+        }
+
+        function bdayCards(c, name, bday, imgs, moments = autoMoments(c)) {
             const msgs = c.messages, items = c.items || [];
             const cards = [{ type: 'b-hello', name }];
             const first = new Date(msgs[0].timestamp_ms || 0), now = new Date();
@@ -2146,17 +2184,12 @@
                 if (rows.length) cards.push({ type: 'b-years', name, rows: rows.sort((a, b) => b.year - a.year).slice(0, 5) });
             }
 
-            // Messages they reacted to; if they never reacted, ones either of you did.
-            const reacted = msgs.filter(m => m.reactions && m.reactions.length && bodyText(m));
-            const byThem = reacted.filter(m => m.reactions.some(r => r.actor && r.actor !== owner));
-            const loved = [...(byThem.length ? byThem : reacted)]
-                .sort((a, b) => b.reactions.length - a.reactions.length || bodyText(b).length - bodyText(a).length)
-                .slice(0, 3)
-                .map(m => {
-                    const fan = m.reactions.find(r => r.actor && r.actor !== owner) || m.reactions[0];
-                    return { text: bodyText(m), from: m.sender_name || '', ts: m.timestamp_ms || 0, react: fan.reaction || '', by: fan.actor || '' };
-                });
-            if (loved.length) cards.push({ type: 'b-loved', name, both: !byThem.length, rows: loved });
+            // The chosen moments, in the order chosen.
+            const loved = moments.map(i => msgs[i]).filter(m => m && bodyText(m)).map(m => {
+                const fan = m.reactions && m.reactions.length ? (m.reactions.find(r => r.actor && r.actor !== owner) || m.reactions[0]) : null;
+                return { text: bodyText(m), from: m.sender_name || '', ts: m.timestamp_ms || 0, react: fan ? fan.reaction || '' : '', by: fan ? fan.actor || '' : '' };
+            });
+            if (loved.length) cards.push({ type: 'b-loved', name, title: loved.every(r => r.by && r.by !== owner) ? 'Moments you loved' : 'Our moments', rows: loved });
 
             for (let k = 0; k < imgs.length; k += 9) cards.push({ type: 'b-photos', name, imgs: imgs.slice(k, k + 9), part: k / 9 + 1, parts: Math.ceil(imgs.length / 9) });
             cards.push({ type: 'b-end', name, from: owner ? firstName(owner) : '' });
@@ -2434,7 +2467,7 @@
                     break;
                 }
                 case 'b-loved': {
-                    label(card.both ? 'Moments we loved' : 'Moments you loved');
+                    label(card.title || 'Moments you loved');
                     let y = 420;
                     lovedRows(g, card, maxW).forEach(({ r, ls, more, h }) => {
                         g.fillStyle = hi;
@@ -2442,7 +2475,7 @@
                         setFont(400, 50);
                         g.fillStyle = '#fff';
                         ls.forEach((l, i) => g.fillText(i === ls.length - 1 && more ? l.slice(0, -1) + '…' : l, X, y + 56 + i * 66));
-                        text(`— ${gift(r.from)}, ${listDate(r.ts)}  ·  ${r.react} ${gift(r.by)}`, X, y + 56 + (ls.length - 1) * 66 + 56, 36, '#a3a3a3');
+                        text(`— ${gift(r.from)}, ${listDate(r.ts)}${r.react ? `  ·  ${r.react} ${gift(r.by)}` : ''}`, X, y + 56 + (ls.length - 1) * 66 + 56, 36, '#a3a3a3');
                         y += h;
                     });
                     break;
@@ -3732,6 +3765,14 @@
             $('bday-title').textContent = `Birthday pack for ${c.title}`;
             $('bday-name').value = firstName(c.title);
             $('bday-date').value = '';
+            const pool = reactedPool(c);
+            momentPool = [...pool.list].reverse();
+            momentPicks = autoMoments(c);
+            $('moments-q').value = '';
+            $('moments-hint').textContent = !pool.list.length
+                ? 'Search to find messages to put on the card.'
+                : `${pool.byThem ? `Messages ${firstName(c.title)} reacted to` : 'Messages either of you reacted to'} are listed, with the top ones chosen. Search to add any other message.`;
+            renderMoments();
             const grid = $('bday-grid');
             if (bdayPhotos.length) {
                 renderGrid(grid, bdayPhotos, bdayThumbs, m => `Photo from ${listDate(m.ts)}`, i => togglePick(i));
@@ -3766,6 +3807,79 @@
             $('bday-count').textContent = bdayPhotos.length ? `${bdayPicks.length} of ${MAX_PICKS} chosen` : '';
         }
 
+        // ---------- birthday pack: choosing moments ----------
+
+        const MAX_MOMENTS = 3;
+        let momentPicks = [];   // chosen messages (places in current.messages), in the order chosen
+        let momentPool = [];    // suggestions: messages they reacted to, newest first
+        let momentsShown = 0;
+        let momentTimer = null;
+
+        function momentList() {
+            const q = $('moments-q').value;
+            if (!(q.trim() && q.length >= 2)) return momentPool;
+            const re = queryRegex(q);
+            const out = [];
+            for (let i = current.messages.length - 1; i >= 0; i--) {
+                const t = bodyText(current.messages[i]);
+                if (t && re.test(t)) out.push(i);
+            }
+            return out;
+        }
+
+        function momentRow(i, order) {
+            const m = current.messages[i];
+            const full = momentPicks.length >= MAX_MOMENTS;
+            const fan = m.reactions && m.reactions.length ? (m.reactions.find(r => r.actor && r.actor !== owner) || m.reactions[0]) : null;
+            const li = el('li');
+            const b = el('button', 'result' + (order >= 0 ? ' picked' : ''));
+            b.type = 'button';
+            b.setAttribute('aria-pressed', order >= 0);
+            const top = el('div', 'top');
+            top.append(
+                el('span', 'where', `${nameOf(m.sender_name)} · ${listDate(m.timestamp_ms || 0)}${fan ? ` · ${fan.reaction || ''} ${firstName(fan.actor || '')}` : ''}`),
+                el('span', 'when', order >= 0 ? `✓ ${order + 1}` : full ? '' : 'Add')
+            );
+            const t = bodyText(m);
+            const body = el('div', 'snippet');
+            body.append(t.length > 220 ? t.slice(0, 220) + '…' : t);
+            b.append(top, body);
+            if (order < 0 && full) b.disabled = true;
+            b.addEventListener('click', () => {
+                const at = momentPicks.indexOf(i);
+                if (at >= 0) momentPicks.splice(at, 1);
+                else if (momentPicks.length < MAX_MOMENTS) momentPicks.push(i);
+                renderMoments();
+            });
+            li.append(b);
+            return li;
+        }
+
+        // Chosen moments first, then suggestions (or search results), 50 at a time.
+        function renderMoments(more = false) {
+            if (!current || !current.messages) return;
+            const ul = $('moments-list');
+            const rest = momentList().filter(i => !momentPicks.includes(i));
+            if (!more) {
+                ul.textContent = '';
+                momentsShown = 0;
+                momentPicks.forEach((i, k) => ul.append(momentRow(i, k)));
+            }
+            const next = rest.slice(momentsShown, momentsShown + 50);
+            next.forEach(i => ul.append(momentRow(i, -1)));
+            momentsShown += next.length;
+            $('moments-more').hidden = momentsShown >= rest.length;
+            const searching = !!$('moments-q').value.trim();
+            if (!more && !rest.length && (searching || !momentPicks.length)) ul.append(el('li', 'hint', searching ? 'No messages match.' : 'Nothing to suggest. Search to find a message.'));
+            $('moments-count').textContent = momentPicks.length >= MAX_MOMENTS ? `${MAX_MOMENTS} of ${MAX_MOMENTS} chosen · tap one to remove it` : `${momentPicks.length} of ${MAX_MOMENTS} chosen`;
+        }
+
+        $('moments-q').addEventListener('input', () => {
+            clearTimeout(momentTimer);
+            momentTimer = setTimeout(() => renderMoments(), 200);
+        });
+        $('moments-more').addEventListener('click', () => renderMoments(true));
+
         $('bday-make').addEventListener('click', async () => {
             const c = current;
             if (!c) return;
@@ -3788,7 +3902,7 @@
                 const v = $('bday-date').value;
                 const bday = v ? { m: Number(v.slice(5, 7)), d: Number(v.slice(8, 10)) } : null;
                 const name = $('bday-name').value.trim() || firstName(c.title);
-                openPack(c, bdayCards(c, name, bday, imgs), name);
+                openPack(c, bdayCards(c, name, bday, imgs, momentPicks), name);
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Make the birthday pack';
