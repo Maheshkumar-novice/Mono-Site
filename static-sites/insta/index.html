@@ -398,6 +398,31 @@
         .result .who { color: var(--text-muted); }
         .result mark { background: rgba(16, 185, 129, 0.3); color: var(--text-primary); border-radius: 3px; padding: 0 2px; }
 
+        /* ---------- top people ---------- */
+
+        .top-head { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+        .top-list { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+
+        .top-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.6rem minmax(0, 1fr) 4.5rem;
+            align-items: center;
+            gap: 0.6rem;
+            text-align: left;
+            padding: 0.55rem 0.8rem;
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .top-row .rank { color: var(--text-muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; text-align: right; }
+        .top-row .who { min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+        .top-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+        .top-row .count { color: var(--text-secondary); font-size: 0.85rem; font-variant-numeric: tabular-nums; text-align: right; }
+        .top-row .bar-track { display: block; height: 6px; }
+        .top-row .bar-fill { display: block; }
+
         /* ---------- stats ---------- */
 
         .stats { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.6rem; }
@@ -549,6 +574,7 @@
 
         <div class="tabs" id="tabs" role="tablist" hidden>
             <button type="button" role="tab" data-tab="chats">Chats</button>
+            <button type="button" role="tab" data-tab="top">Top</button>
             <button type="button" role="tab" data-tab="search">Search</button>
             <button type="button" role="tab" data-tab="media">Media</button>
             <button type="button" class="close-export" id="close-export">Close</button>
@@ -601,6 +627,16 @@
                 <button type="button" class="load" id="chat-search-more" hidden>Show more</button>
             </div>
             <div class="stats" id="chat-stats" hidden></div>
+        </section>
+
+        <section id="top" hidden>
+            <div class="top-head">
+                <select id="top-year" aria-label="Year"><option value="">All time</option></select>
+                <label class="check"><input type="checkbox" id="top-groups" checked> Group chats</label>
+            </div>
+            <p class="hint search-status" id="top-status"></p>
+            <ol class="top-list" id="top-list"></ol>
+            <button type="button" class="load" id="top-more" hidden>Show all</button>
         </section>
 
         <section id="search" hidden>
@@ -790,9 +826,9 @@
         }
 
         function show(section) {
-            for (const id of ['start', 'chats', 'chat', 'search', 'media']) $(id).hidden = id !== section;
+            for (const id of ['start', 'chats', 'chat', 'top', 'search', 'media']) $(id).hidden = id !== section;
             $('subtitle').hidden = section !== 'start';
-            $('tabs').hidden = !['chats', 'search', 'media'].includes(section);
+            $('tabs').hidden = !['chats', 'top', 'search', 'media'].includes(section);
             $('keep-note').hidden = $('tabs').hidden;
             document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === section));
         }
@@ -892,6 +928,7 @@
             lastTab = tab;
             show(tab);
             if (tab === 'media' && !mediaRendered) { renderMedia(); mediaRendered = true; }
+            if (tab === 'top' && !topRendered) renderTop();
         }
         document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
@@ -903,6 +940,12 @@
             $('search-status').textContent = '';
             $('search-results').textContent = '';
             $('search-more').hidden = true;
+            topRendered = false;
+            topShowAll = false;
+            $('top-list').textContent = '';
+            $('top-status').textContent = '';
+            $('top-year').length = 1;
+            $('top-more').hidden = true;
             lastTab = 'chats';
             $('keep-note').textContent = '';
             entries = new Map();
@@ -1478,7 +1521,8 @@
             if (i >= 0) showMessage(i, !opened);
         }
 
-        async function buildSearchIndex(status) {
+        // Reads every chat once, for both Search (the text) and Top (counts per year).
+        async function scanChats(status, label) {
             if (searchIndex) return searchIndex;
             const gen = exportGen;
             const index = [];
@@ -1488,13 +1532,17 @@
                 try { msgs = c.messages || await loadMessages(c); } catch (err) { continue; }
                 if (gen !== exportGen) return null;
                 const items = [];
+                const years = {};
                 msgs.forEach((m, i) => {
                     const text = textOf(m);
                     if (text) items.push({ chat: c, i, ts: m.timestamp_ms || 0, sender: m.sender_name || '', text });
+                    const y = new Date(m.timestamp_ms || 0).getFullYear();
+                    years[y] = (years[y] || 0) + 1;
                 });
+                c.counts = { total: msgs.length, years };
                 index.push(items);
                 if (k % 10 === 9) {
-                    status(`Getting chats ready for search… ${k + 1} of ${chats.length}`);
+                    status(`${label}… ${k + 1} of ${chats.length} chats`);
                     await new Promise(r => setTimeout(r));
                 }
             }
@@ -1557,7 +1605,7 @@
             const status = t => { $('search-status').textContent = t; };
             if (!q.trim() || q.length < 2) { status('Type at least 2 letters.'); return; }
             const gen = exportGen;
-            const index = await buildSearchIndex(status);
+            const index = await scanChats(status, 'Getting chats ready for search');
             if (!index || gen !== exportGen) return;
             const re = queryRegex(q);
             const hits = [];
@@ -1582,6 +1630,80 @@
             $('chat-search-status').textContent = hits.length ? `${plural(hits.length, 'message')}, newest first` : `No messages with "${q}".`;
             renderResults($('chat-search-results'), $('chat-search-more'), hits, re, false);
         });
+
+        // ---------- top people ----------
+
+        let topRendered = false;
+        let topShowAll = false;
+        const TOP_FIRST = 50;
+
+        async function renderTop() {
+            const status = t => { $('top-status').textContent = t; };
+            const gen = exportGen;
+            status('Counting messages…');
+            const index = await scanChats(status, 'Counting messages');
+            if (!index || gen !== exportGen) return;
+            const years = new Set();
+            chats.forEach(c => c.counts && Object.keys(c.counts.years).forEach(y => years.add(Number(y))));
+            const sel = $('top-year');
+            sel.length = 1;
+            [...years].sort((a, b) => b - a).forEach(y => {
+                const o = el('option', '', String(y));
+                o.value = y;
+                sel.append(o);
+            });
+            topRendered = true;
+            drawTop();
+        }
+
+        function drawTop() {
+            const year = $('top-year').value;
+            const groups = $('top-groups').checked;
+            const rows = chats
+                .filter(c => c.counts && (groups || !c.group))
+                .map(c => ({ c, n: year ? (c.counts.years[year] || 0) : c.counts.total }))
+                .filter(r => r.n > 0)
+                .sort((a, b) => b.n - a.n);
+            const total = rows.reduce((sum, r) => sum + r.n, 0);
+            $('top-status').textContent = rows.length
+                ? `${plural(total, 'message')} with ${plural(rows.length, 'chat')}${year ? ' in ' + year : ', all time'}`
+                : `No messages${year ? ' in ' + year : ''}.`;
+            const list = $('top-list');
+            list.textContent = '';
+            const most = rows.length ? rows[0].n : 1;
+            (topShowAll ? rows : rows.slice(0, TOP_FIRST)).forEach((r, i) => {
+                const li = el('li');
+                const b = el('button', 'top-row');
+                b.type = 'button';
+                const who = el('span', 'who');
+                const name = el('span', 'name', r.c.title);
+                if (r.c.group) name.append(el('span', 'tag', 'Group'));
+                const track = el('span', 'bar-track');
+                const fill = el('span', 'bar-fill');
+                fill.style.width = `${(r.n / most) * 100}%`;
+                track.append(fill);
+                who.append(name, track);
+                b.append(el('span', 'rank', String(i + 1)), who, el('span', 'count', r.n.toLocaleString()));
+                b.addEventListener('click', () => openChatAt(r.c, year));
+                li.append(b);
+                list.append(li);
+            });
+            $('top-more').hidden = topShowAll || rows.length <= TOP_FIRST;
+            $('top-more').textContent = `Show all ${rows.length.toLocaleString()}`;
+        }
+
+        // Open a chat; with a year picked, at that year's last messages.
+        async function openChatAt(c, year) {
+            await openChat(c);
+            if (current !== c || !year) return;
+            let idx = -1;
+            c.days.forEach((d, i) => { if (d.key.startsWith(year + '-')) idx = i; });
+            if (idx >= 0) jumpToDay(idx, true);
+        }
+
+        $('top-year').addEventListener('change', () => { topShowAll = false; drawTop(); });
+        $('top-groups').addEventListener('change', () => { topShowAll = false; drawTop(); });
+        $('top-more').addEventListener('click', () => { topShowAll = true; drawTop(); });
 
         // ---------- chat stats ----------
 
