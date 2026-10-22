@@ -298,6 +298,27 @@
             cursor: pointer;
         }
 
+        .seg .span-2 { grid-column: span 2; }
+
+        .scrap-tools {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .check {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+
         .download { width: 100%; padding: 0.75rem; font-size: 1rem; }
 
         .privacy { color: var(--text-muted); font-size: 0.8rem; margin: 0; text-align: center; }
@@ -353,7 +374,7 @@
                 </div>
 
                 <div class="selbar" id="selbar" hidden>
-                    <label>Zoom <input type="range" id="zoom" min="0.2" max="4" step="0.01" value="1"></label>
+                    <label><span id="zoom-label">Zoom</span> <input type="range" id="zoom" min="0.2" max="4" step="0.01" value="1"></label>
                     <button type="button" class="btn-danger" id="remove">Remove</button>
                     <button type="button" id="done">Done</button>
                 </div>
@@ -379,6 +400,7 @@
                         <button type="button" data-layout="big">Big + small</button>
                         <button type="button" data-layout="columns">Columns</button>
                         <button type="button" data-layout="strip">Strip</button>
+                        <button type="button" class="span-2" data-layout="scrap">Scrapbook</button>
                     </div>
                     <div class="seg three" id="big-variants" hidden>
                         <button type="button" data-big="left">Left</button>
@@ -388,6 +410,10 @@
                     <div class="seg" id="strip-variants" hidden>
                         <button type="button" data-strip="row">Row</button>
                         <button type="button" data-strip="column">Column</button>
+                    </div>
+                    <div class="scrap-tools" id="scrap-tools" hidden>
+                        <label class="check"><input type="checkbox" id="border" checked> White borders</label>
+                        <button type="button" id="shuffle">Shuffle</button>
                     </div>
                     <p class="hint" id="layout-hint" hidden>The first photo is the big one. Hold and drag to swap.</p>
                 </div>
@@ -402,7 +428,7 @@
                     </div>
                 </div>
 
-                <div class="group">
+                <div class="group" id="gap-group">
                     <div class="group-title">Gap</div>
                     <div class="slider-row">
                         <input type="range" id="gap" min="0" max="50" step="1" value="12">
@@ -439,12 +465,20 @@
             '16:9': [2880, 1620]
         };
         const STORE_KEY = 'collage:settings';
+        const SIZE_MIN = 0.08;
+        const SIZE_MAX = 1.2;
+        const FRAME = { side: 0.04, bottom: 0.128 };   // white border, as a share of the photo's long side
+        const HINTS = {
+            boxes: 'Drag a photo to move it inside its box. Tap it to zoom or remove it. Press and hold, then drag onto another photo to swap them.',
+            scrap: 'Drag a photo to move it. Pinch and twist with two fingers, or drag its corner dot, to resize and tilt it. Pressing a photo brings it to the front.'
+        };
 
-        const state = { layout: 'grid', big: 'left', strip: 'row', shape: '1:1', gap: 12, bg: '#ffffff' };
+        const state = { layout: 'grid', big: 'left', strip: 'row', shape: '1:1', gap: 12, bg: '#ffffff', border: true };
         let photos = [];      // { img, url, w, h, z, ox, oy } in cell order
         let sel = -1;         // selected photo index
         let cells = [];       // last preview cells, in canvas pixels
         let swap = null;      // { from, to } while a swap drag is going
+        let topZ = 0;         // highest scrapbook stacking number so far
         let pendingShare = null;
         let busy = false;
 
@@ -457,12 +491,13 @@
         function restore() {
             try {
                 const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-                if (['grid', 'big', 'columns', 'strip'].includes(saved.layout)) state.layout = saved.layout;
+                if (['grid', 'big', 'columns', 'strip', 'scrap'].includes(saved.layout)) state.layout = saved.layout;
                 if (['left', 'top', 'middle'].includes(saved.big)) state.big = saved.big;
                 if (['row', 'column'].includes(saved.strip)) state.strip = saved.strip;
                 if (SHAPES[saved.shape]) state.shape = saved.shape;
                 if (Number.isFinite(saved.gap) && saved.gap >= 0 && saved.gap <= 50) state.gap = saved.gap;
                 if (/^#[0-9a-f]{6}$/i.test(saved.bg || '')) state.bg = saved.bg;
+                if (typeof saved.border === 'boolean') state.border = saved.border;
             } catch (e) { /* storage blocked: use defaults */ }
         }
 
@@ -598,6 +633,136 @@
             return gridCells(n, r, g);
         }
 
+        // ---------- scrapbook ----------
+
+        // Each photo keeps its own spot: centre (sx, sy) as a share of the canvas,
+        // long side (ss) as a share of the canvas's short side, tilt (sr) and stacking (sz).
+        const isScrap = () => state.layout === 'scrap';
+        const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+        function shuffled(list) {
+            const a = [...list];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function scrapGeom(p, W, H) {
+            const L = p.ss * Math.min(W, H);
+            const long = Math.max(p.w, p.h);
+            const pw = L * p.w / long, ph = L * p.h / long;
+            const pad = state.border ? L * FRAME.side : 0;
+            const bottom = state.border ? L * FRAME.bottom : 0;
+            return { cx: p.sx * W, cy: p.sy * H, r: p.sr, pw, ph, pad, fw: pw + 2 * pad, fh: ph + pad + bottom };
+        }
+
+        // Spread photos over a loose grid of `total` spots, each a little off-centre and tilted.
+        function scatter(list, total) {
+            const [W, H] = SHAPES[state.shape];
+            const S = Math.min(W, H);
+            const slots = shuffled(gridCells(total, rect(0, 0, W, H), 0));
+            const extraW = state.border ? 2 * FRAME.side : 0;
+            const extraH = state.border ? FRAME.side + FRAME.bottom : 0;
+            shuffled(list).forEach((p, k) => {
+                const c = slots[k % slots.length];
+                const long = Math.max(p.w, p.h);
+                const L = Math.min(c.w / (p.w / long + extraW), c.h / (p.h / long + extraH)) * (0.8 + Math.random() * 0.12);
+                p.ss = clamp(L / S, SIZE_MIN, SIZE_MAX);
+                p.sr = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 5) * Math.PI / 180;
+                p.sx = (c.x + c.w * (0.5 + (Math.random() - 0.5) * 0.12)) / W;
+                p.sy = (c.y + c.h * (0.5 + (Math.random() - 0.5) * 0.12)) / H;
+                // Nudge it back if the tilted print would hang over the edge.
+                const g = scrapGeom(p, W, H);
+                const cos = Math.abs(Math.cos(g.r)), sin = Math.abs(Math.sin(g.r));
+                const hx = g.fw / 2 * cos + g.fh / 2 * sin, hy = g.fw / 2 * sin + g.fh / 2 * cos;
+                if (hx < W / 2) p.sx = clamp(p.sx, hx / W, 1 - hx / W);
+                if (hy < H / 2) p.sy = clamp(p.sy, hy / H, 1 - hy / H);
+                p.sz = ++topZ;
+            });
+        }
+
+        // Photos added while in the scrapbook land in free-ish spots on top.
+        // A batch is placed together once it has finished loading.
+        function ensureScrap() {
+            if (busy) return;
+            const missing = photos.filter(p => p.sx === undefined);
+            if (missing.length) scatter(missing, photos.length);
+        }
+
+        function renderScrap(target, W, H, preview) {
+            ensureScrap();
+            const S = Math.min(W, H);
+            photos.filter(p => p.sx !== undefined).sort((a, b) => a.sz - b.sz).forEach(p => {
+                const g = scrapGeom(p, W, H);
+                const left = -g.fw / 2, top = -g.fh / 2;
+                target.save();
+                target.translate(g.cx, g.cy);
+                target.rotate(g.r);
+                target.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                target.shadowBlur = S * 0.014;
+                target.shadowOffsetY = S * 0.004;
+                if (state.border) {
+                    target.fillStyle = '#ffffff';
+                    target.fillRect(left, top, g.fw, g.fh);
+                    target.shadowColor = 'transparent';
+                }
+                target.drawImage(p.img, left + g.pad, top + g.pad, g.pw, g.ph);
+                target.restore();
+            });
+            if (preview && sel >= 0 && photos[sel]) {
+                const g = scrapGeom(photos[sel], W, H);
+                const k = cssPx();
+                target.save();
+                target.translate(g.cx, g.cy);
+                target.rotate(g.r);
+                target.lineWidth = 2 * k;
+                target.strokeStyle = '#10b981';
+                target.strokeRect(-g.fw / 2, -g.fh / 2, g.fw, g.fh);
+                target.beginPath();
+                target.arc(g.fw / 2, g.fh / 2, 9 * k, 0, Math.PI * 2);
+                target.fillStyle = '#10b981';
+                target.fill();
+                target.strokeStyle = '#ffffff';
+                target.stroke();
+                target.restore();
+            }
+        }
+
+        // Canvas pixels per CSS pixel in the preview.
+        function cssPx() {
+            return canvas.width / (parseFloat(canvas.style.width) || canvas.width);
+        }
+
+        function scrapLocal(p, pt) {
+            const g = scrapGeom(p, canvas.width, canvas.height);
+            const dx = pt.x - g.cx, dy = pt.y - g.cy;
+            const cos = Math.cos(-g.r), sin = Math.sin(-g.r);
+            return { g, x: dx * cos - dy * sin, y: dx * sin + dy * cos };
+        }
+
+        function scrapHit(pt) {
+            let top = -1;
+            photos.forEach((p, i) => {
+                if (p.sx === undefined) return;
+                const l = scrapLocal(p, pt);
+                if (Math.abs(l.x) <= l.g.fw / 2 && Math.abs(l.y) <= l.g.fh / 2 && (top < 0 || p.sz > photos[top].sz)) top = i;
+            });
+            return top;
+        }
+
+        function onHandle(pt, i) {
+            const l = scrapLocal(photos[i], pt);
+            return Math.hypot(l.x - l.g.fw / 2, l.y - l.g.fh / 2) <= 18 * cssPx();
+        }
+
+        // Keep tilt between -180 and 180 degrees, and let it settle on straight.
+        function tilt(r) {
+            r = Math.atan2(Math.sin(r), Math.cos(r));
+            return Math.abs(r) < 1.5 * Math.PI / 180 ? 0 : r;
+        }
+
         // ---------- drawing ----------
 
         // Where a photo sits inside its cell. z is zoom relative to "fill the box";
@@ -619,6 +784,10 @@
             target.imageSmoothingQuality = 'high';
             target.fillStyle = state.bg;
             target.fillRect(0, 0, W, H);
+            if (isScrap()) {
+                renderScrap(target, W, H, preview);
+                return [];
+            }
             const list = layoutCells(W, H);
             list.forEach((c, i) => {
                 const p = photos[i];
@@ -701,6 +870,12 @@
             $('big-variants').hidden = state.layout !== 'big';
             $('strip-variants').hidden = state.layout !== 'strip';
             $('layout-hint').hidden = state.layout !== 'big';
+            $('scrap-tools').hidden = !isScrap();
+            $('gap-group').hidden = isScrap();
+            $('border').checked = state.border;
+            $('shuffle').disabled = !has || busy;
+            $('hint').textContent = isScrap() ? HINTS.scrap : HINTS.boxes;
+            $('zoom-label').textContent = isScrap() ? 'Size' : 'Zoom';
 
             let preset = false;
             document.querySelectorAll('.swatch').forEach(b => {
@@ -720,9 +895,16 @@
         }
 
         function syncZoom() {
-            if (sel < 0 || !cells[sel]) return;
-            const m = placement(photos[sel], cells[sel]);
+            if (sel < 0 || !photos[sel]) return;
             const zoom = $('zoom');
+            if (isScrap()) {
+                zoom.min = SIZE_MIN;
+                zoom.max = SIZE_MAX;
+                zoom.value = photos[sel].ss;
+                return;
+            }
+            if (!cells[sel]) return;
+            const m = placement(photos[sel], cells[sel]);
             zoom.min = Math.floor(Math.min(1, m.zFit) * 100) / 100;
             zoom.max = MAX_ZOOM;
             zoom.value = Math.max(photos[sel].z, m.zFit);
@@ -854,10 +1036,17 @@
         document.querySelectorAll('.swatch').forEach(b => b.addEventListener('click', () => setting('bg', b.dataset.color)));
         $('custom').addEventListener('input', e => setting('bg', e.target.value));
         $('gap').addEventListener('input', e => setting('gap', Number(e.target.value)));
+        $('border').addEventListener('change', e => setting('border', e.target.checked));
+        $('shuffle').addEventListener('click', () => {
+            scatter(photos, photos.length);
+            sel = -1;
+            refresh();
+        });
 
         $('zoom').addEventListener('input', e => {
             if (sel < 0) return;
-            photos[sel].z = Number(e.target.value);
+            if (isScrap()) photos[sel].ss = Number(e.target.value);
+            else photos[sel].z = Number(e.target.value);
             pendingShare = null;
             draw();
         });
@@ -921,6 +1110,7 @@
             canvas.setPointerCapture(e.pointerId);
             const pt = canvasPoint(e);
             pointers.set(e.pointerId, pt);
+            if (isScrap()) { scrapDown(pt); return; }
 
             if (pointers.size === 1) {
                 const idx = hit(pt);
@@ -939,6 +1129,7 @@
             if (!pointers.has(e.pointerId) || !gesture) return;
             const pt = canvasPoint(e);
             pointers.set(e.pointerId, pt);
+            if (isScrap()) { scrapMove(pt); return; }
 
             if (gesture.type === 'pending' && Math.hypot(pt.x - gesture.sx, pt.y - gesture.sy) > 6 * (window.devicePixelRatio || 1)) {
                 clearTimeout(gesture.timer);
@@ -973,6 +1164,10 @@
             if (!pointers.has(e.pointerId)) return;
             pointers.delete(e.pointerId);
             if (!gesture) return;
+            if (isScrap()) {
+                gesture = pointers.size ? { type: 'none', idx: -1 } : null;
+                return;
+            }
             const cancelled = e.type === 'pointercancel';
 
             if (gesture.type === 'pending') {
@@ -991,11 +1186,61 @@
             if (!pointers.size) canvas.classList.remove('grabbing');
         }
 
+        function scrapDown(pt) {
+            if (pointers.size === 1) {
+                if (sel >= 0 && onHandle(pt, sel)) {
+                    const p = photos[sel];
+                    const g = scrapGeom(p, canvas.width, canvas.height);
+                    gesture = { type: 'turn', idx: sel, cx: g.cx, cy: g.cy, d0: Math.hypot(pt.x - g.cx, pt.y - g.cy) || 1, a0: Math.atan2(pt.y - g.cy, pt.x - g.cx), ss0: p.ss, sr0: p.sr };
+                    return;
+                }
+                const idx = scrapHit(pt);
+                gesture = { type: idx >= 0 ? 'move' : 'none', idx, lx: pt.x, ly: pt.y };
+                if (idx >= 0) photos[idx].sz = ++topZ;
+                if (sel !== idx) { sel = idx; refresh(); } else draw();
+            } else if (pointers.size === 2 && gesture && gesture.idx >= 0) {
+                const [a, b] = [...pointers.values()];
+                const p = photos[gesture.idx];
+                gesture = { type: 'twist', idx: gesture.idx, d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, a0: Math.atan2(b.y - a.y, b.x - a.x), ss0: p.ss, sr0: p.sr };
+            }
+        }
+
+        function scrapMove(pt) {
+            const p = photos[gesture.idx];
+            if (!p) return;
+            if (gesture.type === 'move' && pointers.size === 1) {
+                p.sx = clamp(p.sx + (pt.x - gesture.lx) / canvas.width, 0, 1);
+                p.sy = clamp(p.sy + (pt.y - gesture.ly) / canvas.height, 0, 1);
+                gesture.lx = pt.x;
+                gesture.ly = pt.y;
+            } else if (gesture.type === 'turn') {
+                p.ss = clamp(gesture.ss0 * Math.hypot(pt.x - gesture.cx, pt.y - gesture.cy) / gesture.d0, SIZE_MIN, SIZE_MAX);
+                p.sr = tilt(gesture.sr0 + Math.atan2(pt.y - gesture.cy, pt.x - gesture.cx) - gesture.a0);
+            } else if (gesture.type === 'twist' && pointers.size >= 2) {
+                const [a, b] = [...pointers.values()];
+                p.ss = clamp(gesture.ss0 * Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0, SIZE_MIN, SIZE_MAX);
+                p.sr = tilt(gesture.sr0 + Math.atan2(b.y - a.y, b.x - a.x) - gesture.a0);
+            } else {
+                return;
+            }
+            pendingShare = null;
+            draw();
+        }
+
         canvas.addEventListener('pointerup', pointerEnd);
         canvas.addEventListener('pointercancel', pointerEnd);
 
-        // Trackpad pinch (ctrl + wheel), or the wheel on the selected photo, zooms it.
+        // Trackpad pinch (ctrl + wheel), or the wheel on the selected photo, zooms or resizes it.
         canvas.addEventListener('wheel', e => {
+            if (isScrap()) {
+                const idx = scrapHit(canvasPoint(e));
+                if (idx < 0 || !(e.ctrlKey || idx === sel)) return;
+                e.preventDefault();
+                photos[idx].ss = clamp(photos[idx].ss * Math.exp(-e.deltaY * 0.01), SIZE_MIN, SIZE_MAX);
+                pendingShare = null;
+                draw();
+                return;
+            }
             const idx = hit(canvasPoint(e));
             if (idx < 0 || !(e.ctrlKey || idx === sel)) return;
             e.preventDefault();
