@@ -237,7 +237,7 @@
             border-radius: 999px;
             padding: 0.2rem 0.75rem;
             margin: 0.9rem 0 0.3rem;
-            scroll-margin-top: 4.5rem;
+            scroll-margin-top: 7.5rem;
         }
 
         .msg-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 80%; }
@@ -342,7 +342,8 @@
         .tile.video::after { content: '▶'; font-size: 1.4rem; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
         .tile.broken::after { content: 'No preview'; font-size: 0.7rem; color: var(--text-muted); }
 
-        .chat-tabs { display: flex; gap: 0.4rem; margin: 0.6rem 0 0.1rem; }
+        .chat-tabs { display: flex; gap: 0.4rem; }
+        #dateblock { margin-top: 0.5rem; }
         .chat-tabs button[aria-pressed="true"] { border-color: var(--accent); background: rgba(16, 185, 129, 0.12); color: var(--accent-hover); }
         #chat-media { margin-top: 0.25rem; }
         .msg-row.flash .bubble { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -545,19 +546,21 @@
                     <div class="hint" id="chat-info"></div>
                 </div>
             </div>
-            <div class="chat-tabs">
-                <button type="button" data-view="messages">Messages</button>
-                <button type="button" data-view="media" id="chat-media-btn">Media</button>
-                <button type="button" data-view="search">Search</button>
-                <button type="button" data-view="stats">Stats</button>
-            </div>
             <div class="sticky">
+                <div class="chat-tabs">
+                    <button type="button" data-view="messages">Messages</button>
+                    <button type="button" data-view="media" id="chat-media-btn">Media</button>
+                    <button type="button" data-view="search">Search</button>
+                    <button type="button" data-view="stats">Stats</button>
+                </div>
+                <div id="dateblock">
                 <div class="datebar">
                     <button type="button" class="step" id="prev-day" aria-label="Earlier day with messages">‹</button>
                     <button type="button" class="date-btn" id="date-btn" aria-expanded="false"></button>
                     <button type="button" class="step" id="next-day" aria-label="Later day with messages">›</button>
                 </div>
                 <div class="calendar" id="calendar" hidden></div>
+                </div>
             </div>
             <button type="button" class="load" id="load-earlier">Earlier messages</button>
             <div class="messages" id="messages"></div>
@@ -1033,6 +1036,9 @@
         // ---------- one chat ----------
 
         let visible = 0;   // index of the day at the top of the screen
+        let chatView = null;   // 'messages', 'media', 'search' or 'stats'
+        let viewScroll = {};   // where each view was scrolled to, for coming back
+        let chatDepth = 0;     // history entries this chat has added, so "‹ Chats" can go straight back
         let chatGen = 0;   // bumps on every open/close so late loads from an old chat are dropped
         const sizeOf = i => current.days[i].end - current.days[i].start;
         const BATCH = 40;  // roughly how many messages to add at a time
@@ -1074,7 +1080,12 @@
 
             current = c;
             chatGen++;
-            if (push) history.pushState({ chat: c.id }, '');
+            chatView = null;
+            viewScroll = {};
+            if (push) {
+                chatDepth = 1;
+                history.pushState({ chat: c.id, view: 'messages', depth: 1 }, '');
+            }
             $('chat-name').textContent = c.title;
             const n = c.messages.length;
             $('chat-info').textContent = n
@@ -1091,7 +1102,7 @@
             $('chat-search-more').hidden = true;
             $('chat-media-btn').textContent = `Media ${c.media.length.toLocaleString()}`;
             $('chat-media-btn').disabled = !c.media.length;
-            setChatView('messages');
+            setChatView('messages', { restore: false });
             if (n) jumpToDay(c.days.length - 1, true);
             else { $('load-earlier').hidden = $('load-later').hidden = true; }
         }
@@ -1109,6 +1120,7 @@
             hideTip();
             if (current) { current.messages = null; current.days = null; current.dayIndex = null; current.media = null; }
             current = null;
+            chatDepth = 0;
         }
 
         function renderDay(d) {
@@ -1420,8 +1432,8 @@
         const textOf = m => [bodyText(m), m.share && m.share.share_text].filter(Boolean).join('\n');
 
         // Open the chat if needed, then show one message highlighted.
-        function showMessage(i) {
-            setChatView('messages');
+        function showMessage(i, push = true) {
+            setChatView('messages', { push, restore: false });
             jumpToDay(current.dayIndex.get(dayKey(current.messages[i].timestamp_ms || 0)));
             const row = $('messages').querySelector(`[data-i="${i}"]`);
             if (!row) return;
@@ -1431,10 +1443,11 @@
         }
 
         async function goToMessage(c, i, ts) {
-            if (current !== c) await openChat(c);
+            const opened = current !== c;
+            if (opened) await openChat(c);
             if (current !== c) return;
             if (!c.messages[i] || (c.messages[i].timestamp_ms || 0) !== ts) i = c.messages.findIndex(m => (m.timestamp_ms || 0) === ts);
-            if (i >= 0) showMessage(i);
+            if (i >= 0) showMessage(i, !opened);
         }
 
         async function buildSearchIndex(status) {
@@ -1608,9 +1621,9 @@
             tiles.append(
                 statTile('Messages', msgs.length.toLocaleString(), `on ${plural(c.days.length, 'day')}`),
                 statTile('Chatting since', listDate(msgs[0].timestamp_ms), `last message ${listDate(msgs[msgs.length - 1].timestamp_ms)}`),
-                statTile('Busiest day', shortDay(c.days[busyDay].key), plural(sizeOf(busyDay), 'message'), () => { setChatView('messages'); jumpToDay(busyDay); }),
-                statTile('Busiest month', monthName(busyMonth), plural(busyMonthN, 'message'), () => { setChatView('messages'); jumpToDay(firstDayOfMonth(busyMonth)); }),
-                statTile('Longest streak', plural(best.len, 'day'), best.len > 1 ? `from ${shortDay(c.days[best.start].key)}` : 'no days in a row yet', best.len > 1 ? () => { setChatView('messages'); jumpToDay(best.start); } : null),
+                statTile('Busiest day', shortDay(c.days[busyDay].key), plural(sizeOf(busyDay), 'message'), () => { setChatView('messages', { push: true, restore: false }); jumpToDay(busyDay); }),
+                statTile('Busiest month', monthName(busyMonth), plural(busyMonthN, 'message'), () => { setChatView('messages', { push: true, restore: false }); jumpToDay(firstDayOfMonth(busyMonth)); }),
+                statTile('Longest streak', plural(best.len, 'day'), best.len > 1 ? `from ${shortDay(c.days[best.start].key)}` : 'no days in a row yet', best.len > 1 ? () => { setChatView('messages', { push: true, restore: false }); jumpToDay(best.start); } : null),
                 statTile('Usual time', hourLabel, 'most messages around then'),
                 statTile('On a chatting day', (msgs.length / c.days.length).toFixed(1), 'messages on average'),
                 statTile('Photos & videos', shared.toLocaleString(), plural(voice, 'voice message'))
@@ -1720,7 +1733,7 @@
                 hit.addEventListener('click', () => {
                     if (!s.n) return;
                     hideTip();
-                    setChatView('messages');
+                    setChatView('messages', { push: true, restore: false });
                     jumpToDay(firstDayOfMonth(s.k));
                 });
                 svg.append(hit);
@@ -1909,19 +1922,29 @@
             return out.reverse();
         }
 
-        function setChatView(view) {
+        // push: add a history step, so the back gesture returns to the view before.
+        // restore: go back to where this view was scrolled to last time.
+        function setChatView(view, { push = false, restore = true } = {}) {
             const c = current;
+            if (chatView) viewScroll[chatView] = window.scrollY;
+            if (push && view !== chatView) {
+                chatDepth++;
+                history.pushState({ chat: c.id, view, depth: chatDepth }, '');
+            }
+            const firstVisit = viewScroll[view] === undefined;
+            chatView = view;
             document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
             toggleCalendar(false);
             hideTip();
             const messages = view === 'messages';
-            $('chat').querySelector('.sticky').hidden = !messages || !c.messages.length;
+            $('dateblock').hidden = !messages || !c.messages.length;
             $('messages').hidden = !messages;
             $('chat-media').hidden = view !== 'media';
             $('chat-search').hidden = view !== 'search';
             $('chat-stats').hidden = view !== 'stats';
             if (messages) {
                 if (c.days && c.days.length) updateLoadButtons();
+                if (restore && !firstVisit) window.scrollTo(0, viewScroll.messages);
                 return;
             }
             $('load-earlier').hidden = $('load-later').hidden = true;
@@ -1933,10 +1956,10 @@
                 renderStats(c);
                 c.statsRendered = true;
             }
-            window.scrollTo(0, 0);
-            if (view === 'search') $('chat-search-q').focus();
+            window.scrollTo(0, restore && !firstVisit ? viewScroll[view] : 0);
+            if (view === 'search' && push && !$('chat-search-results').children.length) $('chat-search-q').focus();
         }
-        document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setChatView(b.dataset.view)));
+        document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setChatView(b.dataset.view, { push: true })));
 
         // A few at a time, so a phone never holds many full-size photos at once.
         function pumpThumbs() {
@@ -1988,6 +2011,15 @@
         let viewIndex = -1;   // place in viewList; -1 for a single chat photo
         let viewUrl = null;   // object URL the viewer made itself
         let viewGen = 0;
+        let viewerPushed = false;   // the viewer added a history step, so back closes it
+
+        // Called just before the viewer appears: one history step, so the back gesture closes it.
+        function viewerHistory() {
+            if (!$('viewer').hidden) return;
+            const st = history.state || {};
+            history.pushState({ ...st, depth: current ? ++chatDepth : st.depth, viewer: true }, '');
+            viewerPushed = true;
+        }
 
         function releaseView() {
             viewGen++;
@@ -2009,6 +2041,7 @@
             $('viewer-info').hidden = true;
             $('viewer-prev').hidden = $('viewer-next').hidden = true;
             $('viewer-img').src = src;
+            viewerHistory();
             $('viewer').hidden = false;
         }
 
@@ -2018,6 +2051,7 @@
             viewList = list;
             viewIndex = i;
             const m = list[i];
+            viewerHistory();
             $('viewer').hidden = false;
             $('viewer-info').hidden = false;
             $('viewer-prev').hidden = $('viewer-next').hidden = false;
@@ -2056,9 +2090,16 @@
             releaseView();
             viewIndex = -1;
             $('viewer').hidden = true;
+            viewerPushed = false;
         }
 
-        $('viewer-close').addEventListener('click', closeViewer);
+        // The person closed it: step history back too, so back doesn't reopen it.
+        function requestCloseViewer() {
+            if (viewerPushed) history.back();
+            else closeViewer();
+        }
+
+        $('viewer-close').addEventListener('click', requestCloseViewer);
 
         // From a chat's media, jump to the message it came in.
         $('viewer-goto').addEventListener('click', () => {
@@ -2069,7 +2110,7 @@
         });
         $('viewer-prev').addEventListener('click', () => stepViewer(-1));
         $('viewer-next').addEventListener('click', () => stepViewer(1));
-        $('viewer').addEventListener('click', e => { if (e.target === $('viewer') || e.target === $('viewer-stage')) closeViewer(); });
+        $('viewer').addEventListener('click', e => { if (e.target === $('viewer') || e.target === $('viewer-stage')) requestCloseViewer(); });
 
         // Swipe left or right to move through media.
         let swipe = null;
@@ -2084,7 +2125,7 @@
 
         document.addEventListener('keydown', e => {
             if (!$('viewer').hidden) {
-                if (e.key === 'Escape') closeViewer();
+                if (e.key === 'Escape') requestCloseViewer();
                 else if (e.key === 'ArrowLeft') stepViewer(-1);
                 else if (e.key === 'ArrowRight') stepViewer(1);
             } else if (e.key === 'Escape' && !$('calendar').hidden) {
@@ -2100,10 +2141,25 @@
             show(lastTab);
         }
         $('back').addEventListener('click', () => {
-            if (history.state && history.state.chat) history.back();
+            if (history.state && history.state.chat && chatDepth > 0) history.go(-chatDepth);
             else backToList();
         });
-        window.addEventListener('popstate', () => { if (current) backToList(); });
+        // Back steps through the views visited in this chat, then leaves it.
+        window.addEventListener('popstate', e => {
+            const st = e.state || {};
+            if (!$('viewer').hidden) {   // back closes a full-screen photo first
+                closeViewer();
+                if (current && st.chat === current.id) chatDepth = st.depth || chatDepth;
+                return;
+            }
+            if (current && st.chat === current.id) {
+                chatDepth = st.depth || 1;
+                closeViewer();
+                setChatView(st.view || 'messages');
+            } else if (current) {
+                backToList();
+            }
+        });
         history.replaceState({}, '');
         openKept();
     </script>
