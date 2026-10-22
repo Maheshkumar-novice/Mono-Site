@@ -342,9 +342,31 @@
         .tile.video::after { content: '▶'; font-size: 1.4rem; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
         .tile.broken::after { content: 'No preview'; font-size: 0.7rem; color: var(--text-muted); }
 
-        .chat-tabs { display: flex; gap: 0.4rem; }
+        .chat-tabs {
+            display: flex;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: var(--bg-raised);
+        }
+
+        .chat-tabs button {
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 0.55rem 0.25rem;
+            gap: 0.3rem;
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        .chat-tabs button + button { border-left: 1px solid var(--border-strong); }
+        .chat-tabs button:hover { border-color: var(--border-strong); background: rgba(255, 255, 255, 0.03); }
+        .chat-tabs .count { font-size: 0.75rem; color: var(--text-muted); }
+        .chat-tabs button[aria-pressed="true"] .count { color: inherit; opacity: 0.8; }
         #dateblock { margin-top: 0.5rem; }
-        .chat-tabs button[aria-pressed="true"] { border-color: var(--accent); background: rgba(16, 185, 129, 0.12); color: var(--accent-hover); }
+        .chat-tabs button[aria-pressed="true"] { background: rgba(16, 185, 129, 0.15); color: var(--accent-hover); }
         #chat-media { margin-top: 0.25rem; }
         .msg-row.flash .bubble { outline: 2px solid var(--accent); outline-offset: 2px; }
         .viewer-info .goto { margin-top: 0.6rem; }
@@ -489,6 +511,7 @@
         [hidden] { display: none !important; }
 
         @media (max-width: 600px) {
+            .chat-tabs button { font-size: 0.82rem; padding-inline: 0.15rem; }
             .site-nav { padding: 1rem 24px; }
             .container { padding: 1.5rem 24px 2.5rem; }
             .msg-row { max-width: 88%; }
@@ -502,7 +525,7 @@
     <main class="container">
         <header class="page-head">
             <h1>Insta Viewer</h1>
-            <p class="subtitle">Open your Instagram export to read old chats by date and browse your posts, stories and reels. Everything stays on your device.</p>
+            <p class="subtitle" id="subtitle">Open your Instagram export to read old chats by date and browse your posts, stories and reels. Everything stays on your device.</p>
         </header>
 
         <section class="start" id="start">
@@ -766,6 +789,7 @@
 
         function show(section) {
             for (const id of ['start', 'chats', 'chat', 'search', 'media']) $(id).hidden = id !== section;
+            $('subtitle').hidden = section !== 'start';
             $('tabs').hidden = !['chats', 'search', 'media'].includes(section);
             $('keep-note').hidden = $('tabs').hidden;
             document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === section));
@@ -1100,7 +1124,9 @@
             $('chat-search-status').textContent = '';
             $('chat-search-results').textContent = '';
             $('chat-search-more').hidden = true;
-            $('chat-media-btn').textContent = `Media ${c.media.length.toLocaleString()}`;
+            $('chat-media-btn').textContent = 'Media';
+            const mc = c.media.length;
+            $('chat-media-btn').append(' ', el('span', 'count', mc < 10000 ? mc.toLocaleString() : `${Math.round(mc / 1000)}k`));
             $('chat-media-btn').disabled = !c.media.length;
             setChatView('messages', { restore: false });
             if (n) jumpToDay(c.days.length - 1, true);
