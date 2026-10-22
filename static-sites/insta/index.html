@@ -6,7 +6,7 @@
     <meta name="app-name" content="Insta Viewer">
     <meta name="app-section" content="Tools">
     <title>Insta Viewer</title>
-    <meta name="description" content="Open your Instagram export and read old chats by date. Everything stays on your device.">
+    <meta name="description" content="Open your Instagram export to read old chats by date and browse your posts, stories and reels. Everything stays on your device.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -282,26 +282,106 @@
 
         .reactions { font-size: 0.75rem; color: var(--text-secondary); margin: 0.1rem 0.5rem 0; }
 
+        /* ---------- tabs and media ---------- */
+
+        .tabs { display: flex; gap: 0.25rem; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+
+        .tabs [data-tab] {
+            background: none;
+            border: 0;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .tabs [data-tab][aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--accent); }
+        .tabs .close-export { margin-left: auto; margin-bottom: 0.4rem; }
+
+        .filters { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
+        .filters button[aria-pressed="true"] { border-color: var(--accent); background: rgba(16, 185, 129, 0.12); color: var(--accent-hover); }
+
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 4px; }
+
+        .media-grid .month {
+            grid-column: 1 / -1;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 1rem 0 0.3rem;
+        }
+
+        .tile {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1;
+            padding: 0;
+            border: 0;
+            border-radius: 4px;
+            background: #1a1a1a center / cover no-repeat;
+            position: relative;
+        }
+
+        .tile:hover { border: 0; filter: brightness(1.1); }
+
+        .tile.video::after, .tile.broken::after {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        .tile.video::after { content: '▶'; font-size: 1.4rem; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+        .tile.broken::after { content: 'No preview'; font-size: 0.7rem; color: var(--text-muted); }
+
+        /* ---------- full-screen viewer ---------- */
+
         .viewer {
             position: fixed;
             inset: 0;
             z-index: 50;
-            background: rgba(0, 0, 0, 0.94);
-            display: grid;
-            place-items: center;
+            background: #000;
+            display: flex;
+            flex-direction: column;
         }
 
-        .viewer img { max-width: 100vw; max-height: 100vh; object-fit: contain; }
+        .viewer-stage { position: relative; flex: 1; min-height: 0; }
 
-        .viewer .close {
+        .viewer-stage img, .viewer-stage video {
             position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            font-size: 1.1rem;
+            inset: 0;
+            margin: auto;
+            max-width: 100%;
+            max-height: 100%;
         }
+
+        .viewer-info {
+            padding: 0.75rem max(16px, env(safe-area-inset-left, 0px)) calc(0.9rem + env(safe-area-inset-bottom, 0px));
+            max-height: 30vh;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            overflow-wrap: anywhere;
+        }
+
+        #viewer-caption { white-space: pre-wrap; }
+        .viewer-info .when { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.2rem; }
+
+        .viewer .close, .viewer .nav {
+            position: absolute;
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 50%;
+            background: rgba(28, 28, 28, 0.85);
+            font-size: 1.1rem;
+            z-index: 1;
+        }
+
+        .viewer .close { top: calc(0.75rem + env(safe-area-inset-top, 0px)); right: 0.75rem; }
+        .viewer .nav { top: 50%; transform: translateY(-50%); font-size: 1.4rem; }
+        .viewer .nav.prev { left: 0.75rem; }
+        .viewer .nav.next { right: 0.75rem; }
 
         input[type=file] { display: none; }
         [hidden] { display: none !important; }
@@ -310,6 +390,7 @@
             .site-nav { padding: 1rem 24px; }
             .container { padding: 1.5rem 24px 2.5rem; }
             .msg-row { max-width: 88%; }
+            .media-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; }
         }
     </style>
 </head>
@@ -319,7 +400,7 @@
     <main class="container">
         <header class="page-head">
             <h1>Insta Viewer</h1>
-            <p class="subtitle">Open your Instagram export and read old chats by date. Everything stays on your device.</p>
+            <p class="subtitle">Open your Instagram export to read old chats by date and browse your posts, stories and reels. Everything stays on your device.</p>
         </header>
 
         <section class="start" id="start">
@@ -338,10 +419,15 @@
             <p class="msg" id="msg" role="status"></p>
         </section>
 
+        <div class="tabs" id="tabs" role="tablist" hidden>
+            <button type="button" role="tab" data-tab="chats">Chats</button>
+            <button type="button" role="tab" data-tab="media">Media</button>
+            <button type="button" class="close-export" id="close-export">Close</button>
+        </div>
+
         <section id="chats" hidden>
             <div class="list-head">
                 <input type="search" id="filter" placeholder="Search chats" aria-label="Search chats">
-                <button type="button" id="close-export">Close</button>
             </div>
             <p class="hint" id="chat-summary"></p>
             <ul class="chat-list" id="chat-list"></ul>
@@ -367,10 +453,24 @@
             <div class="messages" id="messages"></div>
             <button type="button" class="load" id="load-later">Later messages</button>
         </section>
+
+        <section id="media" hidden>
+            <div class="filters" id="filters"></div>
+            <div class="media-grid" id="media-grid"></div>
+        </section>
     </main>
 
     <div class="viewer" id="viewer" hidden>
-        <img id="viewer-img" alt="">
+        <div class="viewer-stage" id="viewer-stage">
+            <img id="viewer-img" alt="">
+            <video id="viewer-video" controls playsinline hidden></video>
+            <button type="button" class="nav prev" id="viewer-prev" aria-label="Previous" hidden>‹</button>
+            <button type="button" class="nav next" id="viewer-next" aria-label="Next" hidden>›</button>
+        </div>
+        <div class="viewer-info" id="viewer-info" hidden>
+            <div class="when" id="viewer-when"></div>
+            <div id="viewer-caption"></div>
+        </div>
         <button type="button" class="close" id="viewer-close" aria-label="Close">✕</button>
     </div>
 
@@ -519,7 +619,9 @@
         }
 
         function show(section) {
-            for (const id of ['start', 'chats', 'chat']) $(id).hidden = id !== section;
+            for (const id of ['start', 'chats', 'chat', 'media']) $(id).hidden = id !== section;
+            $('tabs').hidden = section !== 'chats' && section !== 'media';
+            document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === section));
         }
 
         async function guessOwner(list) {
@@ -565,11 +667,13 @@
                 if (!folders.has(id)) folders.set(id, { id, request: m[1] === 'message_requests', files: [] });
                 folders.get(id).files.push({ n: Number(m[3]), e: entries.get(name) });
             }
-            if (!folders.size) {
-                const html = [...entries.keys()].some(n => /messages\/inbox\/.+\.html$/.test(n));
+            media = await findMedia();
+            if (!folders.size && !media.length) {
+                const html = [...entries.keys()].some(n => /(messages|content)\/.+\.html$/.test(n));
                 setMsg(html
                     ? 'This export is in HTML format. Ask Instagram for a new one in JSON format.'
-                    : 'No chats found. If Instagram split your export into several zips, pick them all together.', true);
+                    : 'No chats or media found. If Instagram split your export into several zips, pick them all together.', true);
+                closeExport();
                 return;
             }
 
@@ -600,8 +704,15 @@
             const skipped = list.length - chats.length;
             $('chat-summary').textContent = `${chats.length} chat${chats.length === 1 ? '' : 's'}` + (skipped ? ` (${skipped} couldn't be read)` : '');
             renderList();
-            show('chats');
+            mediaFilter = 'all';
+            setTab(chats.length ? 'chats' : 'media');
         }
+
+        function setTab(tab) {
+            show(tab);
+            if (tab === 'media' && !mediaRendered) { renderMedia(); mediaRendered = true; }
+        }
+        document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
         function closeExport() {
             closeChat();
@@ -610,6 +721,11 @@
             chats = [];
             owner = '';
             $('chat-list').textContent = '';
+            clearThumbs();
+            media = [];
+            mediaShown = [];
+            mediaRendered = false;
+            $('media-grid').textContent = '';
         }
 
         // ---------- chat list ----------
@@ -642,7 +758,7 @@
                     frag.append(li);
                 });
             ul.append(frag);
-            if (!ul.children.length) ul.append(el('li', 'hint', 'No chats match.'));
+            if (!ul.children.length) ul.append(el('li', 'hint', chats.length ? 'No chats match.' : 'No chats in this export.'));
         }
 
         $('filter').addEventListener('input', renderList);
@@ -1020,21 +1136,277 @@
         $('load-earlier').addEventListener('click', loadEarlier);
         $('load-later').addEventListener('click', loadLater);
 
-        // ---------- photo viewer and going back ----------
+        // ---------- media browser ----------
 
+        const TYPES = { posts: 'Posts', stories: 'Stories', reels: 'Reels', profile: 'Profile', archived: 'Archived', videos: 'Videos', other: 'Other' };
+        let media = [];          // { entry, type, ts, caption, video }, newest first
+        let mediaFilter = 'all';
+        let mediaShown = [];     // media after the filter
+        let mediaRendered = false;
+        let thumbUrls = [];
+        let thumbGen = 0;
+        let thumbsRunning = 0;
+        const thumbQueue = [];
+
+        const isVideo = name => /\.(mp4|mov|m4v|webm)$/i.test(name);
+        const isMediaFile = name => /\.(jpe?g|png|webp|gif|heic|mp4|mov|m4v|webm)$/i.test(name);
+
+        function listType(path) {
+            const f = path.slice(path.lastIndexOf('/') + 1).toLowerCase();
+            if (f.startsWith('posts')) return 'posts';
+            if (f.startsWith('stories')) return 'stories';
+            if (f.startsWith('reels')) return 'reels';
+            if (f.startsWith('profile_photo')) return 'profile';
+            if (f.startsWith('archived')) return 'archived';
+            if (f.startsWith('igtv')) return 'videos';
+            return 'other';
+        }
+
+        // Posts, stories and reels are listed in content/*.json. Walk them for anything with a
+        // file path, taking the caption and date from the item or the post around it.
+        async function findMedia() {
+            const out = [];
+            const claimed = new Set();
+            const lists = [...entries.keys()].filter(n => /(^|\/)content\/[^/]+\.json$/.test(n) && !/(^|\/)messages\//.test(n));
+            for (const name of lists) {
+                let j;
+                try { j = await readJson(entries.get(name)); } catch (err) { continue; }
+                const type = listType(name);
+                const walk = (node, caption, ts) => {
+                    if (Array.isArray(node)) { node.forEach(n => walk(n, caption, ts)); return; }
+                    if (!node || typeof node !== 'object') return;
+                    const cap = typeof node.title === 'string' && node.title.trim() ? node.title : caption;
+                    const when = node.creation_timestamp || ts;
+                    if (typeof node.uri === 'string' && isMediaFile(node.uri)) {
+                        const e = findEntry(node.uri);
+                        if (e && !claimed.has(e.name)) {
+                            claimed.add(e.name);
+                            out.push({ entry: e, type, ts: (when || 0) * 1000, caption: cap || '', video: isVideo(e.name) });
+                        }
+                    }
+                    for (const k in node) if (node[k] && typeof node[k] === 'object') walk(node[k], cap, when);
+                };
+                walk(j, '', 0);
+            }
+            // Files under media/ that no list mentions, dated by their YYYYMM folder.
+            for (const [name, e] of entries) {
+                if (claimed.has(name) || !isMediaFile(name)) continue;
+                const m = name.match(/(?:^|\/)media\/([^/]+)\/(?:(\d{4})(\d{2})\/)?[^/]+$/);
+                if (!m) continue;
+                const folder = m[1].toLowerCase();
+                const type = ['posts', 'stories', 'reels'].includes(folder) ? folder : folder.startsWith('profile') ? 'profile' : folder.startsWith('archived') ? 'archived' : 'other';
+                out.push({ entry: e, type, ts: m[2] ? new Date(Number(m[2]), Number(m[3]) - 1, 1).getTime() : 0, caption: '', video: isVideo(name) });
+            }
+            return out.sort((a, b) => b.ts - a.ts);
+        }
+
+        function renderFilters() {
+            const counts = { all: media.length };
+            media.forEach(m => { counts[m.type] = (counts[m.type] || 0) + 1; });
+            const box = $('filters');
+            box.textContent = '';
+            if (!media.length) return;
+            ['all', ...Object.keys(TYPES).filter(t => counts[t])].forEach(t => {
+                const b = el('button', '', `${t === 'all' ? 'All' : TYPES[t]} ${counts[t].toLocaleString()}`);
+                b.type = 'button';
+                b.dataset.filter = t;
+                b.setAttribute('aria-pressed', t === mediaFilter);
+                b.addEventListener('click', () => { mediaFilter = t; renderMedia(); });
+                box.append(b);
+            });
+        }
+
+        const monthOf = ts => {
+            if (!ts) return 'unknown';
+            const d = new Date(ts);
+            return monthKey(d.getFullYear(), d.getMonth());
+        };
+
+        function renderMedia() {
+            clearThumbs();
+            renderFilters();
+            const grid = $('media-grid');
+            grid.textContent = '';
+            if (!media.length) { grid.append(el('p', 'hint', 'No posts, stories or reels in this export.')); return; }
+            mediaShown = media.filter(m => mediaFilter === 'all' || m.type === mediaFilter);
+            const perMonth = new Map();
+            mediaShown.forEach(m => { const k = monthOf(m.ts); perMonth.set(k, (perMonth.get(k) || 0) + 1); });
+            const frag = document.createDocumentFragment();
+            let month = null;
+            mediaShown.forEach((m, i) => {
+                const k = monthOf(m.ts);
+                if (k !== month) {
+                    month = k;
+                    const label = k === 'unknown' ? 'Date unknown' : keyDate(k + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                    frag.append(el('h2', 'month', `${label} · ${perMonth.get(k)}`));
+                }
+                const tile = el('button', 'tile' + (m.video ? ' video' : ''));
+                tile.type = 'button';
+                tile.setAttribute('aria-label', `${TYPES[m.type]}${m.ts ? ', ' + listDate(m.ts) : ''}`);
+                tile.addEventListener('click', () => openMediaViewer(i));
+                if (!m.video) { tile._item = m; thumbs.observe(tile); }
+                frag.append(tile);
+            });
+            grid.append(frag);
+        }
+
+        const thumbs = new IntersectionObserver(items => items.forEach(it => {
+            if (!it.isIntersecting) return;
+            thumbs.unobserve(it.target);
+            thumbQueue.push(it.target);
+            pumpThumbs();
+        }), { rootMargin: '400px 0px' });
+
+        // A few at a time, so a phone never holds many full-size photos at once.
+        function pumpThumbs() {
+            while (thumbsRunning < 3 && thumbQueue.length) {
+                const tile = thumbQueue.shift();
+                thumbsRunning++;
+                makeThumb(tile).finally(() => { thumbsRunning--; pumpThumbs(); });
+            }
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        async function makeThumb(tile) {
+            const gen = thumbGen;
+            let full = null;
+            try {
+                full = URL.createObjectURL(await entryBlob(tile._item.entry));
+                if (gen !== thumbGen) return;
+                const img = await loadImage(full);
+                const scale = Math.min(1, 320 / Math.min(img.naturalWidth, img.naturalHeight));
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                const small = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+                c.width = c.height = 0;
+                if (gen !== thumbGen || !small) return;
+                const url = URL.createObjectURL(small);
+                thumbUrls.push(url);
+                tile.style.backgroundImage = `url("${url}")`;
+                tile.classList.add('ready');
+            } catch (err) {
+                if (gen === thumbGen) tile.classList.add('broken');
+            } finally {
+                if (full) URL.revokeObjectURL(full);
+            }
+        }
+
+        function clearThumbs() {
+            thumbGen++;
+            thumbQueue.length = 0;
+            thumbs.disconnect();
+            thumbUrls.forEach(u => URL.revokeObjectURL(u));
+            thumbUrls = [];
+        }
+
+        // ---------- full-screen viewer ----------
+
+        let viewIndex = -1;   // place in mediaShown while browsing media; -1 for a chat photo
+        let viewUrl = null;   // object URL the viewer made itself
+        let viewGen = 0;
+
+        function releaseView() {
+            viewGen++;
+            const v = $('viewer-video');
+            v.pause();
+            v.removeAttribute('src');
+            v.load();
+            v.hidden = true;
+            $('viewer-img').removeAttribute('src');
+            $('viewer-img').hidden = false;
+            if (viewUrl) URL.revokeObjectURL(viewUrl);
+            viewUrl = null;
+        }
+
+        // A photo from a chat: already loaded, no caption or arrows.
         function openViewer(src) {
+            releaseView();
+            viewIndex = -1;
+            $('viewer-info').hidden = true;
+            $('viewer-prev').hidden = $('viewer-next').hidden = true;
             $('viewer-img').src = src;
             $('viewer').hidden = false;
         }
-        function closeViewer() {
-            $('viewer').hidden = true;
-            $('viewer-img').removeAttribute('src');
+
+        async function openMediaViewer(i) {
+            releaseView();
+            const gen = viewGen;
+            viewIndex = i;
+            const m = mediaShown[i];
+            $('viewer').hidden = false;
+            $('viewer-info').hidden = false;
+            $('viewer-prev').hidden = $('viewer-next').hidden = false;
+            $('viewer-prev').disabled = i <= 0;
+            $('viewer-next').disabled = i >= mediaShown.length - 1;
+            $('viewer-when').textContent = [TYPES[m.type], m.ts ? new Date(m.ts).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '', `${i + 1} of ${mediaShown.length}`].filter(Boolean).join(' · ');
+            $('viewer-caption').textContent = m.caption;
+            try {
+                const url = URL.createObjectURL(await entryBlob(m.entry));
+                if (gen !== viewGen) { URL.revokeObjectURL(url); return; }
+                viewUrl = url;
+                if (m.video) {
+                    $('viewer-img').hidden = true;
+                    const v = $('viewer-video');
+                    v.hidden = false;
+                    v.src = url;
+                    v.play().catch(() => {});
+                } else {
+                    $('viewer-img').src = url;
+                }
+            } catch (err) {
+                if (gen === viewGen) $('viewer-caption').textContent = "Couldn't open this file.";
+            }
         }
+
+        function stepViewer(d) {
+            const i = viewIndex + d;
+            if (viewIndex < 0 || i < 0 || i >= mediaShown.length) return;
+            openMediaViewer(i);
+        }
+
+        function closeViewer() {
+            releaseView();
+            viewIndex = -1;
+            $('viewer').hidden = true;
+        }
+
         $('viewer-close').addEventListener('click', closeViewer);
-        $('viewer').addEventListener('click', e => { if (e.target === $('viewer')) closeViewer(); });
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { if (!$('viewer').hidden) closeViewer(); else if (!$('calendar').hidden) toggleCalendar(false); }
+        $('viewer-prev').addEventListener('click', () => stepViewer(-1));
+        $('viewer-next').addEventListener('click', () => stepViewer(1));
+        $('viewer').addEventListener('click', e => { if (e.target === $('viewer') || e.target === $('viewer-stage')) closeViewer(); });
+
+        // Swipe left or right to move through media.
+        let swipe = null;
+        $('viewer-stage').addEventListener('touchstart', e => { if (e.touches.length === 1) swipe = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+        $('viewer-stage').addEventListener('touchend', e => {
+            if (!swipe) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+            swipe = null;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) stepViewer(dx < 0 ? 1 : -1);
         });
+
+        document.addEventListener('keydown', e => {
+            if (!$('viewer').hidden) {
+                if (e.key === 'Escape') closeViewer();
+                else if (e.key === 'ArrowLeft') stepViewer(-1);
+                else if (e.key === 'ArrowRight') stepViewer(1);
+            } else if (e.key === 'Escape' && !$('calendar').hidden) {
+                toggleCalendar(false);
+            }
+        });
+
+        // ---------- going back ----------
 
         function backToList() {
             closeViewer();
