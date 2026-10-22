@@ -496,6 +496,47 @@
         .wrap-actions { display: flex; gap: 0.5rem; justify-content: center; padding: 0.6rem max(12px, env(safe-area-inset-left, 0px)) 0.8rem; }
         .wrap-actions button { flex: 0 1 12rem; }
         .stats-wrap { width: 100%; justify-content: center; }
+        .stats-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .stats-actions .stats-wrap:only-child { grid-column: 1 / -1; }
+
+        /* ---------- birthday pack ---------- */
+
+        .bday { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 0.6rem; }
+        .bday h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+        .bday-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+        .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--text-secondary); min-width: 0; }
+        .field input {
+            font: inherit;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.6rem;
+            min-width: 0;
+            color-scheme: dark;
+        }
+        .field input:focus { outline: none; border-color: var(--accent); }
+        .bday-photos-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+        .bday-photos-head .title { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+        .tile.picked { outline: 3px solid var(--accent); outline-offset: -3px; }
+        .tile .pick-num {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #04140d;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            padding: 0 0.3rem;
+        }
+        .bday-make { position: sticky; bottom: 0; padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to bottom, transparent, var(--bg-primary) 35%); }
+        .bday-make button { width: 100%; padding: 0.7rem; font-size: 1rem; }
 
         /* ---------- top people ---------- */
 
@@ -750,6 +791,17 @@
                 <button type="button" class="load" id="chat-search-more" hidden>Show more</button>
             </div>
             <div class="stats" id="chat-stats" hidden></div>
+            <div class="bday" id="chat-bday" hidden>
+                <h2 id="bday-title">Birthday pack</h2>
+                <div class="bday-fields">
+                    <label class="field">Their birthday<input type="date" id="bday-date"></label>
+                    <label class="field">Name on the cards<input type="text" id="bday-name" maxlength="30" autocomplete="off"></label>
+                </div>
+                <div class="bday-photos-head"><span class="title">Choose photos</span><span class="hint" id="bday-count"></span></div>
+                <p class="hint" id="bday-hint">Tap photos from your chat to put them in the pack. Leave the birthday empty to skip the "every birthday" card.</p>
+                <div class="media-grid" id="bday-grid"></div>
+                <div class="bday-make"><button type="button" class="btn-primary" id="bday-make">Make the birthday pack</button></div>
+            </div>
         </section>
 
         <section id="otd" hidden>
@@ -1332,6 +1384,7 @@
             show('chat');
             c.mediaRendered = false;
             c.statsRendered = false;
+            c.bdayRendered = false;
             $('chat-search-q').value = '';
             $('chat-search-status').textContent = '';
             $('chat-search-results').textContent = '';
@@ -1356,6 +1409,10 @@
             $('chat-media').textContent = '';
             $('chat-stats').textContent = '';
             $('chat-search-results').textContent = '';
+            bdayThumbs.clear();
+            $('bday-grid').textContent = '';
+            bdayUrls.forEach(u => URL.revokeObjectURL(u));
+            bdayUrls = [];
             hideTip();
             if (current) { current.messages = null; current.days = null; current.dayIndex = null; current.media = null; }
             current = null;
@@ -2054,6 +2111,84 @@
             return cards;
         }
 
+        // ---------- birthday pack: the cards ----------
+
+        const WISH = /birth|bday|b'day|hbd|🎂|🎉|🥳/iu;
+        const BDAY_THEMES = {
+            'b-hello': ['#4a0d2e', '#f9a8d4'], 'b-story': ['#3b1d06', '#fcd34d'], 'b-first': ['#1e1b4b', '#a5b4fc'],
+            'b-years': ['#4a0d2e', '#f9a8d4'], 'b-loved': ['#3b0a2a', '#fda4af'], 'b-photos': ['#1c1917', '#fcd34d'], 'b-end': ['#3b1d06', '#fcd34d']
+        };
+
+        function bdayCards(c, name, bday, imgs) {
+            const msgs = c.messages, items = c.items || [];
+            const cards = [{ type: 'b-hello', name }];
+            const first = new Date(msgs[0].timestamp_ms || 0), now = new Date();
+            let months = (now.getFullYear() - first.getFullYear()) * 12 + now.getMonth() - first.getMonth();
+            if (now.getDate() < first.getDate()) months--;
+            cards.push({ type: 'b-story', name, since: msgs[0].timestamp_ms || 0, total: msgs.length, days: c.days.length, months: Math.max(0, months) });
+            if (items.length) cards.push({ type: 'b-first', text: items[0].text, from: items[0].sender, ts: items[0].ts });
+
+            // What was said on their birthday each year, preferring your own wishes.
+            if (bday) {
+                const mmdd = `${pad(bday.m)}-${pad(bday.d)}`;
+                const rows = [];
+                c.days.forEach(d => {
+                    if (d.key.slice(5) !== mmdd) return;
+                    const day = items.filter(it => dayKey(it.ts) === d.key);
+                    const mine = day.filter(it => it.sender === owner);
+                    const pick = mine.find(it => WISH.test(it.text)) || day.find(it => WISH.test(it.text)) || mine[0] || day[0];
+                    if (pick) rows.push({ year: Number(d.key.slice(0, 4)), text: pick.text, from: pick.sender });
+                });
+                if (rows.length) cards.push({ type: 'b-years', name, rows: rows.sort((a, b) => b.year - a.year).slice(0, 5) });
+            }
+
+            // Messages they reacted to; if they never reacted, ones either of you did.
+            const reacted = msgs.filter(m => m.reactions && m.reactions.length && bodyText(m));
+            const byThem = reacted.filter(m => m.reactions.some(r => r.actor && r.actor !== owner));
+            const loved = [...(byThem.length ? byThem : reacted)]
+                .sort((a, b) => b.reactions.length - a.reactions.length || bodyText(b).length - bodyText(a).length)
+                .slice(0, 3)
+                .map(m => {
+                    const fan = m.reactions.find(r => r.actor && r.actor !== owner) || m.reactions[0];
+                    return { text: bodyText(m), from: m.sender_name || '', ts: m.timestamp_ms || 0, react: fan.reaction || '', by: fan.actor || '' };
+                });
+            if (loved.length) cards.push({ type: 'b-loved', name, both: !byThem.length, rows: loved });
+
+            for (let k = 0; k < imgs.length; k += 9) cards.push({ type: 'b-photos', name, imgs: imgs.slice(k, k + 9), part: k / 9 + 1, parts: Math.ceil(imgs.length / 9) });
+            cards.push({ type: 'b-end', name, from: owner ? firstName(owner) : '' });
+            cards.forEach(x => { x.label = ''; x.year = null; });
+            return cards;
+        }
+
+        function yearRows(g, card, maxW) {
+            g.font = `400 44px ${FACE}`;
+            return card.rows.map(r => { const all = wrap(g, r.text, maxW); const ls = all.slice(0, 2); return { r, ls, more: all.length > 2, h: ls.length * 58 + 154 }; });
+        }
+        function lovedRows(g, card, maxW) {
+            g.font = `400 50px ${FACE}`;
+            return card.rows.map(r => { const all = wrap(g, r.text, maxW - 10); const ls = all.slice(0, 3); return { r, ls, more: all.length > 3, h: ls.length * 66 + 96 }; });
+        }
+        function photoGrid(n, maxW) {
+            const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3, rows = Math.ceil(n / cols), gap = 18;
+            const cell = Math.min((maxW - (cols - 1) * gap) / cols, (1250 - (rows - 1) * gap) / rows);
+            return { cols, gap, cell, h: rows * cell + (rows - 1) * gap, w: cols * cell + (cols - 1) * gap };
+        }
+        function confetti(g, seedText, colors) {
+            let x = [...(seedText || 'x')].reduce((t, ch) => t + ch.codePointAt(0), 7) % 2147483646 + 1;
+            const rnd = () => { x = (x * 16807) % 2147483647; return x / 2147483647; };
+            for (let i = 0; i < 70; i++) {
+                const cx = rnd() * WRAP_W, cy = rnd() * WRAP_H, size = 10 + rnd() * 18;
+                g.save();
+                g.translate(cx, cy);
+                g.rotate(rnd() * Math.PI);
+                g.globalAlpha = 0.35 + rnd() * 0.45;
+                g.fillStyle = colors[i % colors.length];
+                if (i % 3 === 0) { g.beginPath(); g.arc(0, 0, size / 2, 0, Math.PI * 2); g.fill(); }
+                else g.fillRect(-size / 2, -size / 4, size, size / 2);
+                g.restore();
+            }
+        }
+
         // ---------- wrapped: drawing a card ----------
 
         const shortDate = key => keyDate(key).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -2074,12 +2209,21 @@
                     return [470, 760 + Math.min(7, wrap(g, card.text, WRAP_W - 192).length) * 82 + 130];
                 }
                 case 'outro': return [640, 1180];
+                case 'b-hello': case 'b-end': return [700, 1150];
+                case 'b-story': return [650, 1150];
+                case 'b-first': {
+                    g.font = `400 60px ${FACE}`;
+                    return [470, 760 + Math.min(7, wrap(g, card.text, WRAP_W - 192).length) * 82 + 130];
+                }
+                case 'b-years': return [420, 420 + yearRows(g, card, WRAP_W - 192).reduce((t, r) => t + r.h, 0)];
+                case 'b-loved': return [420, 420 + lovedRows(g, card, WRAP_W - 192).reduce((t, r) => t + r.h, 0)];
+                case 'b-photos': return [420, 420 + photoGrid(card.imgs.length, WRAP_W - 192).h];
             }
             return [400, 1600];
         }
 
         function drawCard(g, card) {
-            const [base, hi] = THEMES[CARD_TYPES.indexOf(card.type) % THEMES.length];
+            const [base, hi] = BDAY_THEMES[card.type] || THEMES[CARD_TYPES.indexOf(card.type) % THEMES.length];
             const [top0, bottom0] = contentBox(g, card);
             const dy = Math.max(0, Math.round(1015 - (top0 + bottom0) / 2));
             const X = 96, maxW = WRAP_W - X * 2;
@@ -2088,6 +2232,7 @@
             grad.addColorStop(1, '#050505');
             g.fillStyle = grad;
             g.fillRect(0, 0, WRAP_W, WRAP_H);
+            if (card.type === 'b-hello' || card.type === 'b-end') confetti(g, card.name, [hi, '#ffffff', '#fcd34d', '#93c5fd']);
             g.textAlign = 'left';
             g.textBaseline = 'alphabetic';
 
@@ -2115,6 +2260,7 @@
             };
             const bar = (x, y, w, h, color) => { g.fillStyle = color; roundRect(g, x, y, Math.max(h, w), h, h / 2); g.fill(); };
             const nm = n => (n === owner ? 'You' : n || 'Someone');
+            const gift = n => firstName(n || 'Someone');   // the pack is for them, so names, not "You"
             const when = card.year ? `in ${card.year}` : 'in all your chats';
 
             g.save();
@@ -2245,8 +2391,83 @@
                     if (card.top) text(`Top person: ${card.top}`, X, 1160, 50);
                     if (card.other) text(`with ${card.other}`, X, 1160, 50);
                     break;
+                case 'b-hello':
+                    label('Happy birthday');
+                    text('Happy birthday,', X, 820, 110, '#fff', 700);
+                    text(`${card.name}! 🎂`, X, 970, 130, hi, 700);
+                    text('A little look back at us', X, 1090, 48);
+                    break;
+                case 'b-story': {
+                    label('Our story');
+                    const yrs = Math.floor(card.months / 12);
+                    const span = yrs >= 1 ? `${yrs} ${yrs === 1 ? 'year' : 'years'}` : card.months >= 1 ? `${card.months} ${card.months === 1 ? 'month' : 'months'}` : 'A new friendship';
+                    text(span, X, 820, 170, '#fff', 700);
+                    text(`of chatting, since ${listDate(card.since)}`, X, 920, 50, hi, 600);
+                    text(`${card.total.toLocaleString()} messages`, X, 1060, 64, '#fff', 700);
+                    text(`on ${plural(card.days, 'day')}`, X, 1130, 46);
+                    break;
+                }
+                case 'b-first': {
+                    label('Where it all started');
+                    setFont(700, 220);
+                    g.fillStyle = hi;
+                    g.fillText('\u201C', X - 10, 640);
+                    const n = lines(card.text, X, 760, 60, 82, '#fff', 7);
+                    lines(`${gift(card.from)} · ${longDay(dayKey(card.ts))}`, X, 760 + n * 82 + 70, 42, 58, '#a3a3a3', 2);
+                    break;
+                }
+                case 'b-years': {
+                    label('Every birthday');
+                    let y = 420;
+                    yearRows(g, card, maxW).forEach(({ r, ls, more, h }) => {
+                        text(String(r.year), X, y + 56, 56, hi, 700);
+                        setFont(400, 44);
+                        g.fillStyle = '#fff';
+                        ls.forEach((l, i) => g.fillText(i === ls.length - 1 && more ? l.slice(0, -1) + '…' : l, X, y + 120 + i * 58));
+                        text(`— ${gift(r.from)}`, X, y + 120 + (ls.length - 1) * 58 + 52, 34, '#a3a3a3');
+                        y += h;
+                    });
+                    break;
+                }
+                case 'b-loved': {
+                    label(card.both ? 'Moments we loved' : 'Moments you loved');
+                    let y = 420;
+                    lovedRows(g, card, maxW).forEach(({ r, ls, more, h }) => {
+                        g.fillStyle = hi;
+                        g.fillRect(X - 30, y + 14, 6, ls.length * 66);
+                        setFont(400, 50);
+                        g.fillStyle = '#fff';
+                        ls.forEach((l, i) => g.fillText(i === ls.length - 1 && more ? l.slice(0, -1) + '…' : l, X, y + 56 + i * 66));
+                        text(`— ${gift(r.from)}, ${listDate(r.ts)}  ·  ${r.react} ${gift(r.by)}`, X, y + 56 + (ls.length - 1) * 66 + 56, 36, '#a3a3a3');
+                        y += h;
+                    });
+                    break;
+                }
+                case 'b-photos': {
+                    label(card.parts > 1 ? `Us · ${card.part} of ${card.parts}` : 'Us');
+                    const pg = photoGrid(card.imgs.length, maxW);
+                    const gx = X + (maxW - pg.w) / 2;
+                    card.imgs.forEach((img, i) => {
+                        const cx = gx + (i % pg.cols) * (pg.cell + pg.gap), cy = 420 + Math.floor(i / pg.cols) * (pg.cell + pg.gap);
+                        const sc = Math.max(pg.cell / img.naturalWidth, pg.cell / img.naturalHeight);
+                        const dw = img.naturalWidth * sc, dh = img.naturalHeight * sc;
+                        g.save();
+                        roundRect(g, cx, cy, pg.cell, pg.cell, 24);
+                        g.clip();
+                        g.drawImage(img, cx + (pg.cell - dw) / 2, cy + (pg.cell - dh) / 2, dw, dh);
+                        g.restore();
+                    });
+                    break;
+                }
+                case 'b-end':
+                    label('To many more');
+                    text('Happy birthday,', X, 820, 110, '#fff', 700);
+                    text(`${card.name} 💛`, X, 970, 130, hi, 700);
+                    if (card.from) text(`With love, ${card.from}`, X, 1090, 48);
+                    break;
             }
             g.restore();
+            if (card.type.startsWith('b-')) return;   // a gift: no footer
             setFont(600, 32);
             g.fillStyle = 'rgba(255,255,255,0.55)';
             g.fillText('Insta Viewer', X, WRAP_H - 110);
@@ -2261,6 +2482,7 @@
             wrapped = { chat, year: null, cards: [], at: 0 };
             pendingWrap = null;
             $('wrap-title').textContent = chat ? `Wrapped · ${chat.title}` : 'Wrapped';
+            $('wrap-year').hidden = false;
             $('wrap-bars').textContent = '';
             $('wrap-year').length = 0;
             const g = $('wrap-canvas').getContext('2d');
@@ -2405,7 +2627,23 @@
             return new Blob([...parts, ...central, end], { type: 'application/zip' });
         }
 
-        const wrapName = () => `wrapped-${wrapped.year || 'all-time'}${wrapped.chat ? '-' + (slugOf(wrapped.chat.title) || 'chat') : ''}`;
+        const wrapName = () => (wrapped.pack
+            ? `birthday-${slugOf(wrapped.pack) || 'pack'}`
+            : `wrapped-${wrapped.year || 'all-time'}${wrapped.chat ? '-' + (slugOf(wrapped.chat.title) || 'chat') : ''}`);
+
+        // A ready-made set of cards (the birthday pack) in the same story viewer.
+        function openPack(chat, cards, name) {
+            wrapped = { chat, year: null, cards, at: 0, pack: name };
+            pendingWrap = null;
+            $('wrap-title').textContent = `Birthday pack · ${chat.title}`;
+            $('wrap-year').hidden = true;
+            $('wrap-msg').textContent = '';
+            const st = history.state || {};
+            history.pushState({ ...st, depth: current ? ++chatDepth : st.depth, wrap: true }, '');
+            wrapPushed = true;
+            $('wrap').hidden = false;
+            showCard();
+        }
 
         function cardFile(card, i) {
             const c = document.createElement('canvas');
@@ -2918,10 +3156,19 @@
             box.textContent = '';
             const msgs = c.messages;
             if (!msgs.length) { box.append(el('p', 'hint', 'No messages in this chat.')); return; }
+            const actions = el('div', 'stats-actions');
             const wrapBtn = el('button', 'stats-wrap', 'Wrapped for this chat →');
             wrapBtn.type = 'button';
             wrapBtn.addEventListener('click', () => openWrap(c));
-            box.append(wrapBtn);
+            actions.append(wrapBtn);
+            if (!c.group) {
+                const bdayBtn = el('button', 'stats-wrap', 'Birthday pack →');
+                bdayBtn.type = 'button';
+                bdayBtn.id = 'bday-open';
+                bdayBtn.addEventListener('click', () => setChatView('bday', { push: true }));
+                actions.append(bdayBtn);
+            }
+            box.append(actions);
 
             const senders = new Map();
             const hours = new Array(24).fill(0);
@@ -3288,6 +3535,7 @@
             $('chat-media').hidden = view !== 'media';
             $('chat-search').hidden = view !== 'search';
             $('chat-stats').hidden = view !== 'stats';
+            $('chat-bday').hidden = view !== 'bday';
             if (messages) {
                 if (c.days && c.days.length) updateLoadButtons();
                 if (restore && !firstVisit) window.scrollTo(0, viewScroll.messages);
@@ -3301,6 +3549,10 @@
             if (view === 'stats' && !c.statsRendered) {
                 renderStats(c);
                 c.statsRendered = true;
+            }
+            if (view === 'bday' && !c.bdayRendered) {
+                renderBday(c);
+                c.bdayRendered = true;
             }
             window.scrollTo(0, restore && !firstVisit ? viewScroll[view] : 0);
             if (view === 'search' && push && !$('chat-search-results').children.length) $('chat-search-q').focus();
@@ -3350,6 +3602,84 @@
                 if (full) URL.revokeObjectURL(full);
             }
         }
+
+        // ---------- birthday pack page ----------
+
+        const MAX_PICKS = 18;
+        const bdayThumbs = thumbPool();
+        let bdayPhotos = [];   // this chat's photos
+        let bdayPicks = [];    // chosen photos, as places in bdayPhotos, in the order picked
+        let bdayUrls = [];     // full photos loaded for the pack
+        const firstName = t => (t || '').trim().split(/\s+/)[0] || t || '';
+
+        function renderBday(c) {
+            bdayPicks = [];
+            bdayPhotos = c.media.filter(m => !m.video);
+            $('bday-title').textContent = `Birthday pack for ${c.title}`;
+            $('bday-name').value = firstName(c.title);
+            $('bday-date').value = '';
+            const grid = $('bday-grid');
+            if (bdayPhotos.length) {
+                renderGrid(grid, bdayPhotos, bdayThumbs, m => `Photo from ${listDate(m.ts)}`, i => togglePick(i));
+            } else {
+                bdayThumbs.clear();
+                grid.textContent = '';
+                grid.append(el('p', 'hint', 'No photos in this chat, so the pack will be words only.'));
+            }
+            updatePicks();
+        }
+
+        function togglePick(i) {
+            const at = bdayPicks.indexOf(i);
+            if (at >= 0) bdayPicks.splice(at, 1);
+            else if (bdayPicks.length < MAX_PICKS) bdayPicks.push(i);
+            updatePicks();
+        }
+
+        function updatePicks() {
+            $('bday-grid').querySelectorAll('.tile').forEach((t, i) => {
+                const at = bdayPicks.indexOf(i);
+                t.classList.toggle('picked', at >= 0);
+                t.setAttribute('aria-pressed', at >= 0);
+                let badge = t.querySelector('.pick-num');
+                if (at >= 0) {
+                    if (!badge) { badge = el('span', 'pick-num'); t.append(badge); }
+                    badge.textContent = String(at + 1);
+                } else if (badge) {
+                    badge.remove();
+                }
+            });
+            $('bday-count').textContent = bdayPhotos.length ? `${bdayPicks.length} of ${MAX_PICKS} chosen` : '';
+        }
+
+        $('bday-make').addEventListener('click', async () => {
+            const c = current;
+            if (!c) return;
+            const btn = $('bday-make');
+            btn.disabled = true;
+            btn.textContent = 'Making…';
+            try {
+                if (!c.items) aggregate(c, c.messages);
+                bdayUrls.forEach(u => URL.revokeObjectURL(u));
+                bdayUrls = [];
+                const imgs = [];
+                for (const i of bdayPicks) {
+                    try {
+                        const url = URL.createObjectURL(await entryBlob(bdayPhotos[i].entry));
+                        bdayUrls.push(url);
+                        imgs.push(await loadImage(url));
+                    } catch (err) { /* a photo that can't be opened is left out */ }
+                }
+                if (current !== c) return;
+                const v = $('bday-date').value;
+                const bday = v ? { m: Number(v.slice(5, 7)), d: Number(v.slice(8, 10)) } : null;
+                const name = $('bday-name').value.trim() || firstName(c.title);
+                openPack(c, bdayCards(c, name, bday, imgs), name);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Make the birthday pack';
+            }
+        });
 
         // ---------- full-screen viewer ----------
 
