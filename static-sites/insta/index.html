@@ -512,6 +512,8 @@
 
         @media (max-width: 600px) {
             .chat-tabs button { font-size: 0.82rem; padding-inline: 0.15rem; }
+            #back { width: 2.5rem; height: 2.5rem; padding: 0; font-size: 1.3rem; }
+            #back .back-label { display: none; }
             .site-nav { padding: 1rem 24px; }
             .container { padding: 1.5rem 24px 2.5rem; }
             .msg-row { max-width: 88%; }
@@ -563,7 +565,7 @@
 
         <section id="chat" hidden>
             <div class="chat-head">
-                <button type="button" id="back">‹ Chats</button>
+                <button type="button" id="back" aria-label="Back to chats"><span aria-hidden="true">‹</span><span class="back-label" aria-hidden="true">Chats</span></button>
                 <div class="chat-title">
                     <div id="chat-name"></div>
                     <div class="hint" id="chat-info"></div>
