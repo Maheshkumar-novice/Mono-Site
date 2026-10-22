@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-name" content="Collage Maker">
+    <meta name="app-section" content="Tools">
+    <title>Collage Maker</title>
+    <meta name="description" content="Make a photo collage in your browser and download it. Your photos never leave your device.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-raised: #1c1c1c;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --border: #262626;
+            --border-strong: #3a3a3a;
+            --danger: #f87171;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 1100px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .nav-brand {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1.125rem;
+        }
+
+        .nav-brand:hover { color: var(--accent); }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 3rem;
+        }
+
+        .page-head h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin: 0 0 0.25rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin: 0 0 1.5rem;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 300px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .stage-col { min-width: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .stage {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 320px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+        }
+
+        .stage.dragover { border-color: var(--accent); }
+
+        canvas#preview {
+            display: block;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: grab;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas#preview.grabbing { cursor: grabbing; }
+
+        .empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 3rem 1rem;
+        }
+
+        .empty .big-icon {
+            width: 56px;
+            height: 56px;
+            border: 2px dashed var(--border-strong);
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            color: var(--text-muted);
+            font-size: 1.75rem;
+            line-height: 1;
+        }
+
+        .hint {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .msg {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0;
+            min-height: 1.3em;
+        }
+
+        .msg.warn { color: #fbbf24; }
+        .msg:empty { display: none; }
+
+        .selbar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            border-radius: var(--border-radius);
+            padding: 0.6rem 0.75rem;
+        }
+
+        .selbar label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex: 1 1 200px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .selbar input[type=range] { flex: 1; }
+
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+        .group-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .group-title .count {
+            text-transform: none;
+            letter-spacing: 0;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        button, .btn {
+            font: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:hover, .btn:hover { border-color: var(--text-muted); }
+        button:disabled { opacity: 0.45; cursor: default; }
+        button:disabled:hover { border-color: var(--border-strong); }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #04140d;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled:hover { background: var(--accent); border-color: var(--accent); }
+
+        .btn-danger { color: var(--danger); }
+
+        .seg {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
+
+        .seg.three { grid-template-columns: repeat(3, 1fr); }
+        .seg.four { grid-template-columns: repeat(4, 1fr); }
+
+        .seg button[aria-pressed="true"] {
+            border-color: var(--accent);
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--accent-hover);
+        }
+
+        .shape-btn { flex-direction: column; gap: 0.3rem; padding: 0.5rem 0.25rem; font-size: 0.75rem; }
+        .shape-icon { border: 1.5px solid currentColor; border-radius: 2px; opacity: 0.8; }
+
+        .slider-row { display: flex; align-items: center; gap: 0.75rem; }
+        .slider-row input { flex: 1; }
+        .slider-row output { width: 2.5ch; text-align: right; color: var(--text-secondary); font-size: 0.875rem; }
+
+        input[type=range] { accent-color: var(--accent); }
+
+        .swatches { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
+
+        .swatch {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border-radius: 50%;
+            border: 2px solid var(--border-strong);
+        }
+
+        .swatch[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        .custom-color {
+            position: relative;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px dashed var(--border-strong);
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .custom-color[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; border-style: solid; }
+
+        .custom-color input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .download { width: 100%; padding: 0.75rem; font-size: 1rem; }
+
+        .privacy { color: var(--text-muted); font-size: 0.8rem; margin: 0; text-align: center; }
+
+        .ghost {
+            position: fixed;
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            border: 2px solid var(--accent);
+            background-size: cover;
+            background-position: center;
+            pointer-events: none;
+            transform: translate(-50%, -110%);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+
+        input[type=file] { display: none; }
+
+        [hidden] { display: none !important; }
+
+        @media (max-width: 860px) {
+            .workspace { grid-template-columns: minmax(0, 1fr); }
+        }
+
+        @media (max-width: 600px) {
+            .site-nav { padding: 1rem 24px; }
+            .container { padding: 1.5rem 24px 2.5rem; }
+            .stage { padding: 0.5rem; min-height: 240px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav"><a href="/" class="nav-brand">Maheshkumar</a></nav>
+
+    <main class="container">
+        <header class="page-head">
+            <h1>Collage Maker</h1>
+            <p class="subtitle">Pick photos, choose a layout, download. Your photos stay on your device.</p>
+        </header>
+
+        <div class="workspace">
+            <div class="stage-col">
+                <div class="stage" id="stage">
+                    <div class="empty" id="empty">
+                        <div class="big-icon">+</div>
+                        <div>Add up to 25 photos to start</div>
+                        <label class="btn btn-primary" for="files">Add photos</label>
+                        <div class="hint">or drop them here</div>
+                    </div>
+                    <canvas id="preview" hidden></canvas>
+                </div>
+
+                <div class="selbar" id="selbar" hidden>
+                    <label>Zoom <input type="range" id="zoom" min="0.2" max="4" step="0.01" value="1"></label>
+                    <button type="button" class="btn-danger" id="remove">Remove</button>
+                    <button type="button" id="done">Done</button>
+                </div>
+
+                <p class="msg" id="msg" role="status"></p>
+                <p class="hint" id="hint" hidden>Drag a photo to move it inside its box. Tap it to zoom or remove it. Press and hold, then drag onto another photo to swap them.</p>
+            </div>
+
+            <aside class="panel">
+                <div class="group">
+                    <div class="group-title">Photos <span class="count" id="count">0 of 25</span></div>
+                    <div class="row">
+                        <label class="btn" for="files">Add photos</label>
+                        <button type="button" id="clear" disabled>Clear all</button>
+                    </div>
+                    <input type="file" id="files" accept="image/*" multiple>
+                </div>
+
+                <div class="group">
+                    <div class="group-title">Layout</div>
+                    <div class="seg" id="layouts">
+                        <button type="button" data-layout="grid">Grid</button>
+                        <button type="button" data-layout="big">Big + small</button>
+                        <button type="button" data-layout="columns">Columns</button>
+                        <button type="button" data-layout="strip">Strip</button>
+                    </div>
+                    <div class="seg three" id="big-variants" hidden>
+                        <button type="button" data-big="left">Left</button>
+                        <button type="button" data-big="top">Top</button>
+                        <button type="button" data-big="middle">Middle</button>
+                    </div>
+                    <div class="seg" id="strip-variants" hidden>
+                        <button type="button" data-strip="row">Row</button>
+                        <button type="button" data-strip="column">Column</button>
+                    </div>
+                    <p class="hint" id="layout-hint" hidden>The first photo is the big one. Hold and drag to swap.</p>
+                </div>
+
+                <div class="group">
+                    <div class="group-title">Shape</div>
+                    <div class="seg four" id="shapes">
+                        <button type="button" class="shape-btn" data-shape="1:1"><span class="shape-icon" style="width:16px;height:16px"></span>Square</button>
+                        <button type="button" class="shape-btn" data-shape="4:5"><span class="shape-icon" style="width:14px;height:17.5px"></span>Portrait</button>
+                        <button type="button" class="shape-btn" data-shape="9:16"><span class="shape-icon" style="width:11px;height:19.5px"></span>Story</button>
+                        <button type="button" class="shape-btn" data-shape="16:9"><span class="shape-icon" style="width:22px;height:12.4px"></span>Wide</button>
+                    </div>
+                </div>
+
+                <div class="group">
+                    <div class="group-title">Gap</div>
+                    <div class="slider-row">
+                        <input type="range" id="gap" min="0" max="50" step="1" value="12">
+                        <output id="gap-out">12</output>
+                    </div>
+                </div>
+
+                <div class="group">
+                    <div class="group-title">Background</div>
+                    <div class="swatches" id="swatches">
+                        <button type="button" class="swatch" data-color="#ffffff" style="background:#ffffff" aria-label="White"></button>
+                        <button type="button" class="swatch" data-color="#000000" style="background:#000000" aria-label="Black"></button>
+                        <button type="button" class="swatch" data-color="#f4ede1" style="background:#f4ede1" aria-label="Cream"></button>
+                        <button type="button" class="swatch" data-color="#e2d3bd" style="background:#e2d3bd" aria-label="Sand"></button>
+                        <button type="button" class="swatch" data-color="#dde5d8" style="background:#dde5d8" aria-label="Sage"></button>
+                        <button type="button" class="swatch" data-color="#f3dede" style="background:#f3dede" aria-label="Blush"></button>
+                        <label class="custom-color" id="custom-wrap" aria-label="Pick any colour">+<input type="color" id="custom" value="#10b981"></label>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-primary download" id="download" disabled>Download</button>
+                <p class="privacy" id="size-note">JPEG, 2400 × 2400</p>
+            </aside>
+        </div>
+    </main>
+
+    <script>
+        const MAX_PHOTOS = 25;
+        const MAX_ZOOM = 4;
+        const SHAPES = {
+            '1:1': [2400, 2400],
+            '4:5': [2160, 2700],
+            '9:16': [1620, 2880],
+            '16:9': [2880, 1620]
+        };
+        const STORE_KEY = 'collage:settings';
+
+        const state = { layout: 'grid', big: 'left', strip: 'row', shape: '1:1', gap: 12, bg: '#ffffff' };
+        let photos = [];      // { img, url, w, h, z, ox, oy } in cell order
+        let sel = -1;         // selected photo index
+        let cells = [];       // last preview cells, in canvas pixels
+        let swap = null;      // { from, to } while a swap drag is going
+        let pendingShare = null;
+        let busy = false;
+
+        const $ = id => document.getElementById(id);
+        const canvas = $('preview');
+        const ctx = canvas.getContext('2d');
+
+        // ---------- settings ----------
+
+        function restore() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+                if (['grid', 'big', 'columns', 'strip'].includes(saved.layout)) state.layout = saved.layout;
+                if (['left', 'top', 'middle'].includes(saved.big)) state.big = saved.big;
+                if (['row', 'column'].includes(saved.strip)) state.strip = saved.strip;
+                if (SHAPES[saved.shape]) state.shape = saved.shape;
+                if (Number.isFinite(saved.gap) && saved.gap >= 0 && saved.gap <= 50) state.gap = saved.gap;
+                if (/^#[0-9a-f]{6}$/i.test(saved.bg || '')) state.bg = saved.bg;
+            } catch (e) { /* storage blocked: use defaults */ }
+        }
+
+        function persist() {
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+        }
+
+        // ---------- layouts ----------
+
+        function rect(x, y, w, h) { return { x, y, w, h }; }
+
+        // Even rows; any extra photos go to the bottom rows.
+        function gridCells(n, r, g) {
+            if (n <= 0) return [];
+            const rows = Math.max(1, Math.min(n, Math.round(Math.sqrt(n * r.h / r.w))));
+            const base = Math.floor(n / rows);
+            const extra = n % rows;
+            const rh = (r.h - (rows - 1) * g) / rows;
+            const out = [];
+            for (let i = 0; i < rows; i++) {
+                const count = base + (i >= rows - extra ? 1 : 0);
+                const cw = (r.w - (count - 1) * g) / count;
+                for (let j = 0; j < count; j++) {
+                    out.push(rect(r.x + j * (cw + g), r.y + i * (rh + g), cw, rh));
+                }
+            }
+            return out;
+        }
+
+        // Photo 0 is big; the rest share the leftover space as a grid.
+        function bigCells(n, r, g, variant) {
+            if (n === 1) return [r];
+            const small = n - 1;
+            const share = small <= 3 ? 0.62 : small <= 6 ? 0.55 : 0.5;
+
+            if (variant === 'left') {
+                const bw = (r.w - g) * share;
+                return [rect(r.x, r.y, bw, r.h), ...gridCells(small, rect(r.x + bw + g, r.y, r.w - bw - g, r.h), g)];
+            }
+            if (variant === 'top' || small === 1) {
+                const bh = (r.h - g) * share;
+                return [rect(r.x, r.y, r.w, bh), ...gridCells(small, rect(r.x, r.y + bh + g, r.w, r.h - bh - g), g)];
+            }
+
+            // Middle: a band of small photos on each side of the big one.
+            const first = Math.floor(small / 2);
+            const second = small - first;
+            const midShare = share - 0.1;
+            if (r.h >= r.w) {
+                const bh = (r.h - 2 * g) * midShare;
+                const band = (r.h - 2 * g - bh) / 2;
+                return [
+                    rect(r.x, r.y + band + g, r.w, bh),
+                    ...gridCells(first, rect(r.x, r.y, r.w, band), g),
+                    ...gridCells(second, rect(r.x, r.y + band + g + bh + g, r.w, band), g)
+                ];
+            }
+            const bw = (r.w - 2 * g) * midShare;
+            const band = (r.w - 2 * g - bw) / 2;
+            return [
+                rect(r.x + band + g, r.y, bw, r.h),
+                ...gridCells(first, rect(r.x, r.y, band, r.h), g),
+                ...gridCells(second, rect(r.x + band + g + bw + g, r.y, band, r.h), g)
+            ];
+        }
+
+        // Photos go round the columns in turn; column widths are picked so every
+        // column comes out the same height with photos at their own shape.
+        function columnCells(list, r, g) {
+            const n = list.length;
+            const aspect = list.map(p => p.w / p.h);
+            const avgTall = aspect.reduce((s, a) => s + 1 / a, 0) / n;
+            const target = r.h / r.w;
+            let k = 1;
+            let bestErr = Infinity;
+            for (let c = 1; c <= Math.min(n, 8); c++) {
+                const err = Math.abs(Math.log((n * avgTall / (c * c)) / target));
+                if (err < bestErr) { bestErr = err; k = c; }
+            }
+
+            const cols = Array.from({ length: k }, () => []);
+            list.forEach((p, i) => cols[i % k].push(i));
+            const tall = cols.map(c => c.reduce((s, i) => s + 1 / aspect[i], 0));
+            const counts = cols.map(c => c.length);
+
+            let sumInv = 0;
+            let sumGap = 0;
+            cols.forEach((c, ci) => { sumInv += 1 / tall[ci]; sumGap += (counts[ci] - 1) / tall[ci]; });
+            const height = (r.w - (k - 1) * g + g * sumGap) / sumInv;
+            let widths = cols.map((c, ci) => (height - (counts[ci] - 1) * g) / tall[ci]);
+            if (!widths.every(w => Number.isFinite(w) && w > 1)) {
+                widths = cols.map(() => (r.w - (k - 1) * g) / k);
+            }
+
+            const out = new Array(n);
+            let x = r.x;
+            cols.forEach((c, ci) => {
+                const w = widths[ci];
+                const natural = c.map(i => w / aspect[i]);
+                const total = natural.reduce((a, b) => a + b, 0);
+                const scale = (r.h - (counts[ci] - 1) * g) / total;
+                let y = r.y;
+                c.forEach((i, j) => {
+                    const h = natural[j] * scale;
+                    out[i] = rect(x, y, w, h);
+                    y += h + g;
+                });
+                x += w + g;
+            });
+            return out;
+        }
+
+        function stripCells(n, r, g, dir) {
+            const out = [];
+            if (dir === 'row') {
+                const w = (r.w - (n - 1) * g) / n;
+                for (let i = 0; i < n; i++) out.push(rect(r.x + i * (w + g), r.y, w, r.h));
+            } else {
+                const h = (r.h - (n - 1) * g) / n;
+                for (let i = 0; i < n; i++) out.push(rect(r.x, r.y + i * (h + g), r.w, h));
+            }
+            return out;
+        }
+
+        function layoutCells(W, H) {
+            const n = photos.length;
+            if (!n) return [];
+            const g = state.gap * Math.min(W, H) / 1000;
+            const r = rect(g, g, W - 2 * g, H - 2 * g);
+            if (state.layout === 'big') return bigCells(n, r, g, state.big);
+            if (state.layout === 'columns') return columnCells(photos, r, g);
+            if (state.layout === 'strip') return stripCells(n, r, g, state.strip);
+            return gridCells(n, r, g);
+        }
+
+        // ---------- drawing ----------
+
+        // Where a photo sits inside its cell. z is zoom relative to "fill the box";
+        // it never goes below "whole photo fits". ox/oy pick which part shows.
+        function placement(p, c) {
+            const x0 = Math.round(c.x), y0 = Math.round(c.y);
+            const cw = Math.round(c.x + c.w) - x0, ch = Math.round(c.y + c.h) - y0;
+            const cover = Math.max(cw / p.w, ch / p.h);
+            const fit = Math.min(cw / p.w, ch / p.h);
+            const s = Math.max(cover * p.z, fit);
+            const dw = p.w * s, dh = p.h * s;
+            const x = dw > cw ? x0 - (dw - cw) * p.ox : x0 + (cw - dw) / 2;
+            const y = dh > ch ? y0 - (dh - ch) * p.oy : y0 + (ch - dh) / 2;
+            return { x0, y0, cw, ch, x, y, dw, dh, zFit: fit / cover };
+        }
+
+        function render(target, W, H, preview) {
+            target.imageSmoothingEnabled = true;
+            target.imageSmoothingQuality = 'high';
+            target.fillStyle = state.bg;
+            target.fillRect(0, 0, W, H);
+            const list = layoutCells(W, H);
+            list.forEach((c, i) => {
+                const p = photos[i];
+                const m = placement(p, c);
+                if (m.cw <= 0 || m.ch <= 0) return;
+                target.save();
+                target.beginPath();
+                target.rect(m.x0, m.y0, m.cw, m.ch);
+                target.clip();
+                target.drawImage(p.img, m.x, m.y, m.dw, m.dh);
+                target.restore();
+            });
+            if (preview) drawOverlays(target, list);
+            return list;
+        }
+
+        function drawOverlays(target, list) {
+            const line = Math.max(2, Math.round(3 * (window.devicePixelRatio || 1)));
+            const outline = (c, color) => {
+                target.save();
+                target.lineWidth = line;
+                target.strokeStyle = color;
+                target.strokeRect(Math.round(c.x) + line / 2, Math.round(c.y) + line / 2, Math.round(c.w) - line, Math.round(c.h) - line);
+                target.restore();
+            };
+            if (swap) {
+                const from = list[swap.from];
+                target.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                target.fillRect(from.x, from.y, from.w, from.h);
+                if (swap.to >= 0 && swap.to !== swap.from) outline(list[swap.to], '#34d399');
+            } else if (sel >= 0 && list[sel]) {
+                outline(list[sel], '#10b981');
+            }
+        }
+
+        function sizeCanvas() {
+            const stage = $('stage');
+            const style = getComputedStyle(stage);
+            const availW = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+            const maxH = Math.max(220, window.innerHeight * (window.innerWidth <= 600 ? 0.6 : 0.72));
+            const [W, H] = SHAPES[state.shape];
+            const cssW = Math.max(1, Math.min(availW, maxH * W / H));
+            const cssH = cssW * H / W;
+            const dpr = Math.min(window.devicePixelRatio || 1, 3);
+            canvas.style.width = cssW + 'px';
+            canvas.style.height = cssH + 'px';
+            canvas.width = Math.round(cssW * dpr);
+            canvas.height = Math.round(cssH * dpr);
+        }
+
+        let drawQueued = false;
+        function draw() {
+            if (drawQueued) return;
+            drawQueued = true;
+            requestAnimationFrame(() => {
+                drawQueued = false;
+                if (!photos.length) { cells = []; return; }
+                cells = render(ctx, canvas.width, canvas.height, true);
+                syncZoom();
+            });
+        }
+
+        function refresh() {
+            pendingShare = null;
+            const has = photos.length > 0;
+            $('empty').hidden = has;
+            canvas.hidden = !has;
+            $('hint').hidden = !has;
+            $('download').disabled = !has || busy;
+            $('download').textContent = 'Download';
+            $('clear').disabled = !has || busy;
+            $('count').textContent = `${photos.length} of ${MAX_PHOTOS}`;
+            if (sel >= photos.length) sel = -1;
+            $('selbar').hidden = sel < 0;
+
+            document.querySelectorAll('[data-layout]').forEach(b => b.setAttribute('aria-pressed', b.dataset.layout === state.layout));
+            document.querySelectorAll('[data-big]').forEach(b => b.setAttribute('aria-pressed', b.dataset.big === state.big));
+            document.querySelectorAll('[data-strip]').forEach(b => b.setAttribute('aria-pressed', b.dataset.strip === state.strip));
+            document.querySelectorAll('[data-shape]').forEach(b => b.setAttribute('aria-pressed', b.dataset.shape === state.shape));
+            $('big-variants').hidden = state.layout !== 'big';
+            $('strip-variants').hidden = state.layout !== 'strip';
+            $('layout-hint').hidden = state.layout !== 'big';
+
+            let preset = false;
+            document.querySelectorAll('.swatch').forEach(b => {
+                const on = b.dataset.color === state.bg;
+                preset = preset || on;
+                b.setAttribute('aria-pressed', on);
+            });
+            $('custom-wrap').setAttribute('aria-pressed', !preset);
+            if (!preset) $('custom').value = state.bg;
+            $('gap').value = state.gap;
+            $('gap-out').textContent = state.gap;
+            const [W, H] = SHAPES[state.shape];
+            $('size-note').textContent = `JPEG, ${W} × ${H}`;
+
+            if (has) sizeCanvas();
+            draw();
+        }
+
+        function syncZoom() {
+            if (sel < 0 || !cells[sel]) return;
+            const m = placement(photos[sel], cells[sel]);
+            const zoom = $('zoom');
+            zoom.min = Math.floor(Math.min(1, m.zFit) * 100) / 100;
+            zoom.max = MAX_ZOOM;
+            zoom.value = Math.max(photos[sel].z, m.zFit);
+        }
+
+        function setMsg(text, warn) {
+            const el = $('msg');
+            el.textContent = text || '';
+            el.classList.toggle('warn', !!warn);
+        }
+
+        // ---------- adding photos ----------
+
+        function loadImage(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('decode'));
+                img.src = url;
+            });
+        }
+
+        // Shrink each photo once on the way in so phones don't run out of memory.
+        async function prepare(file, maxSide) {
+            const original = URL.createObjectURL(file);
+            try {
+                const src = await loadImage(original);
+                const scale = Math.min(1, maxSide / Math.max(src.naturalWidth, src.naturalHeight));
+                const w = Math.max(1, Math.round(src.naturalWidth * scale));
+                const h = Math.max(1, Math.round(src.naturalHeight * scale));
+                const tmp = document.createElement('canvas');
+                tmp.width = w;
+                tmp.height = h;
+                const t = tmp.getContext('2d');
+                t.fillStyle = '#ffffff';
+                t.fillRect(0, 0, w, h);
+                t.imageSmoothingQuality = 'high';
+                t.drawImage(src, 0, 0, w, h);
+                const blob = await new Promise(res => tmp.toBlob(res, 'image/jpeg', 0.9));
+                tmp.width = tmp.height = 0;
+                if (!blob) throw new Error('encode');
+                const url = URL.createObjectURL(blob);
+                const img = await loadImage(url);
+                return { img, url, w, h, z: 1, ox: 0.5, oy: 0.5 };
+            } finally {
+                URL.revokeObjectURL(original);
+            }
+        }
+
+        async function addFiles(fileList) {
+            if (busy) return;
+            const files = [...fileList].filter(f => !f.type || f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name));
+            if (!files.length) return;
+            const room = MAX_PHOTOS - photos.length;
+            if (room <= 0) { setMsg(`You already have ${MAX_PHOTOS} photos, the most this page takes.`, true); return; }
+            const take = files.slice(0, room);
+            const maxSide = photos.length + take.length <= 9 ? 2048 : 1600;
+
+            busy = true;
+            refresh();
+            let failed = 0;
+            for (let i = 0; i < take.length; i++) {
+                setMsg(`Adding photos… ${i + 1} of ${take.length}`);
+                try {
+                    photos.push(await prepare(take[i], maxSide));
+                    refresh();
+                } catch (e) {
+                    failed++;
+                }
+            }
+            busy = false;
+
+            const notes = [];
+            if (files.length > room) notes.push(`Only ${MAX_PHOTOS} photos fit, so ${files.length - room} were left out.`);
+            if (failed) notes.push(`${failed} photo${failed > 1 ? 's' : ''} couldn't be opened. iPhone HEIC photos may need to be saved as JPEG first.`);
+            setMsg(notes.join(' '), notes.length > 0);
+            refresh();
+        }
+
+        $('files').addEventListener('change', e => {
+            addFiles(e.target.files);
+            e.target.value = '';
+        });
+
+        const stage = $('stage');
+        let dragDepth = 0;
+        const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+        document.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; stage.classList.add('dragover'); } });
+        document.addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; stage.classList.remove('dragover'); } });
+        document.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+        document.addEventListener('drop', e => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            dragDepth = 0;
+            stage.classList.remove('dragover');
+            addFiles(e.dataTransfer.files);
+        });
+
+        let clearArmed = null;
+        $('clear').addEventListener('click', () => {
+            const btn = $('clear');
+            if (!clearArmed) {
+                btn.textContent = 'Tap again to clear';
+                clearArmed = setTimeout(() => { clearArmed = null; btn.textContent = 'Clear all'; }, 3000);
+                return;
+            }
+            clearTimeout(clearArmed);
+            clearArmed = null;
+            btn.textContent = 'Clear all';
+            photos.forEach(p => URL.revokeObjectURL(p.url));
+            photos = [];
+            sel = -1;
+            setMsg('');
+            refresh();
+        });
+
+        // ---------- controls ----------
+
+        function setting(key, value) {
+            state[key] = value;
+            persist();
+            refresh();
+        }
+
+        document.querySelectorAll('[data-layout]').forEach(b => b.addEventListener('click', () => setting('layout', b.dataset.layout)));
+        document.querySelectorAll('[data-big]').forEach(b => b.addEventListener('click', () => setting('big', b.dataset.big)));
+        document.querySelectorAll('[data-strip]').forEach(b => b.addEventListener('click', () => setting('strip', b.dataset.strip)));
+        document.querySelectorAll('[data-shape]').forEach(b => b.addEventListener('click', () => setting('shape', b.dataset.shape)));
+        document.querySelectorAll('.swatch').forEach(b => b.addEventListener('click', () => setting('bg', b.dataset.color)));
+        $('custom').addEventListener('input', e => setting('bg', e.target.value));
+        $('gap').addEventListener('input', e => setting('gap', Number(e.target.value)));
+
+        $('zoom').addEventListener('input', e => {
+            if (sel < 0) return;
+            photos[sel].z = Number(e.target.value);
+            pendingShare = null;
+            draw();
+        });
+
+        $('remove').addEventListener('click', () => {
+            if (sel < 0) return;
+            URL.revokeObjectURL(photos[sel].url);
+            photos.splice(sel, 1);
+            sel = -1;
+            refresh();
+        });
+
+        $('done').addEventListener('click', () => { sel = -1; refresh(); });
+
+        window.addEventListener('resize', () => { if (photos.length) { sizeCanvas(); draw(); } });
+
+        // ---------- touch and mouse on the collage ----------
+
+        const pointers = new Map();
+        let gesture = null;
+        let ghost = null;
+
+        function canvasPoint(e) {
+            const r = canvas.getBoundingClientRect();
+            return { x: (e.clientX - r.left) * canvas.width / r.width, y: (e.clientY - r.top) * canvas.height / r.height };
+        }
+
+        function hit(pt) {
+            return cells.findIndex(c => pt.x >= c.x && pt.x <= c.x + c.w && pt.y >= c.y && pt.y <= c.y + c.h);
+        }
+
+        function startSwap() {
+            if (!gesture || gesture.type !== 'pending') return;
+            gesture.type = 'swap';
+            swap = { from: gesture.idx, to: gesture.idx };
+            if (navigator.vibrate) navigator.vibrate(15);
+            ghost = document.createElement('div');
+            ghost.className = 'ghost';
+            ghost.style.backgroundImage = `url("${photos[gesture.idx].url}")`;
+            ghost.style.left = gesture.cx + 'px';
+            ghost.style.top = gesture.cy + 'px';
+            document.body.appendChild(ghost);
+            draw();
+        }
+
+        function endSwap(commit) {
+            if (ghost) { ghost.remove(); ghost = null; }
+            if (commit && swap && swap.to >= 0 && swap.to !== swap.from) {
+                const a = swap.from, b = swap.to;
+                [photos[a], photos[b]] = [photos[b], photos[a]];
+                if (sel === a) sel = b; else if (sel === b) sel = a;
+            }
+            swap = null;
+            refresh();
+        }
+
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        canvas.addEventListener('pointerdown', e => {
+            if (!photos.length) return;
+            canvas.setPointerCapture(e.pointerId);
+            const pt = canvasPoint(e);
+            pointers.set(e.pointerId, pt);
+
+            if (pointers.size === 1) {
+                const idx = hit(pt);
+                gesture = { type: idx >= 0 ? 'pending' : 'none', idx, sx: pt.x, sy: pt.y, lx: pt.x, ly: pt.y, cx: e.clientX, cy: e.clientY };
+                if (idx >= 0) gesture.timer = setTimeout(startSwap, 350);
+            } else if (pointers.size === 2 && gesture && gesture.idx >= 0 && gesture.type !== 'swap') {
+                clearTimeout(gesture.timer);
+                const [a, b] = [...pointers.values()];
+                const p = photos[gesture.idx];
+                const m = placement(p, cells[gesture.idx]);
+                gesture = { type: 'pinch', idx: gesture.idx, d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: Math.max(p.z, m.zFit) };
+            }
+        });
+
+        canvas.addEventListener('pointermove', e => {
+            if (!pointers.has(e.pointerId) || !gesture) return;
+            const pt = canvasPoint(e);
+            pointers.set(e.pointerId, pt);
+
+            if (gesture.type === 'pending' && Math.hypot(pt.x - gesture.sx, pt.y - gesture.sy) > 6 * (window.devicePixelRatio || 1)) {
+                clearTimeout(gesture.timer);
+                gesture.type = 'pan';
+                canvas.classList.add('grabbing');
+            }
+
+            if (gesture.type === 'pan') {
+                const p = photos[gesture.idx];
+                const m = placement(p, cells[gesture.idx]);
+                if (m.dw > m.cw) p.ox = Math.min(1, Math.max(0, p.ox - (pt.x - gesture.lx) / (m.dw - m.cw)));
+                if (m.dh > m.ch) p.oy = Math.min(1, Math.max(0, p.oy - (pt.y - gesture.ly) / (m.dh - m.ch)));
+                gesture.lx = pt.x;
+                gesture.ly = pt.y;
+                pendingShare = null;
+                draw();
+            } else if (gesture.type === 'pinch' && pointers.size >= 2) {
+                const [a, b] = [...pointers.values()];
+                const p = photos[gesture.idx];
+                const m = placement(p, cells[gesture.idx]);
+                p.z = Math.min(MAX_ZOOM, Math.max(m.zFit, gesture.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0));
+                pendingShare = null;
+                draw();
+            } else if (gesture.type === 'swap') {
+                swap.to = hit(pt);
+                if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
+                draw();
+            }
+        });
+
+        function pointerEnd(e) {
+            if (!pointers.has(e.pointerId)) return;
+            pointers.delete(e.pointerId);
+            if (!gesture) return;
+            const cancelled = e.type === 'pointercancel';
+
+            if (gesture.type === 'pending') {
+                clearTimeout(gesture.timer);
+                if (!cancelled) { sel = sel === gesture.idx ? -1 : gesture.idx; refresh(); }
+                gesture = null;
+            } else if (gesture.type === 'swap') {
+                endSwap(!cancelled);
+                gesture = null;
+            } else if (gesture.type === 'pinch') {
+                // Wait for every finger to lift before starting anything new.
+                gesture = pointers.size ? { type: 'none', idx: -1 } : null;
+            } else if (pointers.size === 0) {
+                gesture = null;
+            }
+            if (!pointers.size) canvas.classList.remove('grabbing');
+        }
+
+        canvas.addEventListener('pointerup', pointerEnd);
+        canvas.addEventListener('pointercancel', pointerEnd);
+
+        // Trackpad pinch (ctrl + wheel), or the wheel on the selected photo, zooms it.
+        canvas.addEventListener('wheel', e => {
+            const idx = hit(canvasPoint(e));
+            if (idx < 0 || !(e.ctrlKey || idx === sel)) return;
+            e.preventDefault();
+            const p = photos[idx];
+            const m = placement(p, cells[idx]);
+            p.z = Math.min(MAX_ZOOM, Math.max(m.zFit, Math.max(p.z, m.zFit) * Math.exp(-e.deltaY * 0.01)));
+            pendingShare = null;
+            draw();
+        }, { passive: false });
+
+        // ---------- download ----------
+
+        function stamp() {
+            const d = new Date();
+            const pad = v => String(v).padStart(2, '0');
+            return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+        }
+
+        function saveLink(file) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(file);
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        }
+
+        async function share(file) {
+            try {
+                await navigator.share({ files: [file] });
+                return true;
+            } catch (e) {
+                if (e.name === 'AbortError') return true;
+                if (e.name === 'NotAllowedError') {
+                    // The phone wants a fresh tap; the image is ready for it.
+                    pendingShare = file;
+                    $('download').textContent = 'Tap to save';
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        $('download').addEventListener('click', async () => {
+            if (!photos.length) return;
+            const btn = $('download');
+
+            if (pendingShare) {
+                const file = pendingShare;
+                pendingShare = null;
+                btn.textContent = 'Download';
+                if (!(await share(file))) saveLink(file);
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Making…';
+            const [W, H] = SHAPES[state.shape];
+            const out = document.createElement('canvas');
+            out.width = W;
+            out.height = H;
+            render(out.getContext('2d'), W, H, false);
+            const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.92));
+            out.width = out.height = 0;
+            btn.disabled = false;
+            btn.textContent = 'Download';
+            if (!blob) { setMsg('Could not make the image. Try fewer photos.', true); return; }
+
+            const file = new File([blob], `collage-${stamp()}.jpg`, { type: 'image/jpeg' });
+            const phone = window.matchMedia('(pointer: coarse)').matches;
+            if (phone && navigator.canShare && navigator.canShare({ files: [file] }) && await share(file)) return;
+            saveLink(file);
+        });
+
+        restore();
+        refresh();
+    </script>
+</body>
+</html>
