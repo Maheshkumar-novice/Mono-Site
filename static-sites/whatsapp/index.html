@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-name" content="WhatsApp Viewer">
+    <meta name="app-section" content="Tools">
+    <title>WhatsApp Viewer</title>
+    <meta name="description" content="Open a WhatsApp chat export to read it by date, see its photos and search it. Everything stays on your device.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-raised: #1c1c1c;
+            --bubble: #1f1f1f;
+            --bubble-me: #0f3d2e;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --border: #262626;
+            --border-strong: #3a3a3a;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --border-radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .nav-brand:hover { color: var(--accent); }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+        .page-head h1 { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.25rem; }
+        .head-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .close-top { font-size: 0.8rem; padding: 0.3rem 0.65rem; }
+        .subtitle { color: var(--text-secondary); margin: 0 0 1.5rem; }
+
+        button, .btn {
+            font: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:hover, .btn:hover { border-color: var(--text-muted); }
+        button:disabled { opacity: 0.4; cursor: default; }
+        button:disabled:hover { border-color: var(--border-strong); }
+
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #04140d; font-weight: 600; }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        input[type=search], select {
+            font: inherit;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.6rem;
+        }
+
+        input[type=search]:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        .hint { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+        .msg { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
+        .msg.warn { color: #fbbf24; }
+        .msg:empty { display: none; }
+
+        /* ---------- start ---------- */
+
+        .start { display: flex; flex-direction: column; gap: 1rem; }
+
+        .drop {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            text-align: center;
+            padding: 2.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--border-radius);
+        }
+
+        .drop.dragover { border-color: var(--accent); }
+
+        .check { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); cursor: pointer; }
+        .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+        .keep-note { margin: 0.35rem 0 0; }
+        .keep-note:empty { display: none; }
+        .drop .hint { max-width: 40ch; }
+
+        .how {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .how summary { cursor: pointer; color: var(--text-primary); }
+        .how ol { margin: 0.75rem 0 0.25rem; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem; }
+        .how p { margin: 0.6rem 0 0.25rem; }
+
+        /* ---------- which one is you ---------- */
+
+        .pick { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+        .pick h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+        .pick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+
+        .pick-item {
+            width: 100%;
+            justify-content: space-between;
+            gap: 1rem;
+            text-align: left;
+            padding: 0.7rem 0.9rem;
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+        }
+
+        .pick-item .name { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pick-item .sub { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
+        .pick-item:hover { border-color: var(--accent); }
+        .pick-cancel { align-self: flex-start; }
+
+        /* ---------- the chat ---------- */
+
+        .chat-head { margin: 1rem 0 0.25rem; }
+        .chat-title { min-width: 0; }
+        .chat-title #chat-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .sticky {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--bg-primary);
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .datebar { display: flex; gap: 0.5rem; align-items: center; }
+        .datebar .date-btn { flex: 1; font-weight: 500; }
+        .datebar .step { width: 2.6rem; font-size: 1.1rem; }
+
+        .calendar {
+            margin: 0.6rem auto 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            max-width: 360px;
+        }
+
+        .cal-head { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.6rem; }
+        .cal-head select { flex: 1; min-width: 0; }
+        .cal-head button { width: 2.2rem; padding-inline: 0; }
+
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; text-align: center; }
+        .cal-grid .wd { font-size: 0.7rem; color: var(--text-muted); padding-bottom: 0.15rem; }
+
+        .cal-day {
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+        }
+
+        .cal-day:disabled { opacity: 0.5; }
+        .cal-day.l1 { color: var(--text-primary); background: rgba(16, 185, 129, 0.14); }
+        .cal-day.l2 { color: var(--text-primary); background: rgba(16, 185, 129, 0.3); }
+        .cal-day.l3 { color: #04140d; background: var(--accent); font-weight: 600; }
+        .cal-day.sel { border-color: var(--text-primary); }
+        .cal-note { text-align: center; margin-top: 0.5rem; }
+
+        .load { display: flex; margin: 0.75rem auto; }
+
+        .messages { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.25rem 0; }
+
+        .day-sep {
+            align-self: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: var(--bg-raised);
+            border-radius: 999px;
+            padding: 0.2rem 0.75rem;
+            margin: 0.9rem 0 0.3rem;
+            scroll-margin-top: 7.5rem;
+        }
+
+        .sys {
+            align-self: center;
+            max-width: 85%;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.25rem 0.65rem;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .msg-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 80%; }
+        .msg-row.me { align-self: flex-end; align-items: flex-end; }
+
+        .sender { font-size: 0.72rem; color: var(--text-muted); margin: 0 0 0.1rem 0.7rem; }
+
+        .bubble {
+            background: var(--bubble);
+            border-radius: 16px;
+            padding: 0.45rem 0.7rem 0.3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .me .bubble { background: var(--bubble-me); }
+        .bubble .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+        .bubble .muted { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
+        .bubble .time { font-size: 0.66rem; color: var(--text-muted); align-self: flex-end; line-height: 1; padding-bottom: 0.1rem; }
+
+        .bubble img.photo {
+            display: block;
+            width: 260px;
+            max-width: 100%;
+            min-height: 120px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #2a2a2a;
+            cursor: zoom-in;
+        }
+
+        .bubble img.photo.sticker { width: 130px; min-height: 130px; object-fit: contain; background: transparent; }
+        .bubble img.photo.ready { min-height: 0; height: auto; }
+        .bubble video, .bubble audio { width: 280px; max-width: 100%; border-radius: 10px; }
+        .bubble .file-btn { align-self: flex-start; text-align: left; overflow-wrap: anywhere; }
+
+        /* ---------- chat views and media ---------- */
+
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 4px; }
+
+        .media-grid .month {
+            grid-column: 1 / -1;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 1rem 0 0.3rem;
+        }
+
+        .tile {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1;
+            padding: 0;
+            border: 0;
+            border-radius: 4px;
+            background: #1a1a1a center / cover no-repeat;
+            position: relative;
+        }
+
+        .tile:hover { border: 0; filter: brightness(1.1); }
+
+        .tile.video::after, .tile.broken::after {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        .tile.video::after { content: '▶'; font-size: 1.4rem; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+        .tile.broken::after { content: 'No preview'; font-size: 0.7rem; color: var(--text-muted); }
+
+        .chat-tabs {
+            display: flex;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: var(--bg-raised);
+        }
+
+        .chat-tabs button {
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 0.55rem 0.25rem;
+            gap: 0.3rem;
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        .chat-tabs button + button { border-left: 1px solid var(--border-strong); }
+        .chat-tabs button:hover { border-color: var(--border-strong); background: rgba(255, 255, 255, 0.03); }
+        .chat-tabs .count { font-size: 0.75rem; color: var(--text-muted); }
+        .chat-tabs button[aria-pressed="true"] .count { color: inherit; opacity: 0.8; }
+        #dateblock { margin-top: 0.5rem; }
+        .chat-tabs button[aria-pressed="true"] { background: rgba(16, 185, 129, 0.15); color: var(--accent-hover); }
+        #chat-media { margin-top: 0.25rem; }
+        .msg-row.flash .bubble { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .viewer-info .goto { margin-top: 0.6rem; }
+
+        /* ---------- search ---------- */
+
+        .search-form { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+        .search-form input { flex: 1; min-width: 0; }
+        .search-status { margin-top: 0.6rem; }
+
+        .results { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+
+        .result {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.15rem;
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .result .top { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.75rem; color: var(--text-muted); }
+        .result .top .where { color: var(--text-secondary); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .result .top .when { white-space: nowrap; }
+        .result .snippet { font-size: 0.9rem; overflow-wrap: anywhere; }
+        .result .who { color: var(--text-muted); }
+        .result mark { background: rgba(16, 185, 129, 0.3); color: var(--text-primary); border-radius: 3px; padding: 0 2px; }
+
+        /* ---------- stats ---------- */
+
+        .stats { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.6rem; }
+        .stat-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+
+        .stat {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 0.65rem 0.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.1rem;
+            text-align: left;
+            min-width: 0;
+        }
+
+        button.stat { font-size: inherit; justify-content: flex-start; }
+        button.stat:hover { border-color: var(--accent); }
+        .stat .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+        .stat .value { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); }
+        .stat .note { font-size: 0.78rem; color: var(--text-secondary); }
+        button.stat .note::after { content: ' →'; color: var(--accent); }
+
+        .box { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--border-radius); padding: 0.85rem 0.9rem; min-width: 0; }
+        .box h3 { font-size: 0.8rem; font-weight: 600; margin: 0 0 0.6rem; color: var(--text-secondary); }
+        .me-box { display: flex; flex-direction: column; gap: 0.5rem; }
+        .me-box h3 { margin: 0; }
+        .me-box button { align-self: flex-start; }
+
+        .sender-row { display: grid; grid-template-columns: minmax(0, 7rem) 1fr auto; gap: 0.6rem; align-items: center; font-size: 0.85rem; padding: 0.15rem 0; }
+        .sender-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sender-row .count { color: var(--text-secondary); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+        .bar-track { height: 10px; background: var(--bg-raised); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+
+        .first-msg { display: flex; flex-direction: column; gap: 0.3rem; }
+        .first-msg .quote { border-left: 3px solid var(--accent); padding-left: 0.6rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .first-msg .meta { font-size: 0.78rem; color: var(--text-muted); }
+        .first-msg button { align-self: flex-start; }
+
+        .chart { width: 100%; }
+        .chart svg { display: block; overflow: visible; }
+        .chart .bar { fill: var(--accent); }
+        .chart .bar.hot { fill: var(--accent-hover); }
+        .chart .axis { stroke: var(--border-strong); stroke-width: 1; }
+        .chart .grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; }
+        .chart text { fill: var(--text-muted); font-size: 10px; font-family: var(--font-family); }
+        .chart .hit { fill: transparent; cursor: pointer; }
+        .chart-note { margin-top: 0.4rem; }
+
+        .tip {
+            position: fixed;
+            z-index: 30;
+            pointer-events: none;
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.3rem 0.55rem;
+            font-size: 0.78rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        /* ---------- full-screen viewer ---------- */
+
+        .viewer {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewer-stage { position: relative; flex: 1; min-height: 0; }
+
+        .viewer-stage img, .viewer-stage video {
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .viewer-info {
+            padding: 0.75rem max(16px, env(safe-area-inset-left, 0px)) calc(0.9rem + env(safe-area-inset-bottom, 0px));
+            max-height: 30vh;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            overflow-wrap: anywhere;
+        }
+
+        #viewer-caption { white-space: pre-wrap; }
+        .viewer-info .when { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.2rem; }
+
+        .viewer .close, .viewer .nav {
+            position: absolute;
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 50%;
+            background: rgba(28, 28, 28, 0.85);
+            font-size: 1.1rem;
+            z-index: 1;
+        }
+
+        .viewer .close { top: calc(0.75rem + env(safe-area-inset-top, 0px)); right: 0.75rem; }
+        .viewer .nav { top: 50%; transform: translateY(-50%); font-size: 1.4rem; }
+        .viewer .nav.prev { left: 0.75rem; }
+        .viewer .nav.next { right: 0.75rem; }
+
+        input[type=file] { display: none; }
+        [hidden] { display: none !important; }
+
+        @media (max-width: 600px) {
+            .chat-tabs button { font-size: 0.82rem; padding-inline: 0.15rem; }
+            .site-nav { padding: 1rem 24px; }
+            .container { padding: 1.5rem 24px 2.5rem; }
+            .msg-row { max-width: 88%; }
+            .media-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav"><a href="/" class="nav-brand">Maheshkumar</a></nav>
+
+    <main class="container">
+        <header class="page-head">
+            <div class="head-row">
+                <h1>WhatsApp Viewer</h1>
+                <button type="button" class="close-top" id="close-top" hidden>Close</button>
+            </div>
+            <p class="subtitle" id="subtitle">Open a WhatsApp chat export to read it by date, see its photos and search it. Everything stays on your device.</p>
+        </header>
+
+        <section class="start" id="start">
+            <div class="drop" id="drop">
+                <label class="btn btn-primary" for="file">Open chat export (.zip or .txt)</label>
+                <p class="hint">Pick the .zip to see photos too, or the .txt for text only. No need to unzip. You can also drop it here.</p>
+                <label class="check"><input type="checkbox" id="keep"> Keep it on this device for next time</label>
+            </div>
+            <details class="how">
+                <summary>How to export a chat</summary>
+                <ol>
+                    <li>In WhatsApp, open the chat. Tap ⋮ at the top right, then More, then Export chat. On an iPhone, tap the chat's name at the top, then Export Chat.</li>
+                    <li>Choose <strong>Include media</strong> to see photos and videos too, or <strong>Without media</strong> for text only.</li>
+                    <li>Save the file to your phone or Drive, then open it here.</li>
+                </ol>
+                <p>WhatsApp puts only the newest messages of a very long chat in the export: about 10,000 with media, or 40,000 without.</p>
+            </details>
+            <p class="msg" id="msg" role="status"></p>
+        </section>
+
+        <section class="pick" id="pick" hidden>
+            <h2>Which one is you?</h2>
+            <p class="hint">Your messages will show on the right. This is remembered for next time.</p>
+            <ul class="pick-list" id="pick-list"></ul>
+            <button type="button" class="pick-cancel" id="pick-cancel" hidden>Cancel</button>
+        </section>
+
+        <section id="chat" hidden>
+            <div class="chat-head">
+                <div class="chat-title">
+                    <div id="chat-name"></div>
+                    <div class="hint" id="chat-info"></div>
+                </div>
+                <p class="hint keep-note" id="keep-note"></p>
+            </div>
+            <div class="sticky">
+                <div class="chat-tabs">
+                    <button type="button" data-view="messages">Messages</button>
+                    <button type="button" data-view="media" id="chat-media-btn">Media</button>
+                    <button type="button" data-view="search">Search</button>
+                    <button type="button" data-view="stats">Stats</button>
+                </div>
+                <div id="dateblock">
+                    <div class="datebar">
+                        <button type="button" class="step" id="prev-day" aria-label="Earlier day with messages">‹</button>
+                        <button type="button" class="date-btn" id="date-btn" aria-expanded="false"></button>
+                        <button type="button" class="step" id="next-day" aria-label="Later day with messages">›</button>
+                    </div>
+                    <div class="calendar" id="calendar" hidden></div>
+                </div>
+            </div>
+            <button type="button" class="load" id="load-earlier">Earlier messages</button>
+            <div class="messages" id="messages"></div>
+            <button type="button" class="load" id="load-later">Later messages</button>
+            <div class="media-grid" id="chat-media" hidden></div>
+            <div id="chat-search" hidden>
+                <form class="search-form" id="chat-search-form">
+                    <input type="search" id="chat-search-q" placeholder="Search this chat" aria-label="Search this chat" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+                    <button type="submit" class="btn-primary">Search</button>
+                </form>
+                <p class="hint search-status" id="chat-search-status"></p>
+                <ul class="results" id="chat-search-results"></ul>
+                <button type="button" class="load" id="chat-search-more" hidden>Show more</button>
+            </div>
+            <div class="stats" id="chat-stats" hidden></div>
+        </section>
+    </main>
+
+    <div class="viewer" id="viewer" hidden>
+        <div class="viewer-stage" id="viewer-stage">
+            <img id="viewer-img" alt="">
+            <video id="viewer-video" controls playsinline hidden></video>
+            <button type="button" class="nav prev" id="viewer-prev" aria-label="Previous" hidden>‹</button>
+            <button type="button" class="nav next" id="viewer-next" aria-label="Next" hidden>›</button>
+        </div>
+        <div class="viewer-info" id="viewer-info" hidden>
+            <div class="when" id="viewer-when"></div>
+            <div id="viewer-caption"></div>
+            <button type="button" class="goto" id="viewer-goto" hidden>Show in chat</button>
+        </div>
+        <button type="button" class="close" id="viewer-close" aria-label="Close">✕</button>
+    </div>
+
+    <div class="tip" id="tip" hidden></div>
+
+    <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain">
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', '3gp': 'video/3gpp', webm: 'video/webm', m4a: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', ogg: 'audio/ogg', opus: 'audio/ogg', amr: 'audio/amr', wav: 'audio/wav', pdf: 'application/pdf', vcf: 'text/vcard', txt: 'text/plain' };
+        const ME_KEY = 'whatsapp:me';   // the name picked as "you", remembered for the next chat
+
+        let entries = new Map();   // path inside the zip -> entry
+        let byName = null;         // file name -> entry, for names written without a folder
+        let owner = '';            // the sender who is "you"; '' when none is
+        let current = null;        // the open chat
+        let shown = { first: 0, last: -1 };   // range of days on screen
+        let urls = [];             // object URLs made for the chat
+        let calMonth = null;       // { y, m } shown in the calendar
+
+        // ---------- reading the zip without unzipping it all ----------
+
+        // Reads only the zip's table of contents; each file is read later, when needed.
+        async function readZip(file) {
+            const tailLen = Math.min(file.size, 65557 + 20);
+            const tail = new DataView(await file.slice(file.size - tailLen).arrayBuffer());
+            let eocd = -1;
+            for (let i = tailLen - 22; i >= 0; i--) {
+                if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+            }
+            if (eocd < 0) throw new Error('not a zip');
+            let count = tail.getUint16(eocd + 10, true);
+            let cdSize = tail.getUint32(eocd + 12, true);
+            let cdOffset = tail.getUint32(eocd + 16, true);
+
+            // Zips over 4 GB use the ZIP64 record instead.
+            if (count === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) {
+                const loc = eocd - 20;
+                if (loc < 0 || tail.getUint32(loc, true) !== 0x07064b50) throw new Error('bad zip64');
+                const at = Number(tail.getBigUint64(loc + 8, true));
+                const z = new DataView(await file.slice(at, at + 56).arrayBuffer());
+                if (z.getUint32(0, true) !== 0x06064b50) throw new Error('bad zip64');
+                count = Number(z.getBigUint64(32, true));
+                cdSize = Number(z.getBigUint64(40, true));
+                cdOffset = Number(z.getBigUint64(48, true));
+            }
+
+            const cd = new DataView(await file.slice(cdOffset, cdOffset + cdSize).arrayBuffer());
+            const decoder = new TextDecoder();
+            const found = new Map();
+            let p = 0;
+            for (let i = 0; i < count && p + 46 <= cd.byteLength; i++) {
+                if (cd.getUint32(p, true) !== 0x02014b50) break;
+                const method = cd.getUint16(p + 10, true);
+                let csize = cd.getUint32(p + 20, true);
+                let usize = cd.getUint32(p + 24, true);
+                const nameLen = cd.getUint16(p + 28, true);
+                const extraLen = cd.getUint16(p + 30, true);
+                const commentLen = cd.getUint16(p + 32, true);
+                let offset = cd.getUint32(p + 42, true);
+                const name = decoder.decode(new Uint8Array(cd.buffer, p + 46, nameLen)).normalize('NFC');
+
+                if (csize === 0xffffffff || usize === 0xffffffff || offset === 0xffffffff) {
+                    let q = p + 46 + nameLen;
+                    const end = q + extraLen;
+                    while (q + 4 <= end) {
+                        const id = cd.getUint16(q, true), size = cd.getUint16(q + 2, true);
+                        if (id === 1) {
+                            let r = q + 4;
+                            if (usize === 0xffffffff) { usize = Number(cd.getBigUint64(r, true)); r += 8; }
+                            if (csize === 0xffffffff) { csize = Number(cd.getBigUint64(r, true)); r += 8; }
+                            if (offset === 0xffffffff) { offset = Number(cd.getBigUint64(r, true)); }
+                            break;
+                        }
+                        q += 4 + size;
+                    }
+                }
+                if (!name.endsWith('/')) found.set(name, { file, name, method, csize, offset });
+                p += 46 + nameLen + extraLen + commentLen;
+            }
+            return found;
+        }
+
+        async function entryBlob(e) {
+            const head = new DataView(await e.file.slice(e.offset, e.offset + 30).arrayBuffer());
+            const start = e.offset + 30 + head.getUint16(26, true) + head.getUint16(28, true);
+            const raw = e.file.slice(start, start + e.csize);
+            const type = MIME[e.name.split('.').pop().toLowerCase()] || '';
+            if (e.method === 0) return new Blob([raw], { type });
+            if (e.method !== 8) throw new Error('unsupported');
+            const out = await new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+            return new Blob([out], { type });
+        }
+
+        // The chat names its files without a folder; match them by file name.
+        function findEntry(name) {
+            if (!name) return null;
+            const clean = name.normalize('NFC');
+            if (entries.has(clean)) return entries.get(clean);
+            if (!byName) {
+                byName = new Map();
+                for (const [n, e] of entries) {
+                    const base = n.slice(n.lastIndexOf('/') + 1);
+                    if (!byName.has(base)) byName.set(base, e);
+                }
+            }
+            return byName.get(clean.slice(clean.lastIndexOf('/') + 1)) || null;
+        }
+
+        // ---------- dates ----------
+
+        const pad = n => String(n).padStart(2, '0');
+        function dayKey(ms) {
+            const d = new Date(ms);
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+        function keyDate(key) {
+            const [y, m, d] = key.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+        const longDay = key => keyDate(key).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const shortDay = key => keyDate(key).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const listDate = ms => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        const clock = ms => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+        const nameOf = n => (n && n === owner ? 'You' : n || 'Unknown');
+
+        // ---------- reading the chat text ----------
+
+        // Each message starts a line with its date and time: "12/10/23, 9:41 pm - Name: text"
+        // on Android, "[12/10/23, 9:41:05 PM] Name: text" on iPhone. The date order and the
+        // clock style follow the phone's settings. Lines without a date belong to the message above.
+        const HEAD = {
+            android: /^(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s?([ap]\.?\s?m\.?)?\s[-–]\s([\s\S]*)$/i,
+            iphone: /^\[(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s?([ap]\.?\s?m\.?)?\]\s?([\s\S]*)$/i,
+        };
+        const MARKS = /^[‎‏﻿]+/;   // invisible marks WhatsApp puts at some line starts
+
+        function splitLines(text) {
+            const lines = text.split(/\r?\n/);
+            let style = null;
+            for (const line of lines.slice(0, 300)) {
+                const clean = line.replace(MARKS, '');
+                if (HEAD.iphone.test(clean)) { style = 'iphone'; break; }
+                if (HEAD.android.test(clean)) { style = 'android'; break; }
+            }
+            if (!style) return [];
+            const re = HEAD[style];
+            const rows = [];
+            for (const line of lines) {
+                const m = re.exec(line.replace(MARKS, ''));
+                if (m) rows.push({ p: [m[1], m[2], m[3]], h: Number(m[4]), mi: Number(m[5]), s: Number(m[6] || 0), ap: (m[7] || '').toLowerCase(), rest: m[8] });
+                else if (rows.length) rows[rows.length - 1].rest += '\n' + line;
+            }
+            return rows;
+        }
+
+        function timeOf(r, order) {
+            const [a, b, c] = r.p.map(Number);
+            let [y, mo, d] = order === 'ymd' ? [a, b, c] : order === 'dmy' ? [c, b, a] : [c, a, b];
+            if (y < 100) y += 2000;
+            let h = r.h;
+            if (r.ap.startsWith('p') && h < 12) h += 12;
+            if (r.ap.startsWith('a') && h === 12) h = 0;
+            return new Date(y, mo - 1, d, h, r.mi, r.s).getTime();
+        }
+
+        // Day first or month first? A number over 12 settles it; otherwise pick the order
+        // that keeps the dates moving forward, and then the phone's own habit.
+        function dateOrder(rows) {
+            if (rows.some(r => r.p[0].length === 4)) return 'ymd';
+            if (rows.some(r => Number(r.p[0]) > 12)) return 'dmy';
+            if (rows.some(r => Number(r.p[1]) > 12)) return 'mdy';
+            const backwards = order => {
+                let n = 0, prev = 0;
+                rows.forEach(r => { const t = timeOf(r, order); if (t < prev) n++; prev = t; });
+                return n;
+            };
+            const d = backwards('dmy'), m = backwards('mdy');
+            if (d !== m) return d < m ? 'dmy' : 'mdy';
+            return /^en-US$/i.test(navigator.language || '') ? 'mdy' : 'dmy';
+        }
+
+        const EDITED = /\s*‎?<This message was edited>\s*$/i;
+        const ATTACHED = /‎?<attached: ([^>]+)>/i;              // iPhone
+        const FILE_ATTACHED = /^(.+?\.[a-z0-9]{2,5}) \(file attached\)\n?/i;   // Android
+        const OMITTED = /^(?:<(media) omitted>|(?:[^\n]*•[^\n]*\s)?(image|video|audio|sticker|gif|document|contact card|video note) omitted|<?(view once)\b[^\n]*omitted>?)$/i;
+        const DELETED = /^(this message was deleted|you deleted this message)\.?$/i;
+        const CALL = /^(missed )?(group )?(voice|video) call\b/i;
+        const SYSTEM_WORDS = /\b(changed|added|removed|left|joined|created|deleted|pinned|turned|reset|blocked|unblocked|started|invited|admin|security code|disappearing|settings)\b/i;
+
+        function fileInfo(name) {
+            const lower = name.toLowerCase();
+            const ext = lower.includes('.') ? lower.split('.').pop() : '';
+            let kind = 'file';
+            if (/^stk-|-sticker-/.test(lower) || ext === 'webp') kind = 'sticker';
+            else if (['jpg', 'jpeg', 'png', 'gif', 'heic'].includes(ext)) kind = 'photo';
+            else if (['mp4', 'mov', '3gp', 'm4v', 'webm', 'mkv'].includes(ext)) kind = /-gif-/.test(lower) ? 'gif' : 'video';
+            else if (['opus', 'ogg', 'm4a', 'aac', 'mp3', 'amr', 'wav'].includes(ext)) kind = /^ptt-|-audio-/.test(lower) || ext === 'opus' ? 'voice' : 'audio';
+            else if (ext === 'vcf') kind = 'contact';
+            return { name, kind };
+        }
+        const shownName = name => name.replace(/^\d{8}-/, '');   // iPhone puts a number before file names
+
+        // What one message holds: its text, a file, a note that media was left out, and so on.
+        function readBody(body) {
+            const m = { text: '' };
+            let s = body;
+            if (EDITED.test(s)) { m.edited = true; s = s.replace(EDITED, ''); }
+            const marked = /^‎/.test(s);   // iPhone marks its own notes this way
+            let a = ATTACHED.exec(s);
+            if (a) {
+                m.file = fileInfo(a[1].trim());
+                s = s.replace(a[0], '');
+                // iPhone puts a document's name and page count before it; that isn't a caption.
+                if (m.file.kind === 'file') s = s.replace(/^[\s‎]*[^\n]*•[^\n]*/, '');
+            } else if ((a = FILE_ATTACHED.exec(s.replace(MARKS, '')))) {
+                m.file = fileInfo(a[1]);
+                s = s.replace(MARKS, '').slice(a[0].length);
+            }
+            s = s.replace(/^[\s‎‏]+|[\s‎‏]+$/g, '');
+            if (!m.file) {
+                const o = OMITTED.exec(s);
+                if (o) { m.omitted = (o[1] || o[2] || o[3]).toLowerCase(); return m; }
+                if (DELETED.test(s)) { m.deleted = true; m.text = s; return m; }
+                if (CALL.test(s)) { m.call = true; m.text = s; return m; }
+                if (s === 'null') { m.omitted = 'view once'; return m; }
+                if (marked && !/^(location|live location|poll)\b/i.test(s)) m.system = true;
+            }
+            m.text = s;
+            return m;
+        }
+
+        // Returns { messages, senders: [[name, count], ...] busiest first, group } or null.
+        function parseChat(text) {
+            const rows = splitLines(text);
+            if (!rows.length) return null;
+            const order = dateOrder(rows);
+            const seen = new Map();
+            rows.forEach(r => {
+                const i = r.rest.indexOf(': ');
+                r.who = i > 0 && i <= 80 && !r.rest.slice(0, i).includes('\n') ? r.rest.slice(0, i) : '';
+                r.body = r.who ? r.rest.slice(i + 2) : r.rest;
+                if (r.who) seen.set(r.who, (seen.get(r.who) || 0) + 1);
+            });
+            // Group notes ("Arun added Bala") have no "Name:" part, but can contain a colon.
+            const isName = who => who && (seen.get(who) > 1 || (!/["“”]/.test(who) && !SYSTEM_WORDS.test(who)));
+            const messages = rows.map(r => {
+                const ts = timeOf(r, order);
+                if (!isName(r.who)) return { ts, sender: '', text: r.rest.trim(), system: true };
+                const m = readBody(r.body);
+                return { ts, sender: m.system ? '' : r.who, ...m };
+            });
+            messages.sort((a, b) => a.ts - b.ts);
+            const counts = new Map();
+            messages.forEach(m => { if (!m.system) counts.set(m.sender, (counts.get(m.sender) || 0) + 1); });
+            if (!messages.length) return null;
+            const senders = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+            const group = senders.length > 2 || messages.some(m => m.system && /\b(created group|created this group|changed the group|changed this group|added|removed)\b/i.test(m.text));
+            return { messages, senders, group };
+        }
+
+        // "WhatsApp Chat with Arun.zip" (Android) or "WhatsApp Chat - Arun.zip" (iPhone).
+        function titleFrom(name) {
+            const base = (name || '').replace(/^.*\//, '').replace(/\.(zip|txt)$/i, '').replace(/\s*\(\d+\)$/, '');
+            const m = base.match(/^WhatsApp Chat (?:with|-)\s*(.+)$/i);
+            return m ? m[1].trim() : '';
+        }
+
+        // The chat doesn't say who exported it. Returns the name, '' for no one, or null to ask.
+        function guessOwner(c) {
+            const names = c.senders.map(s => s[0]);
+            if (!names.length) return '';
+            let me = '';
+            try { me = localStorage.getItem(ME_KEY) || ''; } catch (err) { /* storage blocked */ }
+            if (me && names.includes(me)) return me;
+            const mine = c.messages.find(m => m.deleted && /^you deleted/i.test(m.text) && m.sender);
+            if (mine) return mine.sender;
+            if (!c.group && c.fileTitle && names.includes(c.fileTitle)) {
+                const other = names.find(n => n !== c.fileTitle);
+                return other !== undefined ? other : '';
+            }
+            return null;
+        }
+
+        // ---------- opening an export ----------
+
+        function setMsg(text, warn) {
+            $('msg').textContent = text || '';
+            $('msg').classList.toggle('warn', !!warn);
+        }
+
+        function show(section) {
+            for (const id of ['start', 'pick', 'chat']) $(id).hidden = id !== section;
+            $('subtitle').hidden = section !== 'start';
+            $('close-top').hidden = section === 'start';
+        }
+
+        function el(tag, cls, text) {
+            const n = document.createElement(tag);
+            if (cls) n.className = cls;
+            if (text !== undefined) n.textContent = text;
+            return n;
+        }
+
+        const isZip = f => /\.zip$/i.test(f.name) || /zip/.test(f.type);
+        const isText = f => /\.txt$/i.test(f.name) || f.type === 'text/plain';
+
+        // The chat's text file inside the zip: _chat.txt (iPhone) or "WhatsApp Chat with ….txt".
+        async function chatInZip(list) {
+            const names = [...list.keys()].filter(n => /\.txt$/i.test(n) && !/(^|\/)__MACOSX\//.test(n));
+            const rank = n => (/(^|\/)_chat\.txt$/i.test(n) ? 0 : /(^|\/)WhatsApp Chat/i.test(n) ? 1 : 2);
+            names.sort((a, b) => rank(a) - rank(b) || list.get(b).csize - list.get(a).csize);
+            for (const n of names) {
+                try {
+                    const parsed = parseChat(await (await entryBlob(list.get(n))).text());
+                    if (parsed) return { parsed, name: n };
+                } catch (err) { /* try the next one */ }
+            }
+            return null;
+        }
+
+        // Returns true when the chat opened. fromKept: it came from the copy kept on this device.
+        async function openExport(fileList, fromKept = false) {
+            const files = [...fileList];
+            const file = files.find(isZip) || files.find(isText);
+            if (!file) { setMsg("Please pick the .zip or .txt file from WhatsApp's Export chat.", true); return false; }
+            if (isZip(file) && typeof DecompressionStream === 'undefined') { setMsg('This browser is too old to open zip files. Please update it and try again.', true); return false; }
+            closeExport();
+            setMsg('Opening…');
+
+            let found = null;
+            if (isZip(file)) {
+                let list;
+                try { list = await readZip(file); } catch (err) { setMsg(`"${file.name}" doesn't look like a zip file.`, true); return false; }
+                entries = list;
+                found = await chatInZip(list);
+            } else {
+                try {
+                    const parsed = parseChat(await file.text());
+                    if (parsed) found = { parsed, name: file.name };
+                } catch (err) { /* said below */ }
+            }
+            if (!found) {
+                closeExport();
+                setMsg("No WhatsApp chat found in this file. Please pick the .zip or .txt from WhatsApp's Export chat.", true);
+                return false;
+            }
+
+            const c = found.parsed;
+            c.fileTitle = titleFrom(file.name) || titleFrom(found.name);
+            c.withMedia = isZip(file);
+            setMsg('');
+            if (!fromKept) {
+                if (keepWanted()) keepExport([file]);
+                else forgetKept();
+            }
+            const me = guessOwner(c);
+            if (me === null) askOwner(c, false);
+            else { owner = me; openChat(c); }
+            return true;
+        }
+
+        function closeExport() {
+            chatGen++;
+            closeViewer();
+            urls.forEach(u => URL.revokeObjectURL(u));
+            urls = [];
+            $('messages').textContent = '';
+            $('calendar').hidden = true;
+            chatThumbs.clear();
+            $('chat-media').textContent = '';
+            $('chat-stats').textContent = '';
+            $('chat-search-q').value = '';
+            $('chat-search-status').textContent = '';
+            $('chat-search-results').textContent = '';
+            $('chat-search-more').hidden = true;
+            $('pick-list').textContent = '';
+            hideTip();
+            keepNote('');
+            current = null;
+            owner = '';
+            entries = new Map();
+            byName = null;
+            chatDepth = 0;
+        }
+
+        function closeAndForget() {
+            closeExport();
+            forgetKept();
+            setMsg('');
+            show('start');
+            history.replaceState({}, '');
+        }
+        $('close-top').addEventListener('click', closeAndForget);
+
+        $('file').addEventListener('change', e => {
+            openExport(e.target.files);
+            e.target.value = '';
+        });
+
+        const drop = $('drop');
+        const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+        document.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); drop.classList.add('dragover'); } });
+        document.addEventListener('dragleave', e => { if (e.target === document.documentElement || !e.relatedTarget) drop.classList.remove('dragover'); });
+        document.addEventListener('drop', e => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            drop.classList.remove('dragover');
+            openExport(e.dataTransfer.files);
+        });
+
+        // ---------- keeping the export on this device ----------
+
+        // The file is copied into this browser's own storage (IndexedDB) on this device only.
+        const KEEP_KEY = 'whatsapp:keep';
+        const DB_NAME = 'whatsapp-viewer', STORE = 'kept';
+        let keepGen = 0;   // bumps when the copy is forgotten, so a save still running is undone
+
+        function keepWanted() {
+            try { return localStorage.getItem(KEEP_KEY) === '1'; } catch (err) { return false; }
+        }
+        const keepNote = text => { $('keep-note').textContent = text || ''; };
+
+        function openDb() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // Runs one step on the store and waits until it is safely written.
+        async function inStore(mode, step) {
+            const db = await openDb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, mode);
+                const req = step(tx.objectStore(STORE));
+                tx.oncomplete = () => { db.close(); resolve(req && req.result); };
+                tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('not saved')); };
+            });
+        }
+
+        const dropKept = () => inStore('readwrite', st => st.delete('export')).catch(() => {});
+
+        function forgetKept() {
+            keepGen++;
+            if (window.indexedDB) dropKept();
+        }
+
+        async function keepExport(files) {
+            if (!window.indexedDB) { keepNote("This browser can't keep a copy, so open the file again next time."); return; }
+            const gen = ++keepGen;
+            const total = files.reduce((sum, f) => sum + f.size, 0);
+            try {
+                await dropKept();
+                if (navigator.storage && navigator.storage.estimate) {
+                    const { quota = 0, usage = 0 } = await navigator.storage.estimate();
+                    if (quota && total > (quota - usage) * 0.9) {
+                        keepNote('This export is too big to keep on this device, so open the file again next time.');
+                        return;
+                    }
+                }
+                if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+                keepNote('Keeping a copy on this device…');
+                await inStore('readwrite', st => st.put({ files: files.map(f => ({ name: f.name, blob: f })), size: total, savedAt: Date.now() }, 'export'));
+                if (gen !== keepGen) { await dropKept(); return; }
+                keepNote('Kept on this device for next time. Close forgets it.');
+            } catch (err) {
+                if (gen !== keepGen) return;
+                dropKept();
+                keepNote("Couldn't keep a copy on this device, so open the file again next time.");
+            }
+        }
+
+        async function openKept() {
+            if (!keepWanted() || !window.indexedDB) return;
+            let rec;
+            try { rec = await inStore('readonly', st => st.get('export')); } catch (err) { return; }
+            if (!rec || !rec.files || !rec.files.length) return;
+            setMsg('Opening the chat kept on this device…');
+            const files = rec.files.map(f => new File([f.blob], f.name, { type: f.blob.type || (/\.zip$/i.test(f.name) ? 'application/zip' : 'text/plain') }));
+            if (await openExport(files, true)) {
+                keepNote('Opened from this device. Close forgets it.');
+            } else {
+                forgetKept();
+                setMsg("The copy kept on this device couldn't be opened. Please open the file again.", true);
+            }
+        }
+
+        $('keep').checked = keepWanted();
+        $('keep').addEventListener('change', e => {
+            try { localStorage.setItem(KEEP_KEY, e.target.checked ? '1' : '0'); } catch (err) { /* storage blocked */ }
+            if (!e.target.checked) forgetKept();
+        });
+
+        // ---------- which one is you ----------
+
+        let pickFor = null;   // the chat waiting for an answer
+
+        function askOwner(c, canCancel) {
+            pickFor = c;
+            const list = $('pick-list');
+            list.textContent = '';
+            const add = (label, sub, name) => {
+                const li = el('li');
+                const b = el('button', 'pick-item');
+                b.type = 'button';
+                b.append(el('span', 'name', label));
+                if (sub) b.append(el('span', 'sub', sub));
+                b.addEventListener('click', () => setOwner(name));
+                li.append(b);
+                list.append(li);
+            };
+            c.senders.slice(0, 12).forEach(([name, n]) => add(name, plural(n, 'message'), name));
+            add('None of these', '', '');
+            $('pick-cancel').hidden = !canCancel;
+            show('pick');
+            window.scrollTo(0, 0);
+        }
+
+        function setOwner(name) {
+            const c = pickFor;
+            pickFor = null;
+            if (!c) return;
+            if (name) {
+                try { localStorage.setItem(ME_KEY, name); } catch (err) { /* storage blocked */ }
+            }
+            owner = name;
+            openChat(c);
+        }
+
+        $('pick-cancel').addEventListener('click', () => {
+            pickFor = null;
+            show('chat');
+        });
+
+        // ---------- the chat ----------
+
+        let visible = 0;       // index of the day at the top of the screen
+        let chatView = null;   // 'messages', 'media', 'search' or 'stats'
+        let viewScroll = {};   // where each view was scrolled to, for coming back
+        let chatDepth = 0;     // history steps added inside the chat
+        let chatGen = 0;       // bumps on every open/close so late loads are dropped
+        const sizeOf = i => current.days[i].end - current.days[i].start;
+        const BATCH = 40;      // roughly how many messages to add at a time
+        const isReal = m => !m.system;   // a message someone sent, not a WhatsApp note
+
+        function openChat(c) {
+            if (!c.days) {
+                c.days = [];
+                c.dayIndex = new Map();
+                c.messages.forEach((m, i) => {
+                    const key = dayKey(m.ts);
+                    const last = c.days[c.days.length - 1];
+                    if (last && last.key === key) { last.end = i + 1; if (isReal(m)) last.n++; }
+                    else { c.dayIndex.set(key, c.days.length); c.days.push({ key, start: i, end: i + 1, n: isReal(m) ? 1 : 0 }); }
+                });
+                c.months = [...new Set(c.days.map(d => d.key.slice(0, 7)))];
+                c.media = chatMedia(c);
+                c.count = c.messages.filter(isReal).length;
+            }
+            c.title = c.fileTitle || (c.group ? 'Group chat' : (c.senders.map(s => s[0]).find(n => n !== owner) || 'WhatsApp chat'));
+
+            current = c;
+            chatGen++;
+            chatView = null;
+            viewScroll = {};
+            chatDepth = 0;
+            history.replaceState({ view: 'messages', depth: 0 }, '');
+            $('chat-name').textContent = c.title;
+            const real = c.messages.filter(isReal);
+            $('chat-info').textContent = real.length
+                ? `${plural(real.length, 'message')} · ${listDate(real[0].ts)} – ${listDate(real[real.length - 1].ts)}${c.group ? ` · ${c.senders.length} people` : ''}`
+                : 'No messages';
+            $('calendar').hidden = true;
+            $('date-btn').setAttribute('aria-expanded', 'false');
+            show('chat');
+            c.mediaRendered = false;
+            c.statsRendered = false;
+            chatThumbs.clear();
+            $('chat-media').textContent = '';
+            $('chat-stats').textContent = '';
+            $('chat-search-q').value = '';
+            $('chat-search-status').textContent = '';
+            $('chat-search-results').textContent = '';
+            $('chat-search-more').hidden = true;
+            $('chat-media-btn').textContent = 'Media';
+            const mc = c.media.length;
+            $('chat-media-btn').append(' ', el('span', 'count', mc < 10000 ? mc.toLocaleString() : `${Math.round(mc / 1000)}k`));
+            $('chat-media-btn').disabled = !mc;
+            setChatView('messages', { restore: false });
+            if (c.days.length) jumpToDay(c.days.length - 1, true);
+            else { $('load-earlier').hidden = $('load-later').hidden = true; }
+        }
+
+        function renderDay(d) {
+            const frag = document.createDocumentFragment();
+            const sep = el('div', 'day-sep', longDay(d.key));
+            sep.dataset.day = d.key;
+            frag.append(sep);
+            for (let i = d.start; i < d.end; i++) {
+                const row = renderMessage(current.messages[i]);
+                row.dataset.i = i;
+                frag.append(row);
+            }
+            return frag;
+        }
+
+        // Show day i: from the end (latest messages, scrolled to the bottom) or as the first day on screen.
+        function jumpToDay(i, fromEnd) {
+            urls.forEach(u => URL.revokeObjectURL(u));
+            urls = [];
+            chatGen++;
+            $('messages').textContent = '';
+            const days = current.days;
+            shown = { first: i, last: i };
+            let count = sizeOf(i);
+            if (fromEnd) while (shown.first > 0 && count < BATCH) count += sizeOf(--shown.first);
+            else while (shown.last < days.length - 1 && count < BATCH) count += sizeOf(++shown.last);
+            const frag = document.createDocumentFragment();
+            for (let k = shown.first; k <= shown.last; k++) frag.append(renderDay(days[k]));
+            $('messages').append(frag);
+            updateLoadButtons();
+            selectDay(i);
+            if (fromEnd) {
+                window.scrollTo(0, document.documentElement.scrollHeight);
+            } else {
+                $('messages').querySelector(`[data-day="${days[i].key}"]`).scrollIntoView({ block: 'start' });
+            }
+        }
+
+        function loadEarlier() {
+            if (!current || shown.first <= 0) return;
+            const before = document.documentElement.scrollHeight;
+            let k = shown.first, count = 0;
+            while (k > 0 && count < BATCH) count += sizeOf(--k);
+            const frag = document.createDocumentFragment();
+            for (let j = k; j < shown.first; j++) frag.append(renderDay(current.days[j]));
+            shown.first = k;
+            $('messages').prepend(frag);
+            window.scrollBy(0, document.documentElement.scrollHeight - before);
+            updateLoadButtons();
+        }
+
+        function loadLater() {
+            if (!current || shown.last >= current.days.length - 1) return;
+            let k = shown.last, count = 0;
+            const frag = document.createDocumentFragment();
+            while (k < current.days.length - 1 && count < BATCH) {
+                count += sizeOf(++k);
+                frag.append(renderDay(current.days[k]));
+            }
+            shown.last = k;
+            $('messages').append(frag);
+            updateLoadButtons();
+        }
+
+        function updateLoadButtons() {
+            $('load-earlier').hidden = shown.first <= 0;
+            $('load-later').hidden = shown.last >= current.days.length - 1;
+        }
+
+        function selectDay(i) {
+            visible = i;
+            $('date-btn').textContent = shortDay(current.days[i].key) + '  ▾';
+            $('prev-day').disabled = i <= 0;
+            $('next-day').disabled = i >= current.days.length - 1;
+            if (!$('calendar').hidden) renderCalendar();
+        }
+
+        // Keep the date bar showing the day at the top of the screen.
+        let scrollQueued = false;
+        window.addEventListener('scroll', () => {
+            if (!current || !current.days || scrollQueued || chatView !== 'messages') return;
+            scrollQueued = true;
+            requestAnimationFrame(() => {
+                scrollQueued = false;
+                if (!current || !current.days) return;
+                const line = $('chat').querySelector('.sticky').getBoundingClientRect().bottom + 8;
+                let key = null;
+                for (const sep of $('messages').querySelectorAll('.day-sep')) {
+                    if (sep.getBoundingClientRect().top <= line) key = sep.dataset.day;
+                    else break;
+                }
+                if (!key) { const first = $('messages').querySelector('.day-sep'); key = first && first.dataset.day; }
+                const i = current.dayIndex.get(key);
+                if (i !== undefined && i !== visible) selectDay(i);
+            });
+        }, { passive: true });
+
+        // ---------- messages ----------
+
+        function linkOut(href, text) {
+            const a = el('a', '', text);
+            a.href = href;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            return a;
+        }
+
+        function textNode(s) {
+            const span = el('span', 'text');
+            const re = /https?:\/\/[^\s]+/g;
+            let last = 0, m;
+            while ((m = re.exec(s))) {
+                span.append(s.slice(last, m.index), linkOut(m[0], m[0]));
+                last = m.index + m[0].length;
+            }
+            span.append(s.slice(last));
+            return span;
+        }
+
+        const lazy = new IntersectionObserver(items => items.forEach(it => {
+            if (!it.isIntersecting) return;
+            lazy.unobserve(it.target);
+            loadPhoto(it.target);
+        }), { rootMargin: '600px 0px' });
+
+        async function loadPhoto(img) {
+            const gen = chatGen;
+            try {
+                const url = URL.createObjectURL(await entryBlob(img._entry));
+                if (gen !== chatGen) { URL.revokeObjectURL(url); return; }
+                urls.push(url);
+                img.onload = () => img.classList.add('ready');
+                img.onerror = () => img.replaceWith(el('span', 'muted', "This photo can't be shown in this browser"));
+                img.src = url;
+            } catch (err) {
+                if (gen === chatGen) img.replaceWith(el('span', 'muted', "Couldn't open this photo"));
+            }
+        }
+
+        function photo(e, label) {
+            if (!e) return el('span', 'muted', `${label} not in this export`);
+            const img = el('img', 'photo' + (label === 'Sticker' ? ' sticker' : ''));
+            img.alt = label;
+            img._entry = e;
+            img.addEventListener('click', () => { if (img.src) openViewer(img.src); });
+            lazy.observe(img);
+            return img;
+        }
+
+        // Videos and voice notes load only when tapped, to save memory.
+        function playable(e, kind, label) {
+            if (!e) return el('span', 'muted', `${label} not in this export`);
+            const b = el('button', '', `▶ ${label}`);
+            b.type = 'button';
+            b.addEventListener('click', async () => {
+                const gen = chatGen;
+                b.disabled = true;
+                b.textContent = 'Loading…';
+                try {
+                    const url = URL.createObjectURL(await entryBlob(e));
+                    if (gen !== chatGen) { URL.revokeObjectURL(url); return; }
+                    urls.push(url);
+                    const media = el(kind);
+                    media.controls = true;
+                    media.playsInline = true;
+                    media.src = url;
+                    b.replaceWith(media);
+                    media.play().catch(() => {});
+                } catch (err) {
+                    b.replaceWith(el('span', 'muted', `Couldn't open this ${label.toLowerCase()}`));
+                }
+            });
+            return b;
+        }
+
+        function download(blob, name) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        }
+
+        // Documents and contact cards: tap to save the file.
+        function fileLink(e, f) {
+            const name = shownName(f.name);
+            const label = f.kind === 'contact' ? `Contact · ${name.replace(/\.vcf$/i, '')}` : `Document · ${name}`;
+            if (!e) return el('span', 'muted', `${label} (not in this export)`);
+            const b = el('button', 'file-btn', label);
+            b.type = 'button';
+            b.addEventListener('click', async () => {
+                try { download(await entryBlob(e), name); } catch (err) { b.replaceWith(el('span', 'muted', "Couldn't open this file")); }
+            });
+            return b;
+        }
+
+        function attachment(f) {
+            const e = findEntry(f.name);
+            switch (f.kind) {
+                case 'photo': return photo(e, 'Photo');
+                case 'sticker': return photo(e, 'Sticker');
+                case 'video': return playable(e, 'video', 'Video');
+                case 'gif': return playable(e, 'video', 'GIF');
+                case 'voice': return playable(e, 'audio', 'Voice message');
+                case 'audio': return playable(e, 'audio', 'Audio');
+                default: return fileLink(e, f);
+            }
+        }
+
+        const OMIT_LABEL = { media: 'Media', image: 'Photo', video: 'Video', audio: 'Voice message', sticker: 'Sticker', gif: 'GIF', document: 'Document', 'contact card': 'Contact card', 'video note': 'Video note' };
+
+        function renderMessage(m) {
+            if (m.system) return el('div', 'sys', m.text);
+            const me = !!owner && m.sender === owner;
+            const row = el('div', 'msg-row' + (me ? ' me' : ''));
+            if (current.group && !me && m.sender) row.append(el('div', 'sender', m.sender));
+            const bubble = el('div', 'bubble');
+            if (m.file) bubble.append(attachment(m.file));
+            if (m.omitted) bubble.append(el('span', 'muted', m.omitted === 'view once' ? 'View once message' : `${OMIT_LABEL[m.omitted] || 'Media'} not in this export`));
+            if (m.deleted || m.call) bubble.append(el('span', 'muted', m.text));
+            else if (m.text) bubble.append(textNode(m.text));
+            if (!bubble.children.length) bubble.append(el('span', 'muted', 'Message with no text'));
+            bubble.append(el('span', 'time', clock(m.ts) + (m.edited ? ' · edited' : '')));
+            row.append(bubble);
+            return row;
+        }
+
+        // ---------- calendar ----------
+
+        const monthKey = (y, m) => `${y}-${pad(m + 1)}`;
+
+        function toggleCalendar(open) {
+            $('calendar').hidden = !open;
+            $('date-btn').setAttribute('aria-expanded', open);
+            if (!open) return;
+            const d = keyDate(current.days[visible].key);
+            calMonth = { y: d.getFullYear(), m: d.getMonth() };
+            renderCalendar();
+        }
+
+        function setMonth(key) {
+            const [y, m] = key.split('-').map(Number);
+            calMonth = { y, m: m - 1 };
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const c = current, cal = $('calendar');
+            const { y, m } = calMonth;
+            const here = monthKey(y, m);
+            cal.textContent = '';
+
+            const head = el('div', 'cal-head');
+            const earlier = c.months.filter(k => k < here).pop();
+            const later = c.months.find(k => k > here);
+            const prev = el('button', '', '‹');
+            prev.type = 'button';
+            prev.setAttribute('aria-label', 'Earlier month with messages');
+            prev.disabled = !earlier;
+            prev.addEventListener('click', () => setMonth(earlier));
+            const next = el('button', '', '›');
+            next.type = 'button';
+            next.setAttribute('aria-label', 'Later month with messages');
+            next.disabled = !later;
+            next.addEventListener('click', () => setMonth(later));
+
+            const monthSel = el('select');
+            monthSel.setAttribute('aria-label', 'Month');
+            MONTHS.forEach((name, i) => {
+                const o = el('option', '', name);
+                o.value = i;
+                monthSel.append(o);
+            });
+            monthSel.value = m;
+            monthSel.addEventListener('change', () => { calMonth.m = Number(monthSel.value); renderCalendar(); });
+
+            const yearSel = el('select');
+            yearSel.setAttribute('aria-label', 'Year');
+            const firstYear = Number(c.days[0].key.slice(0, 4)), lastYear = Number(c.days[c.days.length - 1].key.slice(0, 4));
+            for (let yy = firstYear; yy <= lastYear; yy++) {
+                const o = el('option', '', String(yy));
+                o.value = yy;
+                yearSel.append(o);
+            }
+            yearSel.value = y;
+            yearSel.addEventListener('change', () => { calMonth.y = Number(yearSel.value); renderCalendar(); });
+            head.append(prev, monthSel, yearSel, next);
+
+            const grid = el('div', 'cal-grid');
+            ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].forEach(w => grid.append(el('div', 'wd', w)));
+            const blanks = (new Date(y, m, 1).getDay() + 6) % 7;
+            for (let i = 0; i < blanks; i++) grid.append(el('div'));
+            let any = false;
+            const daysIn = new Date(y, m + 1, 0).getDate();
+            for (let d = 1; d <= daysIn; d++) {
+                const idx = c.dayIndex.get(`${y}-${pad(m + 1)}-${pad(d)}`);
+                const b = el('button', 'cal-day', String(d));
+                b.type = 'button';
+                if (idx === undefined) {
+                    b.disabled = true;
+                } else {
+                    any = true;
+                    const n = c.days[idx].n;
+                    b.classList.add(n >= 50 ? 'l3' : n >= 10 ? 'l2' : 'l1');
+                    if (idx === visible) b.classList.add('sel');
+                    b.title = plural(n, 'message');
+                    b.addEventListener('click', () => { toggleCalendar(false); jumpToDay(idx); });
+                }
+                grid.append(b);
+            }
+            cal.append(head, grid);
+            if (!any) cal.append(el('p', 'hint cal-note', 'No messages this month.'));
+        }
+
+        $('date-btn').addEventListener('click', () => toggleCalendar($('calendar').hidden));
+        $('prev-day').addEventListener('click', () => { toggleCalendar(false); jumpToDay(visible - 1); });
+        $('next-day').addEventListener('click', () => { toggleCalendar(false); jumpToDay(visible + 1); });
+        $('load-earlier').addEventListener('click', loadEarlier);
+        $('load-later').addEventListener('click', loadLater);
+
+        // ---------- search ----------
+
+        const PAGE = 100;
+        const textOf = m => (m.system || m.deleted || m.call ? '' : m.text);
+
+        // Show one message, highlighted.
+        function showMessage(i, push = true) {
+            setChatView('messages', { push, restore: false });
+            jumpToDay(current.dayIndex.get(dayKey(current.messages[i].ts)));
+            const row = $('messages').querySelector(`[data-i="${i}"]`);
+            if (!row) return;
+            row.scrollIntoView({ block: 'center' });
+            row.classList.add('flash');
+            setTimeout(() => row.classList.remove('flash'), 2500);
+        }
+
+        // Spaces count: a space inside matches any space or line break, and a space at
+        // either end also matches the start or end of the message ("also " skips "also,").
+        function queryRegex(q) {
+            const core = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+            const lead = /^\s/.test(q) ? '(?:^|\\s)' : '';
+            const trail = /\s$/.test(q) ? '(?=\\s|$)' : '';
+            return new RegExp(lead + core + trail, 'iu');
+        }
+
+        function snippet(text, re) {
+            const div = el('div', 'snippet');
+            const m = re.exec(text);
+            if (!m) { div.append(text.slice(0, 160)); return div; }
+            const at = m.index, len = m[0].length;
+            const start = Math.max(0, at - 60), end = Math.min(text.length, at + len + 100);
+            div.append((start > 0 ? '…' : '') + text.slice(start, at), el('mark', '', text.slice(at, at + len)), text.slice(at + len, end) + (end < text.length ? '…' : ''));
+            return div;
+        }
+
+        function resultItem(h, re) {
+            const li = el('li');
+            const b = el('button', 'result');
+            b.type = 'button';
+            const top = el('div', 'top');
+            top.append(el('span', 'where', nameOf(h.sender)), el('span', 'when', `${listDate(h.ts)}, ${clock(h.ts)}`));
+            b.append(top, snippet(h.text, re));
+            b.addEventListener('click', () => showMessage(h.i));
+            li.append(b);
+            return li;
+        }
+
+        // Newest first, a page at a time.
+        function renderResults(ul, more, hits, re) {
+            ul.textContent = '';
+            let done = 0;
+            const page = () => {
+                const frag = document.createDocumentFragment();
+                hits.slice(done, done + PAGE).forEach(h => frag.append(resultItem(h, re)));
+                done = Math.min(hits.length, done + PAGE);
+                ul.append(frag);
+                more.hidden = done >= hits.length;
+            };
+            more.onclick = page;
+            page();
+        }
+
+        $('chat-search-form').addEventListener('submit', e => {
+            e.preventDefault();
+            const q = $('chat-search-q').value;
+            if (!q.trim() || q.length < 2) { $('chat-search-status').textContent = 'Type at least 2 letters.'; return; }
+            const re = queryRegex(q);
+            const hits = [];
+            current.messages.forEach((m, i) => {
+                const text = textOf(m);
+                if (text && re.test(text)) hits.push({ i, ts: m.ts, sender: m.sender, text });
+            });
+            hits.reverse();
+            $('chat-search-status').textContent = hits.length ? `${plural(hits.length, 'message')}, newest first` : `No messages with "${q}".`;
+            renderResults($('chat-search-results'), $('chat-search-more'), hits, re);
+        });
+
+        // ---------- chat stats ----------
+
+        const SVG = 'http://www.w3.org/2000/svg';
+        function svgEl(tag, attrs) {
+            const n = document.createElementNS(SVG, tag);
+            for (const k in attrs) n.setAttribute(k, attrs[k]);
+            return n;
+        }
+
+        function statTile(label, value, note, onClick) {
+            const t = el(onClick ? 'button' : 'div', 'stat');
+            if (onClick) { t.type = 'button'; t.addEventListener('click', onClick); }
+            t.append(el('span', 'label', label), el('span', 'value', value), el('span', 'note', note));
+            return t;
+        }
+
+        const monthName = key => keyDate(key + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        const firstDayOfMonth = key => current.days.findIndex(d => d.key.startsWith(key) && d.n > 0);
+        const readDay = i => { setChatView('messages', { push: true, restore: false }); jumpToDay(i); };
+
+        function renderStats(c) {
+            const box = $('chat-stats');
+            box.textContent = '';
+            const msgs = c.messages.filter(isReal);
+            if (!msgs.length) { box.append(el('p', 'hint', 'No messages in this chat.')); return; }
+
+            const senders = new Map();
+            const hours = new Array(24).fill(0);
+            const months = new Map();
+            let shared = 0, voice = 0;
+            for (const m of msgs) {
+                senders.set(m.sender, (senders.get(m.sender) || 0) + 1);
+                const d = new Date(m.ts);
+                hours[d.getHours()]++;
+                const k = monthKey(d.getFullYear(), d.getMonth());
+                months.set(k, (months.get(k) || 0) + 1);
+                const kind = m.file ? m.file.kind : m.omitted;
+                if (['photo', 'video', 'gif', 'image', 'media'].includes(kind)) shared++;
+                if (['voice', 'audio'].includes(kind)) voice++;
+            }
+
+            // Days with real messages, keeping their place in c.days.
+            const days = [];
+            c.days.forEach((d, i) => { if (d.n > 0) days.push({ key: d.key, n: d.n, i }); });
+            const busy = days.reduce((a, b) => (b.n > a.n ? b : a));
+            let busyMonth = null, busyMonthN = 0;
+            months.forEach((n, k) => { if (n > busyMonthN) { busyMonthN = n; busyMonth = k; } });
+
+            // Longest run of days in a row with messages.
+            let best = { len: 1, start: 0 }, run = 1;
+            for (let i = 1; i < days.length; i++) {
+                const prev = keyDate(days[i - 1].key);
+                const next = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
+                if (dayKey(next.getTime()) === days[i].key) {
+                    run++;
+                    if (run > best.len) best = { len: run, start: i - run + 1 };
+                } else {
+                    run = 1;
+                }
+            }
+
+            const firstDay = keyDate(days[0].key), lastDay = keyDate(days[days.length - 1].key);
+            const topHour = hours.indexOf(Math.max(...hours));
+            const hourLabel = new Date(2000, 0, 1, topHour).toLocaleTimeString(undefined, { hour: 'numeric', hour12: true });
+
+            const tiles = el('div', 'stat-tiles');
+            tiles.append(
+                statTile('Messages', msgs.length.toLocaleString(), `on ${plural(days.length, 'day')}`),
+                statTile('Chatting since', listDate(msgs[0].ts), `last message ${listDate(msgs[msgs.length - 1].ts)}`),
+                statTile('Busiest day', shortDay(busy.key), plural(busy.n, 'message'), () => readDay(busy.i)),
+                statTile('Busiest month', monthName(busyMonth), plural(busyMonthN, 'message'), () => readDay(firstDayOfMonth(busyMonth))),
+                statTile('Longest streak', plural(best.len, 'day'), best.len > 1 ? `from ${shortDay(days[best.start].key)}` : 'no days in a row yet', best.len > 1 ? () => readDay(days[best.start].i) : null),
+                statTile('Usual time', hourLabel, 'most messages around then'),
+                statTile('On a chatting day', (msgs.length / days.length).toFixed(1), 'messages on average'),
+                statTile('Photos & videos', shared.toLocaleString(), plural(voice, 'voice message'))
+            );
+            box.append(tiles);
+
+            // Who sends more
+            const who = el('div', 'box');
+            who.append(el('h3', '', c.group ? 'Who sends the most' : 'Who sends more'));
+            const ranked = [...senders.entries()].sort((a, b) => b[1] - a[1]);
+            const top = ranked.slice(0, 8);
+            if (ranked.length > 8) top.push(['Others', ranked.slice(8).reduce((s, r) => s + r[1], 0)]);
+            const most = top[0][1];
+            top.forEach(([name, n]) => {
+                const row = el('div', 'sender-row');
+                const track = el('div', 'bar-track');
+                const fill = el('div', 'bar-fill');
+                fill.style.width = `${(n / most) * 100}%`;
+                track.append(fill);
+                row.append(el('span', 'name', name === 'Others' ? name : nameOf(name)), track, el('span', 'count', `${n.toLocaleString()} · ${Math.round((n / msgs.length) * 100)}%`));
+                who.append(row);
+            });
+            box.append(who);
+
+            // First message
+            let firstIdx = c.messages.findIndex(m => textOf(m));
+            if (firstIdx < 0) firstIdx = c.messages.findIndex(isReal);
+            const fm = c.messages[firstIdx];
+            const first = el('div', 'box first-msg');
+            first.append(el('h3', '', 'Your first message together'));
+            first.append(el('div', 'quote', (textOf(fm) || 'A photo or attachment').slice(0, 300)));
+            first.append(el('div', 'meta', `${nameOf(fm.sender)} · ${longDay(dayKey(fm.ts))}, ${clock(fm.ts)}`));
+            const go = el('button', '', 'Show in chat');
+            go.type = 'button';
+            go.addEventListener('click', () => showMessage(firstIdx));
+            first.append(go);
+            box.append(first);
+
+            // Messages per month, every month from the first to the last
+            const series = [];
+            let y = firstDay.getFullYear(), mo = firstDay.getMonth();
+            const endKey = monthKey(lastDay.getFullYear(), lastDay.getMonth());
+            for (;;) {
+                const k = monthKey(y, mo);
+                series.push({ k, n: months.get(k) || 0 });
+                if (k === endKey) break;
+                if (++mo === 12) { mo = 0; y++; }
+            }
+            const chartBox = el('div', 'box');
+            chartBox.append(el('h3', '', 'Messages per month'));
+            const chart = el('div', 'chart');
+            chart._series = series;
+            chartBox.append(chart, el('p', 'hint chart-note', 'Tap a month to read it.'));
+            box.append(chartBox);
+            drawChart(chart);
+
+            // Which one is you
+            const me = el('div', 'box me-box');
+            me.append(el('h3', '', 'Which one is you'));
+            me.append(el('p', 'hint', owner ? `You are ${owner}. Your messages show on the right.` : 'No one in this chat is set as you.'));
+            const change = el('button', '', 'Change');
+            change.type = 'button';
+            change.addEventListener('click', () => askOwner(c, true));
+            me.append(change);
+            box.append(me);
+        }
+
+        function drawChart(chart) {
+            const series = chart._series;
+            chart.textContent = '';
+            const W = Math.max(240, chart.clientWidth || 600), H = 150, top = 14, bottom = 20;
+            const base = H - bottom;
+            const max = Math.max(1, ...series.map(s => s.n));
+            const step = W / series.length;
+            const gap = step >= 6 ? 2 : 0;
+            const bw = Math.max(1, step - gap);
+            const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img' });
+            const peak = series.reduce((a, b) => (b.n > a.n ? b : a));
+            svg.setAttribute('aria-label', `Messages per month from ${monthName(series[0].k)} to ${monthName(series[series.length - 1].k)}. Busiest: ${monthName(peak.k)} with ${peak.n}.`);
+
+            svg.append(svgEl('line', { class: 'grid', x1: 0, x2: W, y1: top, y2: top }));
+            const maxLabel = svgEl('text', { x: 0, y: top - 4 });
+            maxLabel.textContent = max.toLocaleString();
+            svg.append(maxLabel);
+
+            const bars = [];
+            series.forEach((s, i) => {
+                const x = i * step + gap / 2;
+                if (s.n > 0) {
+                    const h = Math.max(1, (base - top) * s.n / max);
+                    const yTop = base - h;
+                    const r = Math.min(4, bw / 2, h);
+                    bars[i] = svgEl('path', { class: 'bar', d: `M${x},${base} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + bw - r} Q${x + bw},${yTop} ${x + bw},${yTop + r} V${base} Z` });
+                    svg.append(bars[i]);
+                }
+            });
+            svg.append(svgEl('line', { class: 'axis', x1: 0, x2: W, y1: base, y2: base }));
+
+            // Year labels under January, spaced so they never collide.
+            const every = Math.max(1, Math.ceil(36 / (step * 12)));
+            const firstYear = Number(series[0].k.slice(0, 4));
+            series.forEach((s, i) => {
+                const yr = Number(s.k.slice(0, 4));
+                const isJan = s.k.endsWith('-01');
+                if (!(isJan || i === 0) || (yr - firstYear) % every) return;
+                if (i === 0 && !isJan && (13 - Number(s.k.slice(5))) * step < 36) return;
+                const t = svgEl('text', { x: i * step, y: H - 5 });
+                t.textContent = String(yr);
+                svg.append(t);
+            });
+
+            // Hit areas: the whole column, wider than the bar.
+            series.forEach((s, i) => {
+                const hit = svgEl('rect', { class: 'hit', x: i * step, y: 0, width: Math.max(step, 1), height: base });
+                hit.addEventListener('pointerenter', e => { if (bars[i]) bars[i].classList.add('hot'); showTip(e, `${monthName(s.k)} · ${plural(s.n, 'message')}`); });
+                hit.addEventListener('pointermove', e => moveTip(e));
+                hit.addEventListener('pointerleave', () => { if (bars[i]) bars[i].classList.remove('hot'); hideTip(); });
+                hit.addEventListener('click', () => {
+                    if (!s.n) return;
+                    hideTip();
+                    readDay(firstDayOfMonth(s.k));
+                });
+                svg.append(hit);
+            });
+            chart.append(svg);
+        }
+
+        function showTip(e, text) {
+            $('tip').textContent = text;
+            $('tip').hidden = false;
+            moveTip(e);
+        }
+        function moveTip(e) {
+            const tip = $('tip');
+            const w = tip.offsetWidth, h = tip.offsetHeight;
+            tip.style.left = `${Math.min(window.innerWidth - w - 8, Math.max(8, e.clientX - w / 2))}px`;
+            tip.style.top = `${Math.max(8, e.clientY - h - 12)}px`;
+        }
+        function hideTip() { $('tip').hidden = true; }
+
+        let redrawQueued = false;
+        window.addEventListener('resize', () => {
+            if (redrawQueued) return;
+            redrawQueued = true;
+            requestAnimationFrame(() => {
+                redrawQueued = false;
+                const chart = $('chat-stats').querySelector('.chart');
+                if (chart && !$('chat-stats').hidden) drawChart(chart);
+            });
+        });
+
+        // ---------- media ----------
+
+        let thumbsRunning = 0;
+        const thumbQueue = [];
+
+        const monthOf = ts => {
+            if (!ts) return 'unknown';
+            const d = new Date(ts);
+            return monthKey(d.getFullYear(), d.getMonth());
+        };
+
+        // The grid's thumbnails, so they can all be let go at once.
+        function thumbPool() {
+            const pool = { urls: [], gen: 0 };
+            pool.io = new IntersectionObserver(items => items.forEach(it => {
+                if (!it.isIntersecting) return;
+                pool.io.unobserve(it.target);
+                thumbQueue.push(it.target);
+                pumpThumbs();
+            }), { rootMargin: '400px 0px' });
+            pool.clear = () => {
+                pool.gen++;
+                pool.io.disconnect();
+                for (let i = thumbQueue.length - 1; i >= 0; i--) if (thumbQueue[i]._pool === pool) thumbQueue.splice(i, 1);
+                pool.urls.forEach(u => URL.revokeObjectURL(u));
+                pool.urls = [];
+            };
+            return pool;
+        }
+        const chatThumbs = thumbPool();
+
+        // A month-by-month grid of tiles; photos get small thumbnails as they scroll into view.
+        function renderGrid(grid, items, pool, label, open) {
+            pool.clear();
+            grid.textContent = '';
+            const perMonth = new Map();
+            items.forEach(m => { const k = monthOf(m.ts); perMonth.set(k, (perMonth.get(k) || 0) + 1); });
+            const frag = document.createDocumentFragment();
+            let month = null;
+            items.forEach((m, i) => {
+                const k = monthOf(m.ts);
+                if (k !== month) {
+                    month = k;
+                    const name = k === 'unknown' ? 'Date unknown' : keyDate(k + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                    frag.append(el('h2', 'month', `${name} · ${perMonth.get(k)}`));
+                }
+                const tile = el('button', 'tile' + (m.video ? ' video' : ''));
+                tile.type = 'button';
+                tile.setAttribute('aria-label', label(m));
+                tile.addEventListener('click', () => open(i));
+                if (!m.video) { tile._item = m; tile._pool = pool; pool.io.observe(tile); }
+                frag.append(tile);
+            });
+            grid.append(frag);
+        }
+
+        // Photos and videos in the chat, newest first.
+        function chatMedia(c) {
+            const out = [];
+            c.messages.forEach((m, i) => {
+                if (!m.file || !['photo', 'video', 'gif'].includes(m.file.kind)) return;
+                const e = findEntry(m.file.name);
+                if (e) out.push({ entry: e, ts: m.ts, caption: m.text, video: m.file.kind !== 'photo', sender: m.sender, msgIndex: i });
+            });
+            return out.reverse();
+        }
+
+        // push: add a history step, so the back gesture returns to the view before.
+        // restore: go back to where this view was scrolled to last time.
+        function setChatView(view, { push = false, restore = true } = {}) {
+            const c = current;
+            if (chatView) viewScroll[chatView] = window.scrollY;
+            if (push && view !== chatView) {
+                chatDepth++;
+                history.pushState({ view, depth: chatDepth }, '');
+            }
+            const firstVisit = viewScroll[view] === undefined;
+            chatView = view;
+            document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
+            toggleCalendar(false);
+            hideTip();
+            const messages = view === 'messages';
+            $('dateblock').hidden = !messages || !c.days.length;
+            $('messages').hidden = !messages;
+            $('chat-media').hidden = view !== 'media';
+            $('chat-search').hidden = view !== 'search';
+            $('chat-stats').hidden = view !== 'stats';
+            if (messages) {
+                if (c.days.length) updateLoadButtons();
+                if (restore && !firstVisit) window.scrollTo(0, viewScroll.messages);
+                return;
+            }
+            $('load-earlier').hidden = $('load-later').hidden = true;
+            if (view === 'media' && !c.mediaRendered) {
+                renderGrid($('chat-media'), c.media, chatThumbs, m => `${nameOf(m.sender)}, ${listDate(m.ts)}`, i => openMediaViewer(i, c.media));
+                c.mediaRendered = true;
+            }
+            if (view === 'stats' && !c.statsRendered) {
+                renderStats(c);
+                c.statsRendered = true;
+            }
+            window.scrollTo(0, restore && !firstVisit ? viewScroll[view] : 0);
+            if (view === 'search' && push && !$('chat-search-results').children.length) $('chat-search-q').focus();
+        }
+        document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setChatView(b.dataset.view, { push: true })));
+
+        // A few at a time, so a phone never holds many full-size photos at once.
+        function pumpThumbs() {
+            while (thumbsRunning < 3 && thumbQueue.length) {
+                const tile = thumbQueue.shift();
+                thumbsRunning++;
+                makeThumb(tile).finally(() => { thumbsRunning--; pumpThumbs(); });
+            }
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        async function makeThumb(tile) {
+            const pool = tile._pool, gen = pool.gen;
+            let full = null;
+            try {
+                full = URL.createObjectURL(await entryBlob(tile._item.entry));
+                if (gen !== pool.gen) return;
+                const img = await loadImage(full);
+                const scale = Math.min(1, 320 / Math.min(img.naturalWidth, img.naturalHeight));
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                const small = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+                c.width = c.height = 0;
+                if (gen !== pool.gen || !small) return;
+                const url = URL.createObjectURL(small);
+                pool.urls.push(url);
+                tile.style.backgroundImage = `url("${url}")`;
+                tile.classList.add('ready');
+            } catch (err) {
+                if (gen === pool.gen) tile.classList.add('broken');
+            } finally {
+                if (full) URL.revokeObjectURL(full);
+            }
+        }
+
+        // ---------- full-screen viewer ----------
+
+        let viewList = [];
+        let viewIndex = -1;   // place in viewList; -1 for a single photo from the chat
+        let viewUrl = null;   // object URL the viewer made itself
+        let viewGen = 0;
+        let viewerPushed = false;   // the viewer added a history step, so back closes it
+
+        // Called just before the viewer appears: one history step, so the back gesture closes it.
+        function viewerHistory() {
+            if (!$('viewer').hidden) return;
+            const st = history.state || {};
+            history.pushState({ ...st, depth: current ? ++chatDepth : st.depth, viewer: true }, '');
+            viewerPushed = true;
+        }
+
+        function releaseView() {
+            viewGen++;
+            const v = $('viewer-video');
+            v.pause();
+            v.removeAttribute('src');
+            v.load();
+            v.hidden = true;
+            $('viewer-img').removeAttribute('src');
+            $('viewer-img').hidden = false;
+            if (viewUrl) URL.revokeObjectURL(viewUrl);
+            viewUrl = null;
+        }
+
+        // A photo from the chat: already loaded, no caption or arrows.
+        function openViewer(src) {
+            releaseView();
+            viewIndex = -1;
+            $('viewer-info').hidden = true;
+            $('viewer-prev').hidden = $('viewer-next').hidden = true;
+            $('viewer-img').src = src;
+            viewerHistory();
+            $('viewer').hidden = false;
+        }
+
+        async function openMediaViewer(i, list = viewList) {
+            releaseView();
+            const gen = viewGen;
+            viewList = list;
+            viewIndex = i;
+            const m = list[i];
+            viewerHistory();
+            $('viewer').hidden = false;
+            $('viewer-info').hidden = false;
+            $('viewer-prev').hidden = $('viewer-next').hidden = false;
+            $('viewer-prev').disabled = i <= 0;
+            $('viewer-next').disabled = i >= list.length - 1;
+            const date = m.ts ? new Date(m.ts).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+            $('viewer-when').textContent = [nameOf(m.sender), date && `${date}, ${clock(m.ts)}`, `${i + 1} of ${list.length}`].filter(Boolean).join(' · ');
+            $('viewer-caption').textContent = m.caption;
+            $('viewer-goto').hidden = m.msgIndex === undefined;
+            try {
+                const url = URL.createObjectURL(await entryBlob(m.entry));
+                if (gen !== viewGen) { URL.revokeObjectURL(url); return; }
+                viewUrl = url;
+                if (m.video) {
+                    $('viewer-img').hidden = true;
+                    const v = $('viewer-video');
+                    v.hidden = false;
+                    v.src = url;
+                    v.play().catch(() => {});
+                } else {
+                    $('viewer-img').src = url;
+                }
+            } catch (err) {
+                if (gen === viewGen) $('viewer-caption').textContent = "Couldn't open this file.";
+            }
+        }
+
+        function stepViewer(d) {
+            const i = viewIndex + d;
+            if (viewIndex < 0 || i < 0 || i >= viewList.length) return;
+            openMediaViewer(i);
+        }
+
+        function closeViewer() {
+            releaseView();
+            viewIndex = -1;
+            $('viewer').hidden = true;
+            viewerPushed = false;
+        }
+
+        // The person closed it: step history back too, so back doesn't reopen it.
+        function requestCloseViewer() {
+            if (viewerPushed) history.back();
+            else closeViewer();
+        }
+
+        $('viewer-close').addEventListener('click', requestCloseViewer);
+
+        // From the media grid, jump to the message it came in.
+        $('viewer-goto').addEventListener('click', () => {
+            const m = viewList[viewIndex];
+            if (!m || m.msgIndex === undefined || !current) return;
+            closeViewer();
+            showMessage(m.msgIndex);
+        });
+        $('viewer-prev').addEventListener('click', () => stepViewer(-1));
+        $('viewer-next').addEventListener('click', () => stepViewer(1));
+        $('viewer').addEventListener('click', e => { if (e.target === $('viewer') || e.target === $('viewer-stage')) requestCloseViewer(); });
+
+        // Swipe left or right to move through media.
+        let swipe = null;
+        $('viewer-stage').addEventListener('touchstart', e => { if (e.touches.length === 1) swipe = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+        $('viewer-stage').addEventListener('touchend', e => {
+            if (!swipe) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+            swipe = null;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) stepViewer(dx < 0 ? 1 : -1);
+        });
+
+        document.addEventListener('keydown', e => {
+            if (!$('viewer').hidden) {
+                if (e.key === 'Escape') requestCloseViewer();
+                else if (e.key === 'ArrowLeft') stepViewer(-1);
+                else if (e.key === 'ArrowRight') stepViewer(1);
+            } else if (e.key === 'Escape' && !$('calendar').hidden) {
+                toggleCalendar(false);
+            }
+        });
+
+        // ---------- going back ----------
+
+        // Back steps through the views visited in the chat; a full-screen photo closes first.
+        window.addEventListener('popstate', e => {
+            const st = e.state || {};
+            if (!$('viewer').hidden) {
+                closeViewer();
+                if (current && st.depth !== undefined) chatDepth = st.depth;
+                return;
+            }
+            if (current && st.view && !$('chat').hidden) {
+                chatDepth = st.depth || 0;
+                setChatView(st.view);
+            }
+        });
+        history.replaceState({}, '');
+        openKept();
+    </script>
+</body>
+</html>
