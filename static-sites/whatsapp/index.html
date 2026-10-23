@@ -647,6 +647,11 @@
                 cdOffset = Number(z.getBigUint64(48, true));
             }
 
+            // Extra bytes before the zip move everything along; find the table where it really is.
+            let shift = 0;
+            const sig = new DataView(await file.slice(cdOffset, cdOffset + 4).arrayBuffer());
+            if (sig.byteLength < 4 || sig.getUint32(0, true) !== 0x02014b50) shift = (file.size - tailLen + eocd - cdSize) - cdOffset;
+            cdOffset += shift;
             const cd = new DataView(await file.slice(cdOffset, cdOffset + cdSize).arrayBuffer());
             const decoder = new TextDecoder();
             const found = new Map();
@@ -677,21 +682,142 @@
                         q += 4 + size;
                     }
                 }
-                if (!name.endsWith('/')) found.set(name, { file, name, method, csize, offset });
+                offset += shift;
+                const flags = cd.getUint16(p + 8, true);
+                if (!name.endsWith('/')) found.set(name, { file, name, method, flags, csize, usize, offset });
                 p += 46 + nameLen + extraLen + commentLen;
             }
+            // Where each file's data must end at the latest: the next file, or the table of contents.
+            const byOffset = [...found.values()].sort((a, b) => a.offset - b.offset);
+            byOffset.forEach((e, i) => { e.end = i + 1 < byOffset.length ? byOffset[i + 1].offset : cdOffset; });
             return found;
         }
 
         async function entryBlob(e) {
+            if (e.flags & 1) throw new Error('locked');
             const head = new DataView(await e.file.slice(e.offset, e.offset + 30).arrayBuffer());
+            if (head.getUint32(0, true) !== 0x04034b50) throw new Error('no file header where the zip says');
             const start = e.offset + 30 + head.getUint16(26, true) + head.getUint16(28, true);
-            const raw = e.file.slice(start, start + e.csize);
             const type = MIME[e.name.split('.').pop().toLowerCase()] || '';
-            if (e.method === 0) return new Blob([raw], { type });
-            if (e.method !== 8) throw new Error('unsupported');
-            const out = await new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
-            return new Blob([out], { type });
+            if (e.method === 0) return new Blob([e.file.slice(start, start + (e.csize || e.usize))], { type });
+            if (e.method !== 8) throw new Error(`packing method ${e.method}`);
+            try {
+                const out = await new Response(e.file.slice(start, start + e.csize).stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+                return new Blob([out], { type });
+            } catch (err) {
+                // Some phones write wrong sizes or extra bytes, which the browser's own reader refuses.
+                // Unpack it here instead, reading up to the next file and stopping at the data's own end.
+                try {
+                    const out = inflateRaw(new Uint8Array(await e.file.slice(start, Math.max(e.end || 0, start + e.csize)).arrayBuffer()));
+                    return new Blob([out], { type });
+                } catch (err2) {
+                    throw new Error(`${err.message || err.name}; backup: ${err2.message}`);
+                }
+            }
+        }
+
+        // A small unpacker for zip data (deflate, RFC 1951). It stops at the last block, so any
+        // bytes after it are ignored.
+        const LBASE = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+        const LEXTRA = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+        const DBASE = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
+        const DEXTRA = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+        const LENGTH_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+
+        function huffman(lengths) {
+            const counts = new Uint16Array(16), offs = new Uint16Array(16), syms = new Uint16Array(lengths.length);
+            for (const l of lengths) counts[l]++;
+            counts[0] = 0;
+            for (let i = 1, sum = 0; i < 16; i++) { offs[i] = sum; sum += counts[i]; }
+            lengths.forEach((l, sym) => { if (l) syms[offs[l]++] = sym; });
+            return { counts, syms };
+        }
+
+        function inflateRaw(src) {
+            let pos = 0, cur = 0, have = 0;
+            let out = new Uint8Array(Math.max(4096, src.length * 4)), len = 0;
+            const room = n => {
+                if (len + n <= out.length) return;
+                const bigger = new Uint8Array(Math.max(out.length * 2, len + n));
+                bigger.set(out.subarray(0, len));
+                out = bigger;
+            };
+            const bits = n => {
+                while (have < n) {
+                    if (pos >= src.length) throw new Error('data ends too soon');
+                    cur |= src[pos++] << have;
+                    have += 8;
+                }
+                const v = cur & ((1 << n) - 1);
+                cur >>>= n;
+                have -= n;
+                return v;
+            };
+            const decode = t => {
+                let code = 0, first = 0, index = 0;
+                for (let l = 1; l < 16; l++) {
+                    code |= bits(1);
+                    const count = t.counts[l];
+                    if (code < first + count) return t.syms[index + code - first];
+                    index += count;
+                    first = (first + count) << 1;
+                    code <<= 1;
+                }
+                throw new Error('bad code');
+            };
+            const fixedLit = huffman(Array.from({ length: 288 }, (_, i) => (i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8)));
+            const fixedDist = huffman(new Array(30).fill(5));
+
+            for (let last = 0; !last;) {
+                last = bits(1);
+                const type = bits(2);
+                if (type === 0) {
+                    cur = have = 0;   // a stored block starts on the next whole byte
+                    if (pos + 4 > src.length) throw new Error('data ends too soon');
+                    const n = src[pos] | (src[pos + 1] << 8);
+                    pos += 4;
+                    if (pos + n > src.length) throw new Error('data ends too soon');
+                    room(n);
+                    out.set(src.subarray(pos, pos + n), len);
+                    len += n;
+                    pos += n;
+                    continue;
+                }
+                let lit = fixedLit, dist = fixedDist;
+                if (type === 2) {
+                    const nlit = bits(5) + 257, ndist = bits(5) + 1, ncode = bits(4) + 4;
+                    const codeLengths = new Array(19).fill(0);
+                    for (let i = 0; i < ncode; i++) codeLengths[LENGTH_ORDER[i]] = bits(3);
+                    const lc = huffman(codeLengths);
+                    const lengths = [];
+                    while (lengths.length < nlit + ndist) {
+                        const sym = decode(lc);
+                        if (sym < 16) lengths.push(sym);
+                        else if (sym === 16) { const prev = lengths[lengths.length - 1] || 0; for (let r = 3 + bits(2); r > 0; r--) lengths.push(prev); }
+                        else if (sym === 17) { for (let r = 3 + bits(3); r > 0; r--) lengths.push(0); }
+                        else { for (let r = 11 + bits(7); r > 0; r--) lengths.push(0); }
+                    }
+                    lit = huffman(lengths.slice(0, nlit));
+                    dist = huffman(lengths.slice(nlit, nlit + ndist));
+                } else if (type !== 1) {
+                    throw new Error('bad block');
+                }
+                for (;;) {
+                    const sym = decode(lit);
+                    if (sym < 256) { room(1); out[len++] = sym; continue; }
+                    if (sym === 256) break;
+                    const i = sym - 257;
+                    if (i >= 29) throw new Error('bad length');
+                    const n = LBASE[i] + bits(LEXTRA[i]);
+                    const ds = decode(dist);
+                    if (ds >= 30) throw new Error('bad distance');
+                    const d = DBASE[ds] + bits(DEXTRA[ds]);
+                    if (d > len) throw new Error('bad distance');
+                    room(n);
+                    for (let k = 0; k < n; k++, len++) out[len] = out[len - d];
+                }
+            }
+            return out.subarray(0, len);
         }
 
         // The chat names its files without a folder; match them by file name.
@@ -980,15 +1106,22 @@
             if (!names.length) return { why: `This zip has no chat text (.txt) inside. It has ${plural(list.size, 'file')}${list.size ? ': ' + describeFiles(list) : ''}.` };
             const rank = n => (/(^|\/)_chat\.txt$/i.test(n) ? 0 : /(^|\/)WhatsApp Chat/i.test(n) ? 1 : 2);
             names.sort((a, b) => rank(a) - rank(b) || list.get(b).csize - list.get(a).csize);
-            let miss = null;
+            let miss = null, failure = null;
             for (const n of names) {
                 let text;
-                try { text = await (await entryBlob(list.get(n))).text(); } catch (err) { continue; }
+                try { text = await (await entryBlob(list.get(n))).text(); } catch (err) { failure = failure || readFailure(list.get(n), err); continue; }
                 const got = readChat(text, n);
                 if (got.parsed) return got;
                 if (!miss || (!miss.shape && got.shape)) miss = got;
             }
-            return miss || { why: "The chat text inside this zip couldn't be read. Please export the chat again." };
+            return miss || { why: failure };
+        }
+
+        // Why a file in the zip couldn't be read, with the details needed to fix it (no names or text).
+        function readFailure(e, err) {
+            if (e.flags & 1) return "This zip is locked with a password, so its chat can't be read. Please export the chat again.";
+            if (e.method !== 0 && e.method !== 8) return `This zip is packed in a way this page can't open yet (method ${e.method}). Please export the chat again, or open its .txt file instead.`;
+            return `The chat text inside this zip couldn't be read. Details: method ${e.method}, flags ${e.flags}, sizes ${e.csize} / ${e.usize} / ${e.end - e.offset}, ${(err && err.message) || 'unknown error'}.`;
         }
 
         // Returns true when the chat opened. fromKept: it came from the copy kept on this device.
