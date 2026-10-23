@@ -103,6 +103,17 @@
         .msg { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
         .msg.warn { color: #fbbf24; }
         .msg:empty { display: none; }
+        .shape {
+            margin: 0;
+            padding: 0.5rem 0.65rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
 
         /* ---------- start ---------- */
 
@@ -525,6 +536,7 @@
                 <p>WhatsApp puts only the newest messages of a very long chat in the export: about 10,000 with media, or 40,000 without.</p>
             </details>
             <p class="msg" id="msg" role="status"></p>
+            <pre class="shape" id="shape" hidden></pre>
         </section>
 
         <section class="pick" id="pick" hidden>
@@ -718,13 +730,18 @@
         // ---------- reading the chat text ----------
 
         // Each message starts a line with its date and time: "12/10/23, 9:41 pm - Name: text"
-        // on Android, "[12/10/23, 9:41:05 PM] Name: text" on iPhone. The date order and the
-        // clock style follow the phone's settings. Lines without a date belong to the message above.
+        // on Android, "[12/10/23, 9:41:05 PM] Name: text" on iPhone. The date order, the clock
+        // style and the am/pm words follow the phone's settings and language. Lines without
+        // a date belong to the message above.
+        const AMPM = '\\p{L}[\\p{L}\\p{M}.]*(?:\\s\\p{L}[\\p{L}\\p{M}.]*)?';   // "pm", "p. m.", "முற்பகல்", "오후"…
+        const DATE = '(\\d{1,4})[./-]\\s?(\\d{1,2})[./-]\\s?(\\d{1,4})\\.?';
+        const TIME = `(?:(${AMPM})\\s?)?(\\d{1,2})[:.](\\d{2})(?:[:.](\\d{2}))?(?:\\s?(${AMPM}))?`;
         const HEAD = {
-            android: /^(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s?([ap]\.?\s?m\.?)?\s[-–]\s([\s\S]*)$/i,
-            iphone: /^\[(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s?([ap]\.?\s?m\.?)?\]\s?([\s\S]*)$/i,
+            android: new RegExp(`^${DATE},?\\s+${TIME}\\s*[-–—]\\s([\\s\\S]*)$`, 'u'),
+            iphone: new RegExp(`^\\[${DATE},?\\s+${TIME}\\]\\s?([\\s\\S]*)$`, 'u'),
         };
-        const MARKS = /^[‎‏﻿]+/;   // invisible marks WhatsApp puts at some line starts
+        const MARKS = /^[\u200e\u200f\ufeff\u202a-\u202e\u2066-\u2069]+/;   // invisible marks WhatsApp puts at some line starts
+        const ISOLATES = /[\u202a-\u202e\u2066-\u2069]/g;   // invisible marks some phones put around names
 
         function splitLines(text) {
             const lines = text.split(/\r?\n/);
@@ -739,10 +756,38 @@
             const rows = [];
             for (const line of lines) {
                 const m = re.exec(line.replace(MARKS, ''));
-                if (m) rows.push({ p: [m[1], m[2], m[3]], h: Number(m[4]), mi: Number(m[5]), s: Number(m[6] || 0), ap: (m[7] || '').toLowerCase(), rest: m[8] });
+                if (m) rows.push({ p: [m[1], m[2], m[3]], h: Number(m[5]), mi: Number(m[6]), s: Number(m[7] || 0), word: (m[4] || m[8] || '').toLowerCase().replace(/\s+/g, ''), rest: m[9] });
                 else if (rows.length) rows[rows.length - 1].rest += '\n' + line;
             }
+            const words = clockWords(rows);
+            rows.forEach(r => { r.ap = words.get(r.word) || ''; });
             return rows;
+        }
+
+        // Which word means morning and which afternoon. English and a few others are known;
+        // for any other language, the word that comes first within a day is the morning one.
+        const AM_WORDS = new Set(['முற்பகல்', 'पूर्वाह्न', '上午', '오전', '午前']);
+        const PM_WORDS = new Set(['பிற்பகல்', 'अपराह्न', '下午', '오후', '午後']);
+        function clockWords(rows) {
+            const map = new Map();
+            const unknown = new Set();
+            rows.forEach(({ word: w }) => {
+                if (!w || map.has(w) || unknown.has(w)) return;
+                if (/^a\.?m\.?$/.test(w) || AM_WORDS.has(w)) map.set(w, 'am');
+                else if (/^p\.?m\.?$/.test(w) || PM_WORDS.has(w)) map.set(w, 'pm');
+                else unknown.add(w);
+            });
+            if (!unknown.size) return map;
+            const first = new Map();
+            for (let i = 1; i < rows.length; i++) {
+                const a = rows[i - 1], b = rows[i];
+                if (a.word !== b.word && unknown.has(a.word) && a.p.join() === b.p.join()) first.set(a.word, (first.get(a.word) || 0) + 1);
+            }
+            const known = [...map.values()];
+            [...unknown].sort((x, y) => (first.get(y) || 0) - (first.get(x) || 0)).forEach((w, i) => {
+                map.set(w, known.includes('am') ? 'pm' : known.includes('pm') ? 'am' : i === 0 ? 'am' : 'pm');
+            });
+            return map;
         }
 
         function timeOf(r, order) {
@@ -750,8 +795,8 @@
             let [y, mo, d] = order === 'ymd' ? [a, b, c] : order === 'dmy' ? [c, b, a] : [c, a, b];
             if (y < 100) y += 2000;
             let h = r.h;
-            if (r.ap.startsWith('p') && h < 12) h += 12;
-            if (r.ap.startsWith('a') && h === 12) h = 0;
+            if (r.ap === 'pm' && h < 12) h += 12;
+            if (r.ap === 'am' && h === 12) h = 0;
             return new Date(y, mo - 1, d, h, r.mi, r.s).getTime();
         }
 
@@ -771,8 +816,8 @@
             return /^en-US$/i.test(navigator.language || '') ? 'mdy' : 'dmy';
         }
 
-        const EDITED = /\s*‎?<This message was edited>\s*$/i;
-        const ATTACHED = /‎?<attached: ([^>]+)>/i;              // iPhone
+        const EDITED = /\s*\u200e?<This message was edited>\s*$/i;
+        const ATTACHED = /\u200e?<attached: ([^>]+)>/i;              // iPhone
         const FILE_ATTACHED = /^(.+?\.[a-z0-9]{2,5}) \(file attached\)\n?/i;   // Android
         const OMITTED = /^(?:<(media) omitted>|(?:[^\n]*•[^\n]*\s)?(image|video|audio|sticker|gif|document|contact card|video note) omitted|<?(view once)\b[^\n]*omitted>?)$/i;
         const DELETED = /^(this message was deleted|you deleted this message)\.?$/i;
@@ -797,18 +842,18 @@
             const m = { text: '' };
             let s = body;
             if (EDITED.test(s)) { m.edited = true; s = s.replace(EDITED, ''); }
-            const marked = /^‎/.test(s);   // iPhone marks its own notes this way
+            const marked = /^\u200e/.test(s);   // iPhone marks its own notes this way
             let a = ATTACHED.exec(s);
             if (a) {
                 m.file = fileInfo(a[1].trim());
                 s = s.replace(a[0], '');
                 // iPhone puts a document's name and page count before it; that isn't a caption.
-                if (m.file.kind === 'file') s = s.replace(/^[\s‎]*[^\n]*•[^\n]*/, '');
+                if (m.file.kind === 'file') s = s.replace(/^[\s\u200e]*[^\n]*•[^\n]*/, '');
             } else if ((a = FILE_ATTACHED.exec(s.replace(MARKS, '')))) {
                 m.file = fileInfo(a[1]);
                 s = s.replace(MARKS, '').slice(a[0].length);
             }
-            s = s.replace(/^[\s‎‏]+|[\s‎‏]+$/g, '');
+            s = s.replace(/^[\s\u200e\u200f]+|[\s\u200e\u200f]+$/g, '');
             if (!m.file) {
                 const o = OMITTED.exec(s);
                 if (o) { m.omitted = (o[1] || o[2] || o[3]).toLowerCase(); return m; }
@@ -829,7 +874,7 @@
             const seen = new Map();
             rows.forEach(r => {
                 const i = r.rest.indexOf(': ');
-                r.who = i > 0 && i <= 80 && !r.rest.slice(0, i).includes('\n') ? r.rest.slice(0, i) : '';
+                r.who = i > 0 && i <= 80 && !r.rest.slice(0, i).includes('\n') ? r.rest.slice(0, i).replace(ISOLATES, '').trim() : '';
                 r.body = r.who ? r.rest.slice(i + 2) : r.rest;
                 if (r.who) seen.set(r.who, (seen.get(r.who) || 0) + 1);
             });
@@ -852,7 +897,7 @@
 
         // "WhatsApp Chat with Arun.zip" (Android) or "WhatsApp Chat - Arun.zip" (iPhone).
         function titleFrom(name) {
-            const base = (name || '').replace(/^.*\//, '').replace(/\.(zip|txt)$/i, '').replace(/\s*\(\d+\)$/, '');
+            const base = (name || '').replace(ISOLATES, '').replace(/^.*\//, '').replace(/\.(zip|txt)$/i, '').replace(/\s*\(\d+\)$/, '');
             const m = base.match(/^WhatsApp Chat (?:with|-)\s*(.+)$/i);
             return m ? m[1].trim() : '';
         }
@@ -875,9 +920,11 @@
 
         // ---------- opening an export ----------
 
-        function setMsg(text, warn) {
+        function setMsg(text, warn, shape) {
             $('msg').textContent = text || '';
             $('msg').classList.toggle('warn', !!warn);
+            $('shape').textContent = shape || '';
+            $('shape').hidden = !shape;
         }
 
         function show(section) {
@@ -896,18 +943,52 @@
         const isZip = f => /\.zip$/i.test(f.name) || /zip/.test(f.type);
         const isText = f => /\.txt$/i.test(f.name) || f.type === 'text/plain';
 
+        const NOT_READ = "No WhatsApp chat found in this file. If it is a chat export, here is its first line with the letters hidden, so its layout can be added:";
+
+        // The first line with its letters hidden (and invisible marks shown as codes), so its
+        // layout can be described without sharing what it says.
+        function shapeOf(text) {
+            const line = text.split(/\r?\n/).find(l => l.trim()) || '';
+            return [...line.slice(0, 70)].map(ch => {
+                if (/\p{M}/u.test(ch)) return '';
+                if (/\p{L}/u.test(ch)) return /\p{Lu}/u.test(ch) ? 'A' : 'a';
+                if (/[\p{Cf}\u00a0\u202f]/u.test(ch)) return `<${ch.codePointAt(0).toString(16).toUpperCase()}>`;
+                return ch;
+            }).join('');
+        }
+
+        // What a zip holds, by kind: "12 jpg, 2 opus".
+        function describeFiles(list) {
+            const kinds = new Map();
+            for (const n of list.keys()) {
+                const ext = n.includes('.') ? n.split('.').pop().toLowerCase() : 'other';
+                kinds.set(ext, (kinds.get(ext) || 0) + 1);
+            }
+            return [...kinds].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, n]) => `${n} ${k}`).join(', ');
+        }
+
+        // Reads a chat's text. Returns { parsed, name } or, when it can't, { why, shape }.
+        function readChat(text, name) {
+            const parsed = parseChat(text);
+            if (parsed) return { parsed, name };
+            return text.trim() ? { why: NOT_READ, shape: shapeOf(text) } : { why: 'The chat text in this file is empty.' };
+        }
+
         // The chat's text file inside the zip: _chat.txt (iPhone) or "WhatsApp Chat with ….txt".
         async function chatInZip(list) {
             const names = [...list.keys()].filter(n => /\.txt$/i.test(n) && !/(^|\/)__MACOSX\//.test(n));
+            if (!names.length) return { why: `This zip has no chat text (.txt) inside. It has ${plural(list.size, 'file')}${list.size ? ': ' + describeFiles(list) : ''}.` };
             const rank = n => (/(^|\/)_chat\.txt$/i.test(n) ? 0 : /(^|\/)WhatsApp Chat/i.test(n) ? 1 : 2);
             names.sort((a, b) => rank(a) - rank(b) || list.get(b).csize - list.get(a).csize);
+            let miss = null;
             for (const n of names) {
-                try {
-                    const parsed = parseChat(await (await entryBlob(list.get(n))).text());
-                    if (parsed) return { parsed, name: n };
-                } catch (err) { /* try the next one */ }
+                let text;
+                try { text = await (await entryBlob(list.get(n))).text(); } catch (err) { continue; }
+                const got = readChat(text, n);
+                if (got.parsed) return got;
+                if (!miss || (!miss.shape && got.shape)) miss = got;
             }
-            return null;
+            return miss || { why: "The chat text inside this zip couldn't be read. Please export the chat again." };
         }
 
         // Returns true when the chat opened. fromKept: it came from the copy kept on this device.
@@ -926,14 +1007,11 @@
                 entries = list;
                 found = await chatInZip(list);
             } else {
-                try {
-                    const parsed = parseChat(await file.text());
-                    if (parsed) found = { parsed, name: file.name };
-                } catch (err) { /* said below */ }
+                try { found = readChat(await file.text(), file.name); } catch (err) { found = { why: "This file couldn't be read." }; }
             }
-            if (!found) {
+            if (!found.parsed) {
                 closeExport();
-                setMsg("No WhatsApp chat found in this file. Please pick the .zip or .txt from WhatsApp's Export chat.", true);
+                setMsg(found.why, true, found.shape);
                 return false;
             }
 
