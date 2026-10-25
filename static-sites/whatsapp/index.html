@@ -611,7 +611,7 @@
     <script>
         const $ = id => document.getElementById(id);
         const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', '3gp': 'video/3gpp', webm: 'video/webm', m4a: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', ogg: 'audio/ogg', opus: 'audio/ogg', amr: 'audio/amr', wav: 'audio/wav', pdf: 'application/pdf', vcf: 'text/vcard', txt: 'text/plain' };
+        const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', heif: 'image/heif', mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', '3gp': 'video/3gpp', webm: 'video/webm', m4a: 'audio/mp4', aac: 'audio/aac', mp3: 'audio/mpeg', ogg: 'audio/ogg', opus: 'audio/ogg', amr: 'audio/amr', wav: 'audio/wav', pdf: 'application/pdf', vcf: 'text/vcard', txt: 'text/plain' };
         const ME_KEY = 'whatsapp:me';   // the name picked as "you", remembered for the next chat
 
         let entries = new Map();   // path inside the zip -> entry
@@ -689,33 +689,47 @@
                 }
                 offset += shift;
                 const flags = cd.getUint16(p + 8, true);
-                if (!name.endsWith('/')) found.set(name, { file, name, method, flags, csize, usize, offset });
+                if (!name.endsWith('/')) found.set(name, { file, name, method, flags, csize, usize, offset, tableAt: offset });
                 p += 46 + nameLen + extraLen + commentLen;
             }
-            // Where each file's data must end at the latest: the next file, or the table of contents.
-            const byOffset = [...found.values()].sort((a, b) => a.offset - b.offset);
-            byOffset.forEach((e, i) => { e.end = i + 1 < byOffset.length ? byOffset[i + 1].offset : cdOffset; });
-            zipInfo.set(file, { table: cdOffset });
+            const info = { table: cdOffset, map: found };
+            zipInfo.set(file, info);
+            setEnds(info);
             return found;
         }
 
-        const zipInfo = new WeakMap();   // zip file -> { table: where its table of contents starts, fixed }
+        // zip file -> { table: where its table of contents starts, map: its files, scan, fixed }
+        const zipInfo = new WeakMap();
 
-        async function hasHeader(e) {
-            const b = new DataView(await e.file.slice(e.offset, e.offset + 4).arrayBuffer());
+        // Where each file's data must end at the latest: the next file, or the table of contents.
+        function setEnds(info) {
+            const list = [...info.map.values()].filter(e => !e.lost).sort((a, b) => a.offset - b.offset);
+            list.forEach((e, i) => { e.end = i + 1 < list.length ? list[i + 1].offset : info.table; });
+        }
+
+        async function hasSignature(file, at) {
+            const b = new DataView(await file.slice(at, at + 4).arrayBuffer());
             return b.byteLength === 4 && b.getUint32(0, true) === 0x04034b50;
         }
 
-        // Some phones write the wrong places for files in the zip's table of contents, or leave
-        // files out of it. Then the zip is searched once for every file's own header: listed files
-        // get their real place, and files the table doesn't list are added.
-        function fixPlaces(file, map) {
+        // Whether the file's own header (with its own name) is where we think it is.
+        async function headerAt(e) {
+            const b = new Uint8Array(await e.file.slice(e.offset, e.offset + 30 + 1100).arrayBuffer());
+            if (b.length < 30) return false;
+            const view = new DataView(b.buffer);
+            if (view.getUint32(0, true) !== 0x04034b50) return false;
+            const n = view.getUint16(26, true);
+            if (30 + n > b.length) return true;   // a very long name: the mark will do
+            return new TextDecoder().decode(b.subarray(30, 30 + n)).normalize('NFC') === e.name;
+        }
+
+        // Some phones write the wrong places in the zip's table of contents, or leave files out of
+        // it. Then the zip is searched once for every file header: name -> where headers with it are.
+        function scanHeaders(file) {
             const info = zipInfo.get(file);
-            if (!info.fixed) info.fixed = (async () => {
-                const want = new Map([...map.values()].filter(e => e.file === file).map(e => [e.name, e]));
-                const seen = new Set();
-                const found = [];
-                const CHUNK = 4 << 20, decoder = new TextDecoder('utf-8', { fatal: true });
+            if (!info.scan) info.scan = (async () => {
+                const headers = new Map();
+                const CHUNK = 4 << 20, decoder = new TextDecoder();
                 for (let at = 0; at < info.table; at += CHUNK) {
                     // Read a little past the chunk, so a header that starts near its end is whole.
                     const buf = new Uint8Array(await file.slice(at, Math.min(file.size, at + CHUNK + 30 + 0xffff)).arrayBuffer());
@@ -723,47 +737,89 @@
                     for (let i = buf.indexOf(0x50); i >= 0 && i < CHUNK; i = buf.indexOf(0x50, i + 1)) {
                         if (buf[i + 1] !== 0x4b || buf[i + 2] !== 3 || buf[i + 3] !== 4 || i + 30 > buf.length) continue;
                         const nameLen = view.getUint16(i + 26, true);
-                        if (!nameLen || nameLen > 1024 || i + 30 + nameLen > buf.length) continue;
-                        let name;
-                        try { name = decoder.decode(buf.subarray(i + 30, i + 30 + nameLen)).normalize('NFC'); } catch (err) { continue; }
-                        if (seen.has(name)) continue;
-                        let e = want.get(name);
-                        if (!e) {
-                            // Not in the table: add it, if its header looks like a real file's.
-                            const method = view.getUint16(i + 8, true), flags = view.getUint16(i + 6, true);
-                            if ((method !== 0 && method !== 8) || flags & 1 || !/^[^\x00-\x1f]+\.[a-z0-9]{2,5}$/i.test(name)) continue;
-                            const size = k => { const v = view.getUint32(i + k, true); return v === 0xffffffff ? 0 : v; };
-                            e = { file, name, method, flags, csize: size(18), usize: size(22), offset: 0 };
-                            map.set(name, e);
-                        }
-                        seen.add(name);
-                        e.offset = at + i;
-                        e.lost = false;
-                        found.push(e);
+                        if (!nameLen || i + 30 + nameLen > buf.length) continue;
+                        const name = decoder.decode(buf.subarray(i + 30, i + 30 + nameLen)).normalize('NFC');
+                        const size = k => { const v = view.getUint32(i + k, true); return v === 0xffffffff ? 0 : v; };
+                        const h = { at: at + i, method: view.getUint16(i + 8, true), flags: view.getUint16(i + 6, true), csize: size(18), usize: size(22) };
+                        if (headers.has(name)) headers.get(name).push(h);
+                        else headers.set(name, [h]);
                     }
                 }
-                want.forEach((e, name) => { if (!seen.has(name)) e.lost = true; });
-                found.sort((a, b) => a.offset - b.offset).forEach((e, i) => { e.end = i + 1 < found.length ? found[i + 1].offset : info.table; });
+                return headers;
+            })().catch(err => { info.scan = null; throw err; });
+            return info.scan;
+        }
+
+        // Gives every listed file its real place, from the search.
+        function fixPlaces(file) {
+            const info = zipInfo.get(file);
+            if (!info.fixed) info.fixed = (async () => {
+                const headers = await scanHeaders(file);
+                for (const e of info.map.values()) {
+                    const spots = headers.get(e.name) || [];
+                    if (spots.some(h => h.at === e.tableAt)) { e.offset = e.tableAt; continue; }
+                    if (spots.length) {
+                        // The one nearest to where the table says: a file stored inside another can hold a same-named one.
+                        e.offset = spots.reduce((a, b) => (Math.abs(b.at - e.tableAt) < Math.abs(a.at - e.tableAt) ? b : a)).at;
+                        continue;
+                    }
+                    // Its own header may spell the name differently: keep the table's place if a header is there.
+                    e.offset = e.tableAt;
+                    if (!(await hasSignature(file, e.tableAt))) e.lost = true;
+                }
+                setEnds(info);
                 byName = null;
-            })();
+            })().catch(err => { info.fixed = null; throw err; });
             return info.fixed;
         }
 
-        // Spot-checks a few files; if the table points to the wrong places, finds the right ones now.
-        async function checkPlaces(file, list) {
-            const byOffset = [...list.values()].sort((a, b) => a.offset - b.offset);
-            const sample = [byOffset[0], byOffset[byOffset.length >> 1], byOffset[byOffset.length - 1]].filter(Boolean);
+        // Adds files the chat mentions but the table leaves out. Only those: other headers in the
+        // zip can belong to files stored inside files (a Word document is a zip too).
+        async function addUnlisted(file, names) {
+            const info = zipInfo.get(file);
+            const headers = await scanHeaders(file);
+            await fixPlaces(file);
+            const byBase = new Map();
+            for (const [n, spots] of headers) {
+                const base = n.slice(n.lastIndexOf('/') + 1);
+                if (!byBase.has(base)) byBase.set(base, [n, spots[0]]);
+            }
+            let added = 0;
+            for (const name of names) {
+                const clean = name.normalize('NFC');
+                const hit = headers.has(clean) ? [clean, headers.get(clean)[0]] : byBase.get(clean.slice(clean.lastIndexOf('/') + 1));
+                if (!hit || (info.map.has(hit[0]) && !info.map.get(hit[0]).lost)) continue;
+                const [full, h] = hit;
+                if ((h.method !== 0 && h.method !== 8) || h.flags & 1) continue;
+                info.map.set(full, { file, name: full, method: h.method, flags: h.flags, csize: h.csize, usize: h.usize, offset: h.at, tableAt: h.at });
+                added++;
+            }
+            if (added) { setEnds(info); byName = null; }
+            return added;
+        }
+
+        // Spot-checks files spread through the zip; if the table points to the wrong places,
+        // finds the right ones now.
+        async function checkPlaces(file) {
+            const list = [...zipInfo.get(file).map.values()].sort((a, b) => a.offset - b.offset);
+            const step = Math.max(1, Math.floor(list.length / 8));
+            const sample = list.filter((e, i) => i % step === 0 || i === list.length - 1);
             for (const e of sample) {
-                if (await hasHeader(e)) continue;
+                if (await headerAt(e)) continue;
                 setMsg('Opening… finding the files inside this zip');
-                await fixPlaces(file, list);
+                await fixPlaces(file);
                 return;
             }
         }
 
         async function entryBlob(e) {
             if (e.flags & 1) throw new Error('locked');
-            if (!e.lost && !(await hasHeader(e))) await fixPlaces(e.file, entries);
+            if (!e.lost && !(await headerAt(e))) {
+                const info = zipInfo.get(e.file);
+                const late = !info.fixed;
+                await fixPlaces(e.file);
+                if (late && info.map === entries) refreshMedia();
+            }
             if (e.lost) throw new Error('not found in the zip');
             const head = new DataView(await e.file.slice(e.offset, e.offset + 30).arrayBuffer());
             if (head.byteLength < 30 || head.getUint32(0, true) !== 0x04034b50) throw new Error('no file header where the zip says');
@@ -771,35 +827,36 @@
             const type = MIME[e.name.split('.').pop().toLowerCase()] || '';
             if (e.method === 0) return new Blob([e.file.slice(start, await dataEnd(e, start, true))], { type });
             if (e.method !== 8) throw new Error(`packing method ${e.method}`);
-            const end = e.dataEnd || await dataEnd(e, start, false);
+            const last = Math.max(e.end || 0, start);
             const unpack = async to => new Blob([await new Response(e.file.slice(start, to).stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob()], { type });
+            const walk = async () => {
+                try { return await deflateEnd(e.file, start, last); } catch (err) { throw new Error(`couldn't find where its data ends: ${err.message}`); }
+            };
+            let end = e.dataEnd || await dataEnd(e, start, false);
+            let walked = !!e.dataEnd;
+            // No size and no record after the data: for a big file, find the exact end first,
+            // rather than unpack it all only to fail at whatever follows it.
+            if (!walked && !e.csize && end === last && last - start > WALK_FIRST) { end = await walk(); walked = true; }
             try {
-                return await unpack(end);
-            } catch (err) {
-                // Chrome says "Failed to fetch" for any data it refuses; carry on below.
-            }
-            // Some phones write wrong sizes or extra bytes, which the browser's own reader refuses.
-            const last = Math.max(e.end || 0, end);
-            if (last - start <= BACKUP_LIMIT) {
-                // Unpack it here instead, reading up to the next file and stopping at the data's own end.
-                try {
-                    return new Blob([inflateRaw(new Uint8Array(await e.file.slice(start, last).arrayBuffer()), e.usize)], { type });
-                } catch (err) {
-                    throw new Error(`the browser couldn't unpack it, nor the backup: ${err.message}`);
-                }
-            }
-            // Too big to hold in memory: find exactly where its data ends, then let the browser unpack that.
-            let exact;
-            try { exact = await deflateEnd(e.file, start, last); } catch (err) { throw new Error(`the browser couldn't unpack it, and walking its data failed: ${err.message}`); }
-            try {
-                const out = await unpack(exact);
-                e.dataEnd = exact;
+                const out = await unpack(end);
+                if (walked) e.dataEnd = end;
                 return out;
             } catch (err) {
-                throw new Error(`the browser couldn't unpack it, even to where its data ends (${exact - start} bytes)`);
+                // Chrome says "Failed to fetch" for any data it refuses.
+                if (walked) throw new Error(`the browser couldn't unpack it (${end - start} bytes)`);
+            }
+            // The recorded size or end was wrong (some phones write wrong sizes or extra bytes):
+            // find exactly where its data ends, then let the browser unpack just that.
+            end = await walk();
+            try {
+                const out = await unpack(end);
+                e.dataEnd = end;
+                return out;
+            } catch (err) {
+                throw new Error(`the browser couldn't unpack it, even to where its data ends (${end - start} bytes)`);
             }
         }
-        const BACKUP_LIMIT = 48 << 20;   // the backup unpacker holds the whole file in memory
+        const WALK_FIRST = 8 << 20;
 
         // Where a file's data ends. Some phones leave its size at zero; then it runs to the next
         // file, minus the small record (sizes and a checksum) some zips put after it.
@@ -842,14 +899,21 @@
         }
 
         // A blob any browser can show: HEIC becomes JPEG where needed; everything else is unchanged.
-        async function showable(blob, name) {
+        // wanted: whether the photo is still needed when its turn comes.
+        async function showable(blob, name, wanted = () => true) {
             if (!isHeic(name)) return blob;
             if (heicNative === null) {
                 try { (await createImageBitmap(blob)).close(); heicNative = true; } catch (err) { heicNative = false; }
             }
             if (heicNative) return blob;
             const HeicTo = await loadHeicLib();
-            const job = heicQueue.then(() => HeicTo({ blob, type: 'image/jpeg', quality: 0.85 }));
+            const job = heicQueue.then(() => {
+                if (!wanted()) throw new Error('no longer needed');
+                return HeicTo({ blob, type: 'image/jpeg', quality: 0.85 });
+            }).catch(err => {
+                // heic-to can fail with a plain string, or nothing at all.
+                throw err instanceof Error ? err : new Error(typeof err === 'string' && err ? err : "the HEIC photo couldn't be converted");
+            });
             heicQueue = job.catch(() => {});
             return job;
         }
@@ -857,11 +921,8 @@
         // The technical details of a file in the zip, for a message when it can't be shown.
         const fileDetails = e => `method ${e.method}, flags ${e.flags}, sizes ${e.csize} / ${e.usize} / ${e.end - e.offset}`;
 
-        // A small unpacker for zip data (deflate, RFC 1951). It stops at the last block, so any
-        // bytes after it are ignored.
-        const LBASE = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+        // Reading packed zip data's structure (deflate, RFC 1951).
         const LEXTRA = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
-        const DBASE = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
         const DEXTRA = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
         const LENGTH_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
 
@@ -974,105 +1035,19 @@
             return fixed;
         }
 
-        function inflateRaw(src, expected = 0) {
-            let pos = 0, cur = 0, have = 0;
-            let out = new Uint8Array(expected || Math.max(4096, Math.min(src.length * 4, src.length + (16 << 20)))), len = 0;
-            const room = n => {
-                if (len + n <= out.length) return;
-                const bigger = new Uint8Array(Math.max(out.length < (32 << 20) ? out.length * 2 : Math.ceil(out.length * 1.5), len + n));
-                bigger.set(out.subarray(0, len));
-                out = bigger;
-            };
-            const bits = n => {
-                while (have < n) {
-                    if (pos >= src.length) throw new Error('data ends too soon');
-                    cur |= src[pos++] << have;
-                    have += 8;
-                }
-                const v = cur & ((1 << n) - 1);
-                cur >>>= n;
-                have -= n;
-                return v;
-            };
-            const decode = t => {
-                let code = 0, first = 0, index = 0;
-                for (let l = 1; l < 16; l++) {
-                    code |= bits(1);
-                    const count = t.counts[l];
-                    if (code < first + count) return t.syms[index + code - first];
-                    index += count;
-                    first = (first + count) << 1;
-                    code <<= 1;
-                }
-                throw new Error('bad code');
-            };
-            const { lit: fixedLit, dist: fixedDist } = fixedCodes();
-
-            for (let last = 0; !last;) {
-                last = bits(1);
-                const type = bits(2);
-                if (type === 0) {
-                    cur = have = 0;   // a stored block starts on the next whole byte
-                    if (pos + 4 > src.length) throw new Error('data ends too soon');
-                    const n = src[pos] | (src[pos + 1] << 8);
-                    pos += 4;
-                    if (pos + n > src.length) throw new Error('data ends too soon');
-                    room(n);
-                    out.set(src.subarray(pos, pos + n), len);
-                    len += n;
-                    pos += n;
-                    continue;
-                }
-                let lit = fixedLit, dist = fixedDist;
-                if (type === 2) {
-                    const nlit = bits(5) + 257, ndist = bits(5) + 1, ncode = bits(4) + 4;
-                    const codeLengths = new Array(19).fill(0);
-                    for (let i = 0; i < ncode; i++) codeLengths[LENGTH_ORDER[i]] = bits(3);
-                    const lc = huffman(codeLengths);
-                    const lengths = [];
-                    while (lengths.length < nlit + ndist) {
-                        const sym = decode(lc);
-                        if (sym < 16) lengths.push(sym);
-                        else if (sym === 16) { const prev = lengths[lengths.length - 1] || 0; for (let r = 3 + bits(2); r > 0; r--) lengths.push(prev); }
-                        else if (sym === 17) { for (let r = 3 + bits(3); r > 0; r--) lengths.push(0); }
-                        else { for (let r = 11 + bits(7); r > 0; r--) lengths.push(0); }
-                    }
-                    lit = huffman(lengths.slice(0, nlit));
-                    dist = huffman(lengths.slice(nlit, nlit + ndist));
-                } else if (type !== 1) {
-                    throw new Error('bad block');
-                }
-                for (;;) {
-                    const sym = decode(lit);
-                    if (sym < 256) { room(1); out[len++] = sym; continue; }
-                    if (sym === 256) break;
-                    const i = sym - 257;
-                    if (i >= 29) throw new Error('bad length');
-                    const n = LBASE[i] + bits(LEXTRA[i]);
-                    const ds = decode(dist);
-                    if (ds >= 30) throw new Error('bad distance');
-                    const d = DBASE[ds] + bits(DEXTRA[ds]);
-                    if (d > len) throw new Error('bad distance');
-                    room(n);
-                    for (let k = 0; k < n; k++, len++) out[len] = out[len - d];
-                }
-            }
-            return out.subarray(0, len);
-        }
-
         // The chat names its files without a folder; match them by file name.
         function findEntry(name) {
             if (!name) return null;
             const clean = name.normalize('NFC');
-            if (entries.has(clean)) return entries.get(clean);
             if (!byName) {
                 byName = new Map();
                 for (const [n, e] of entries) {
                     const base = n.slice(n.lastIndexOf('/') + 1);
-                    if (!byName.has(base)) byName.set(base, e);
+                    if (!e.lost && !byName.has(base)) byName.set(base, e);
                 }
             }
-            return byName.get(clean.slice(clean.lastIndexOf('/') + 1)) || null;
+            const e = entries.get(clean) || byName.get(clean.slice(clean.lastIndexOf('/') + 1));
+            return e && !e.lost ? e : null;
         }
 
         // ---------- dates ----------
@@ -1195,7 +1170,7 @@
             const ext = lower.includes('.') ? lower.split('.').pop() : '';
             let kind = 'file';
             if (/^stk-|-sticker-/.test(lower) || ext === 'webp') kind = 'sticker';
-            else if (['jpg', 'jpeg', 'png', 'gif', 'heic'].includes(ext)) kind = 'photo';
+            else if (['jpg', 'jpeg', 'png', 'gif', 'heic', 'heif'].includes(ext)) kind = 'photo';
             else if (['mp4', 'mov', '3gp', 'm4v', 'webm', 'mkv'].includes(ext)) kind = /-gif-/.test(lower) ? 'gif' : 'video';
             else if (['opus', 'ogg', 'm4a', 'aac', 'mp3', 'amr', 'wav'].includes(ext)) kind = /^ptt-|-audio-/.test(lower) || ext === 'opus' ? 'voice' : 'audio';
             else if (ext === 'vcf') kind = 'contact';
@@ -1361,28 +1336,36 @@
         function readFailure(e, err) {
             if (e.flags & 1) return "This zip is locked with a password, so its chat can't be read. Please export the chat again.";
             if (e.method !== 0 && e.method !== 8) return `This zip is packed in a way this page can't open yet (method ${e.method}). Please export the chat again, or open its .txt file instead.`;
-            return `The chat text inside this zip couldn't be read. Details: method ${e.method}, flags ${e.flags}, sizes ${e.csize} / ${e.usize} / ${e.end - e.offset}, ${(err && err.message) || 'unknown error'}.`;
+            return `The chat text inside this zip couldn't be read. Details: ${fileDetails(e)}, ${(err && err.message) || 'unknown error'}.`;
         }
 
-        // Returns true when the chat opened. fromKept: it came from the copy kept on this device.
+        // Returns true when the chat opened, false when it couldn't, and null when another file
+        // was opened (or it was closed) meanwhile. fromKept: it came from the copy kept on this device.
         async function openExport(fileList, fromKept = false) {
             const files = [...fileList];
             const file = files.find(isZip) || files.find(isText);
             if (!file) { setMsg("Please pick the .zip or .txt file from WhatsApp's Export chat.", true); return false; }
             if (isZip(file) && typeof DecompressionStream === 'undefined') { setMsg('This browser is too old to open zip files. Please update it and try again.', true); return false; }
             closeExport();
+            const gen = openGen;   // another file opened meanwhile makes this one stop
             setMsg('Opening…');
 
             let found = null;
             if (isZip(file)) {
                 let list;
-                try { list = await readZip(file); } catch (err) { setMsg(`"${file.name}" doesn't look like a zip file.`, true); return false; }
+                try { list = await readZip(file); } catch (err) { if (gen !== openGen) return null; setMsg(`"${file.name}" doesn't look like a zip file.`, true); return false; }
+                if (gen !== openGen) return null;
                 entries = list;
-                await checkPlaces(file, list);
-                found = await chatInZip(list);
+                try {
+                    await checkPlaces(file);
+                    found = await chatInZip(list);
+                } catch (err) {
+                    found = { why: `This zip couldn't be read (${err.message || err}). Please open it again.` };
+                }
             } else {
                 try { found = readChat(await file.text(), file.name); } catch (err) { found = { why: "This file couldn't be read." }; }
             }
+            if (gen !== openGen) return null;
             if (!found.parsed) {
                 closeExport();
                 setMsg(found.why, true, found.shape);
@@ -1392,10 +1375,11 @@
             const c = found.parsed;
             // A zip that leaves sizes out may leave files out of its table too.
             if (isZip(file) && [...entries.values()].some(e => !e.csize && !e.usize)) {
-                const missing = c.messages.filter(m => m.file && !findEntry(m.file.name)).length;
-                if (missing) {
-                    setMsg(`Opening… looking for ${plural(missing, 'file')} the chat mentions`);
-                    await fixPlaces(file, entries);
+                const missing = [...new Set(c.messages.filter(m => m.file && !findEntry(m.file.name)).map(m => m.file.name))];
+                if (missing.length) {
+                    setMsg(`Opening… looking for ${plural(missing.length, 'file')} the chat mentions`);
+                    try { await addUnlisted(file, missing); } catch (err) { /* those stay "not in this export" */ }
+                    if (gen !== openGen) return null;
                 }
             }
             c.fileTitle = titleFrom(file.name) || titleFrom(found.name);
@@ -1411,7 +1395,10 @@
             return true;
         }
 
+        let openGen = 0;   // bumps whenever a file is closed or another is opened
+
         function closeExport() {
+            openGen++;
             chatGen++;
             closeViewer();
             urls.forEach(u => URL.revokeObjectURL(u));
@@ -1531,9 +1518,10 @@
             if (!rec || !rec.files || !rec.files.length) return;
             setMsg('Opening the chat kept on this device…');
             const files = rec.files.map(f => new File([f.blob], f.name, { type: f.blob.type || (/\.zip$/i.test(f.name) ? 'application/zip' : 'text/plain') }));
-            if (await openExport(files, true)) {
+            const opened = await openExport(files, true);
+            if (opened) {
                 keepNote('Opened from this device. Close forgets it.');
-            } else {
+            } else if (opened === false) {
                 forgetKept();
                 setMsg("The copy kept on this device couldn't be opened. Please open the file again.", true);
             }
@@ -1636,13 +1624,28 @@
             $('chat-search-status').textContent = '';
             $('chat-search-results').textContent = '';
             $('chat-search-more').hidden = true;
+            setMediaButton(c);
+            setChatView('messages', { restore: false });
+            if (c.days.length) jumpToDay(c.days.length - 1, true);
+            else { $('load-earlier').hidden = $('load-later').hidden = true; }
+        }
+
+        function setMediaButton(c) {
             $('chat-media-btn').textContent = 'Media';
             const mc = c.media.length;
             $('chat-media-btn').append(' ', el('span', 'count', mc < 10000 ? mc.toLocaleString() : `${Math.round(mc / 1000)}k`));
             $('chat-media-btn').disabled = !mc && !c.mediaMissing;
-            setChatView('messages', { restore: false });
-            if (c.days.length) jumpToDay(c.days.length - 1, true);
-            else { $('load-earlier').hidden = $('load-later').hidden = true; }
+        }
+
+        // After a late search of the zip found files or moved them, Media shows them. (Messages
+        // already on screen keep what they show until the day is shown again.)
+        function refreshMedia() {
+            const c = current;
+            if (!c || !c.days) return;
+            c.media = chatMedia(c);
+            c.mediaRendered = false;
+            setMediaButton(c);
+            if (chatView === 'media') setChatView('media', { restore: false });
         }
 
         function renderDay(d) {
@@ -1771,7 +1774,7 @@
         async function loadPhoto(img) {
             const gen = chatGen;
             try {
-                const blob = await showable(await entryBlob(img._entry), img._entry.name);
+                const blob = await showable(await entryBlob(img._entry), img._entry.name, () => gen === chatGen);
                 const url = URL.createObjectURL(blob);
                 if (gen !== chatGen) { URL.revokeObjectURL(url); return; }
                 urls.push(url);
@@ -2341,7 +2344,7 @@
         function mediaNote(c) {
             const left = c.mediaMissing;
             if (!left) return '';
-            if (!c.withMedia) return `This export has no photos or videos (it was made "Without media"), so ${plural(left, 'photo or video', 'photos and videos')} can't be shown.`;
+            if (!c.withMedia) return `This is only the chat's text, so ${plural(left, 'photo or video', 'photos and videos')} can't be shown. Open the export's .zip to see them.`;
             const from = listDate(c.missingFrom), to = listDate(c.missingTo);
             const when = from === to ? `sent on ${from}` : `sent between ${from} and ${to}`;
             return `${c.media.length ? `These are the ${plural(c.media.length, 'photo or video', 'photos and videos')} in the export. ` : ''}WhatsApp left out ${left.toLocaleString()} more, ${when}. It leaves out media that isn't saved on the phone (such as photos never opened), and older media in long chats.`;
@@ -2410,7 +2413,7 @@
             const pool = tile._pool, gen = pool.gen;
             let full = null;
             try {
-                full = URL.createObjectURL(await showable(await entryBlob(tile._item.entry), tile._item.entry.name));
+                full = URL.createObjectURL(await showable(await entryBlob(tile._item.entry), tile._item.entry.name, () => gen === pool.gen));
                 if (gen !== pool.gen) return;
                 const img = await loadImage(full);
                 const scale = Math.min(1, 320 / Math.min(img.naturalWidth, img.naturalHeight));
@@ -2457,6 +2460,7 @@
             v.hidden = true;
             $('viewer-img').removeAttribute('src');
             $('viewer-img').hidden = false;
+            $('viewer-img').onerror = v.onerror = null;
             if (viewUrl) URL.revokeObjectURL(viewUrl);
             viewUrl = null;
         }
@@ -2489,11 +2493,12 @@
             $('viewer-caption').textContent = m.caption;
             $('viewer-goto').hidden = m.msgIndex === undefined;
             try {
-                const blob = m.video ? await entryBlob(m.entry) : await showable(await entryBlob(m.entry), m.entry.name);
+                const blob = m.video ? await entryBlob(m.entry) : await showable(await entryBlob(m.entry), m.entry.name, () => gen === viewGen);
                 const url = URL.createObjectURL(blob);
                 if (gen !== viewGen) { URL.revokeObjectURL(url); return; }
                 viewUrl = url;
-                const broken = () => { if (gen === viewGen) $('viewer-caption').textContent = `Couldn't show this file. Details: ${fileDetails(m.entry)}, ${blob.size} bytes read`; };
+                const size = blob.size;
+                const broken = () => { if (gen === viewGen) $('viewer-caption').textContent = `Couldn't show this file. Details: ${fileDetails(m.entry)}, ${size} bytes read`; };
                 $('viewer-img').onerror = $('viewer-video').onerror = broken;
                 if (m.video) {
                     $('viewer-img').hidden = true;
