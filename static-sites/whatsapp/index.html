@@ -354,7 +354,7 @@
         #dateblock { margin-top: 0.5rem; }
         .chat-tabs button[aria-pressed="true"] { background: rgba(16, 185, 129, 0.15); color: var(--accent-hover); }
         #chat-media { margin-top: 0.25rem; }
-        .media-note { margin: 0.75rem 0 0; }
+        .media-note { margin: 0.75rem 0 0; white-space: pre-line; }
         .msg-row.flash .bubble { outline: 2px solid var(--accent); outline-offset: 2px; }
         .viewer-info .goto { margin-top: 0.6rem; }
 
@@ -692,7 +692,7 @@
                 if (!name.endsWith('/')) found.set(name, { file, name, method, flags, csize, usize, offset, tableAt: offset });
                 p += 46 + nameLen + extraLen + commentLen;
             }
-            const info = { table: cdOffset, map: found };
+            const info = { table: cdOffset, map: found, listed: found.size, added: 0 };
             zipInfo.set(file, info);
             setEnds(info);
             return found;
@@ -779,15 +779,17 @@
             const info = zipInfo.get(file);
             const headers = await scanHeaders(file);
             await fixPlaces(file);
-            const byBase = new Map();
+            const byBase = new Map(), byLower = new Map();
             for (const [n, spots] of headers) {
                 const base = n.slice(n.lastIndexOf('/') + 1);
                 if (!byBase.has(base)) byBase.set(base, [n, spots[0]]);
+                if (!byLower.has(base.toLowerCase())) byLower.set(base.toLowerCase(), [n, spots[0]]);
             }
             let added = 0;
             for (const name of names) {
                 const clean = name.normalize('NFC');
-                const hit = headers.has(clean) ? [clean, headers.get(clean)[0]] : byBase.get(clean.slice(clean.lastIndexOf('/') + 1));
+                const base = clean.slice(clean.lastIndexOf('/') + 1);
+                const hit = headers.has(clean) ? [clean, headers.get(clean)[0]] : byBase.get(base) || byLower.get(base.toLowerCase());
                 if (!hit || (info.map.has(hit[0]) && !info.map.get(hit[0]).lost)) continue;
                 const [full, h] = hit;
                 if ((h.method !== 0 && h.method !== 8) || h.flags & 1) continue;
@@ -795,6 +797,7 @@
                 added++;
             }
             if (added) { setEnds(info); byName = null; }
+            info.added += added;
             return added;
         }
 
@@ -818,7 +821,11 @@
                 const info = zipInfo.get(e.file);
                 const late = !info.fixed;
                 await fixPlaces(e.file);
-                if (late && info.map === entries) refreshMedia();
+                if (late && info.map === entries && current) {
+                    try { await addUnlisted(e.file, mentionedMissing(current)); } catch (err) { /* they stay missing */ }
+                    current.zipCheck = await zipCheck(e.file, current);
+                    refreshMedia();
+                }
             }
             if (e.lost) throw new Error('not found in the zip');
             const head = new DataView(await e.file.slice(e.offset, e.offset + 30).arrayBuffer());
@@ -1046,7 +1053,8 @@
                     if (!e.lost && !byName.has(base)) byName.set(base, e);
                 }
             }
-            const e = entries.get(clean) || byName.get(clean.slice(clean.lastIndexOf('/') + 1));
+            const exact = entries.get(clean);
+            const e = exact && !exact.lost ? exact : byName.get(clean.slice(clean.lastIndexOf('/') + 1));
             return e && !e.lost ? e : null;
         }
 
@@ -1339,6 +1347,27 @@
             return `The chat text inside this zip couldn't be read. Details: ${fileDetails(e)}, ${(err && err.message) || 'unknown error'}.`;
         }
 
+        // Files the chat mentions that aren't found in the zip (yet).
+        const mentionedMissing = c => [...new Set(c.messages.filter(m => m.file && !findEntry(m.file.name)).map(m => m.file.name))];
+
+        // Counts for the Media note, to tell "WhatsApp left them out" from "the page missed them":
+        // no names, just how many files the zip lists, how many a search found, and how many of
+        // the left-out photos and videos are in the zip after all.
+        async function zipCheck(file, c) {
+            const info = zipInfo.get(file);
+            if (!info) return '';
+            const left = [...new Set(c.messages.filter(m => m.file && ['photo', 'video', 'gif'].includes(m.file.kind) && !findEntry(m.file.name)).map(m => m.file.name))];
+            if (!left.length) return '';
+            const lost = [...info.map.values()].filter(e => e.lost).length;
+            let line = `Zip check: ${plural(info.listed, 'file')} listed`;
+            if (!info.scan) return `${line}. Left out: ${left.length}; in the zip's list: 0.`;
+            const headers = await info.scan;
+            const bases = new Set([...headers.keys()].map(n => n.slice(n.lastIndexOf('/') + 1).toLowerCase()));
+            const inZip = left.filter(n => bases.has(n.slice(n.lastIndexOf('/') + 1).toLowerCase())).length;
+            line += `${lost ? ` (${lost} not where listed)` : ''}, ${info.added} found by searching ${plural(headers.size, 'file header')}`;
+            return `${line}. Left out: ${left.length}; found in the zip after all: ${inZip}.`;
+        }
+
         // Returns true when the chat opened, false when it couldn't, and null when another file
         // was opened (or it was closed) meanwhile. fromKept: it came from the copy kept on this device.
         async function openExport(fileList, fromKept = false) {
@@ -1374,14 +1403,16 @@
 
             const c = found.parsed;
             // A zip that leaves sizes out may leave files out of its table too.
-            if (isZip(file) && [...entries.values()].some(e => !e.csize && !e.usize)) {
-                const missing = [...new Set(c.messages.filter(m => m.file && !findEntry(m.file.name)).map(m => m.file.name))];
-                if (missing.length) {
-                    setMsg(`Opening… looking for ${plural(missing.length, 'file')} the chat mentions`);
-                    try { await addUnlisted(file, missing); } catch (err) { /* those stay "not in this export" */ }
-                    if (gen !== openGen) return null;
-                }
+            if (isZip(file) && [...entries.values()].some(e => !e.csize && !e.usize) && mentionedMissing(c).length) {
+                setMsg('Opening… looking for the files the chat mentions');
+                try {
+                    await fixPlaces(file);   // fixing places can show more files missing, so ask after it
+                    await addUnlisted(file, mentionedMissing(c));
+                } catch (err) { /* those stay "not in this export" */ }
+                if (gen !== openGen) return null;
             }
+            if (isZip(file)) c.zipCheck = await zipCheck(file, c);
+            if (gen !== openGen) return null;
             c.fileTitle = titleFrom(file.name) || titleFrom(found.name);
             c.withMedia = isZip(file);
             setMsg('');
@@ -2347,7 +2378,8 @@
             if (!c.withMedia) return `This is only the chat's text, so ${plural(left, 'photo or video', 'photos and videos')} can't be shown. Open the export's .zip to see them.`;
             const from = listDate(c.missingFrom), to = listDate(c.missingTo);
             const when = from === to ? `sent on ${from}` : `sent between ${from} and ${to}`;
-            return `${c.media.length ? `These are the ${plural(c.media.length, 'photo or video', 'photos and videos')} in the export. ` : ''}WhatsApp left out ${left.toLocaleString()} more, ${when}. It leaves out media that isn't saved on the phone (such as photos never opened), and older media in long chats.`;
+            const note = `${c.media.length ? `These are the ${plural(c.media.length, 'photo or video', 'photos and videos')} in the export. ` : ''}WhatsApp left out ${left.toLocaleString()} more, ${when}. It leaves out media that isn't saved on the phone (such as photos never opened), and older media in long chats.`;
+            return c.zipCheck ? `${note}\n${c.zipCheck}` : note;
         }
 
         // push: add a history step, so the back gesture returns to the view before.
