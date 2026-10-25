@@ -636,6 +636,7 @@
             let count = tail.getUint16(eocd + 10, true);
             let cdSize = tail.getUint32(eocd + 12, true);
             let cdOffset = tail.getUint32(eocd + 16, true);
+            let tableEnd = file.size - tailLen + eocd;   // the table runs up to the end record
 
             // Zips over 4 GB use the ZIP64 record instead.
             if (count === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) {
@@ -643,6 +644,7 @@
                 if (loc < 0 || tail.getUint32(loc, true) !== 0x07064b50) throw new Error('bad zip64');
                 const at = Number(tail.getBigUint64(loc + 8, true));
                 const z = new DataView(await file.slice(at, at + 56).arrayBuffer());
+                tableEnd = at;
                 if (z.getUint32(0, true) !== 0x06064b50) throw new Error('bad zip64');
                 count = Number(z.getBigUint64(32, true));
                 cdSize = Number(z.getBigUint64(40, true));
@@ -654,11 +656,12 @@
             const sig = new DataView(await file.slice(cdOffset, cdOffset + 4).arrayBuffer());
             if (sig.byteLength < 4 || sig.getUint32(0, true) !== 0x02014b50) shift = (file.size - tailLen + eocd - cdSize) - cdOffset;
             cdOffset += shift;
-            const cd = new DataView(await file.slice(cdOffset, cdOffset + cdSize).arrayBuffer());
+            // Read all of it, even past the size it states: some phones count too few files.
+            const cd = new DataView(await file.slice(cdOffset, Math.max(cdOffset + cdSize, tableEnd)).arrayBuffer());
             const decoder = new TextDecoder();
             const found = new Map();
             let p = 0;
-            for (let i = 0; i < count && p + 46 <= cd.byteLength; i++) {
+            while (p + 46 <= cd.byteLength) {
                 if (cd.getUint32(p, true) !== 0x02014b50) break;
                 const method = cd.getUint16(p + 10, true);
                 let csize = cd.getUint32(p + 20, true);
@@ -703,30 +706,45 @@
             return b.byteLength === 4 && b.getUint32(0, true) === 0x04034b50;
         }
 
-        // Some phones write the wrong places for files in the zip's table of contents. Then the
-        // zip is searched once for each file's own header, and those places are used instead.
-        function fixPlaces(file, list) {
+        // Some phones write the wrong places for files in the zip's table of contents, or leave
+        // files out of it. Then the zip is searched once for every file's own header: listed files
+        // get their real place, and files the table doesn't list are added.
+        function fixPlaces(file, map) {
             const info = zipInfo.get(file);
             if (!info.fixed) info.fixed = (async () => {
-                const want = new Map(list.filter(e => e.file === file).map(e => [e.name, e]));
+                const want = new Map([...map.values()].filter(e => e.file === file).map(e => [e.name, e]));
+                const seen = new Set();
                 const found = [];
-                const CHUNK = 4 << 20, decoder = new TextDecoder();
-                for (let at = 0; at < info.table && want.size; at += CHUNK) {
+                const CHUNK = 4 << 20, decoder = new TextDecoder('utf-8', { fatal: true });
+                for (let at = 0; at < info.table; at += CHUNK) {
                     // Read a little past the chunk, so a header that starts near its end is whole.
                     const buf = new Uint8Array(await file.slice(at, Math.min(file.size, at + CHUNK + 30 + 0xffff)).arrayBuffer());
+                    const view = new DataView(buf.buffer);
                     for (let i = buf.indexOf(0x50); i >= 0 && i < CHUNK; i = buf.indexOf(0x50, i + 1)) {
                         if (buf[i + 1] !== 0x4b || buf[i + 2] !== 3 || buf[i + 3] !== 4 || i + 30 > buf.length) continue;
-                        const nameLen = buf[i + 26] | (buf[i + 27] << 8);
-                        if (i + 30 + nameLen > buf.length) continue;
-                        const e = want.get(decoder.decode(buf.subarray(i + 30, i + 30 + nameLen)).normalize('NFC'));
-                        if (!e) continue;
+                        const nameLen = view.getUint16(i + 26, true);
+                        if (!nameLen || nameLen > 1024 || i + 30 + nameLen > buf.length) continue;
+                        let name;
+                        try { name = decoder.decode(buf.subarray(i + 30, i + 30 + nameLen)).normalize('NFC'); } catch (err) { continue; }
+                        if (seen.has(name)) continue;
+                        let e = want.get(name);
+                        if (!e) {
+                            // Not in the table: add it, if its header looks like a real file's.
+                            const method = view.getUint16(i + 8, true), flags = view.getUint16(i + 6, true);
+                            if ((method !== 0 && method !== 8) || flags & 1 || !/^[^\x00-\x1f]+\.[a-z0-9]{2,5}$/i.test(name)) continue;
+                            const size = k => { const v = view.getUint32(i + k, true); return v === 0xffffffff ? 0 : v; };
+                            e = { file, name, method, flags, csize: size(18), usize: size(22), offset: 0 };
+                            map.set(name, e);
+                        }
+                        seen.add(name);
                         e.offset = at + i;
-                        want.delete(e.name);
+                        e.lost = false;
                         found.push(e);
                     }
                 }
-                want.forEach(e => { e.lost = true; });
+                want.forEach((e, name) => { if (!seen.has(name)) e.lost = true; });
                 found.sort((a, b) => a.offset - b.offset).forEach((e, i) => { e.end = i + 1 < found.length ? found[i + 1].offset : info.table; });
+                byName = null;
             })();
             return info.fixed;
         }
@@ -738,14 +756,14 @@
             for (const e of sample) {
                 if (await hasHeader(e)) continue;
                 setMsg('Opening… finding the files inside this zip');
-                await fixPlaces(file, byOffset);
+                await fixPlaces(file, list);
                 return;
             }
         }
 
         async function entryBlob(e) {
             if (e.flags & 1) throw new Error('locked');
-            if (!e.lost && !(await hasHeader(e))) await fixPlaces(e.file, [...entries.values()]);
+            if (!e.lost && !(await hasHeader(e))) await fixPlaces(e.file, entries);
             if (e.lost) throw new Error('not found in the zip');
             const head = new DataView(await e.file.slice(e.offset, e.offset + 30).arrayBuffer());
             if (head.byteLength < 30 || head.getUint32(0, true) !== 0x04034b50) throw new Error('no file header where the zip says');
@@ -1225,6 +1243,14 @@
             }
 
             const c = found.parsed;
+            // A zip that leaves sizes out may leave files out of its table too.
+            if (isZip(file) && [...entries.values()].some(e => !e.csize && !e.usize)) {
+                const missing = c.messages.filter(m => m.file && !findEntry(m.file.name)).length;
+                if (missing) {
+                    setMsg(`Opening… looking for ${plural(missing, 'file')} the chat mentions`);
+                    await fixPlaces(file, entries);
+                }
+            }
             c.fileTitle = titleFrom(file.name) || titleFrom(found.name);
             c.withMedia = isZip(file);
             setMsg('');
@@ -2157,7 +2183,10 @@
                 if (!m.file || !['photo', 'video', 'gif'].includes(m.file.kind)) return;
                 const e = findEntry(m.file.name);
                 if (e) out.push({ entry: e, ts: m.ts, caption: m.text, video: m.file.kind !== 'photo', sender: m.sender, msgIndex: i });
-                else c.mediaMissing++;
+                else {
+                    if (!c.mediaMissing++) c.missingFrom = m.ts;
+                    c.missingTo = m.ts;
+                }
             });
             return out.reverse();
         }
@@ -2166,7 +2195,9 @@
             const left = c.mediaMissing;
             if (!left) return '';
             if (!c.withMedia) return `This export has no photos or videos (it was made "Without media"), so ${plural(left, 'photo or video', 'photos and videos')} can't be shown.`;
-            return `${c.media.length ? `These are the ${plural(c.media.length, 'photo or video', 'photos and videos')} in the export. ` : ''}WhatsApp left out ${left.toLocaleString()} more: it adds only recent media, and only what's still on the phone.`;
+            const from = listDate(c.missingFrom), to = listDate(c.missingTo);
+            const when = from === to ? `sent on ${from}` : `sent between ${from} and ${to}`;
+            return `${c.media.length ? `These are the ${plural(c.media.length, 'photo or video', 'photos and videos')} in the export. ` : ''}WhatsApp left out ${left.toLocaleString()} more, ${when}. It leaves out media that isn't saved on the phone (such as photos never opened), and older media in long chats.`;
         }
 
         // push: add a history step, so the back gesture returns to the view before.
