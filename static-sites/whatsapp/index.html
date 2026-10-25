@@ -771,13 +771,12 @@
             const type = MIME[e.name.split('.').pop().toLowerCase()] || '';
             if (e.method === 0) return new Blob([e.file.slice(start, await dataEnd(e, start, true))], { type });
             if (e.method !== 8) throw new Error(`packing method ${e.method}`);
-            const end = await dataEnd(e, start, false);
+            const end = e.dataEnd || await dataEnd(e, start, false);
             const unpack = async to => new Blob([await new Response(e.file.slice(start, to).stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob()], { type });
-            let first;
             try {
                 return await unpack(end);
             } catch (err) {
-                first = err;
+                // Chrome says "Failed to fetch" for any data it refuses; carry on below.
             }
             // Some phones write wrong sizes or extra bytes, which the browser's own reader refuses.
             const last = Math.max(e.end || 0, end);
@@ -785,16 +784,20 @@
                 // Unpack it here instead, reading up to the next file and stopping at the data's own end.
                 try {
                     return new Blob([inflateRaw(new Uint8Array(await e.file.slice(start, last).arrayBuffer()), e.usize)], { type });
-                } catch (err2) {
-                    throw new Error(`${first.message || first.name}; backup: ${err2.message}`);
+                } catch (err) {
+                    throw new Error(`the browser couldn't unpack it, nor the backup: ${err.message}`);
                 }
             }
-            // Too big to hold in memory: try the other places the data could end.
-            for (const to of new Set([last - 16, last - 12, last - 24, last - 20, last])) {
-                if (to <= start || to === end) continue;
-                try { return await unpack(to); } catch (err) { /* try the next */ }
+            // Too big to hold in memory: find exactly where its data ends, then let the browser unpack that.
+            let exact;
+            try { exact = await deflateEnd(e.file, start, last); } catch (err) { throw new Error(`the browser couldn't unpack it, and walking its data failed: ${err.message}`); }
+            try {
+                const out = await unpack(exact);
+                e.dataEnd = exact;
+                return out;
+            } catch (err) {
+                throw new Error(`the browser couldn't unpack it, even to where its data ends (${exact - start} bytes)`);
             }
-            throw new Error(`${first.message || first.name}; too big for the backup unpacker`);
         }
         const BACKUP_LIMIT = 48 << 20;   // the backup unpacker holds the whole file in memory
 
@@ -872,6 +875,105 @@
         }
 
         // expected: the unpacked size, when the zip says it.
+        // Finds where packed data really ends by walking its structure a megabyte at a time,
+        // without unpacking it into memory. Returns the place just after its last byte.
+        async function deflateEnd(file, start, stop) {
+            const CHUNK = 1 << 20, MARGIN = 1 << 16;
+            let buf = new Uint8Array(0), base = start, pos = 0, cur = 0, have = 0;
+            const fill = async () => {   // keep at least MARGIN bytes loaded ahead
+                if (buf.length - pos >= MARGIN) return;
+                const from = base + buf.length;
+                const more = new Uint8Array(await file.slice(from, Math.min(stop, from + CHUNK)).arrayBuffer());
+                const next = new Uint8Array(buf.length - pos + more.length);
+                next.set(buf.subarray(pos));
+                next.set(more, buf.length - pos);
+                base += pos;
+                pos = 0;
+                buf = next;
+            };
+            const bits = n => {
+                while (have < n) {
+                    if (pos >= buf.length) throw new Error('data ends too soon');
+                    cur |= buf[pos++] << have;
+                    have += 8;
+                }
+                const v = cur & ((1 << n) - 1);
+                cur >>>= n;
+                have -= n;
+                return v;
+            };
+            const decode = t => {
+                let code = 0, first = 0, index = 0;
+                for (let l = 1; l < 16; l++) {
+                    code |= bits(1);
+                    const count = t.counts[l];
+                    if (code < first + count) return t.syms[index + code - first];
+                    index += count;
+                    first = (first + count) << 1;
+                    code <<= 1;
+                }
+                throw new Error('bad code');
+            };
+            const { lit: fixedLit, dist: fixedDist } = fixedCodes();
+            for (let last = 0; !last;) {
+                await fill();
+                last = bits(1);
+                const type = bits(2);
+                if (type === 0) {
+                    cur = have = 0;   // a stored block starts on the next whole byte
+                    if (pos + 4 > buf.length) throw new Error('data ends too soon');
+                    const n = buf[pos] | (buf[pos + 1] << 8);
+                    pos += 4;
+                    if (pos + n <= buf.length) pos += n;
+                    else { base += pos + n; buf = new Uint8Array(0); pos = 0; }   // skip it without reading it
+                    if (base + pos > stop) throw new Error('data ends too soon');
+                    continue;
+                }
+                let lit = fixedLit, dist = fixedDist;
+                if (type === 2) {
+                    const nlit = bits(5) + 257, ndist = bits(5) + 1, ncode = bits(4) + 4;
+                    const codeLengths = new Array(19).fill(0);
+                    for (let i = 0; i < ncode; i++) codeLengths[LENGTH_ORDER[i]] = bits(3);
+                    const lc = huffman(codeLengths);
+                    const lengths = [];
+                    while (lengths.length < nlit + ndist) {
+                        const sym = decode(lc);
+                        if (sym < 16) lengths.push(sym);
+                        else if (sym === 16) { const prev = lengths[lengths.length - 1] || 0; for (let r = 3 + bits(2); r > 0; r--) lengths.push(prev); }
+                        else if (sym === 17) { for (let r = 3 + bits(3); r > 0; r--) lengths.push(0); }
+                        else { for (let r = 11 + bits(7); r > 0; r--) lengths.push(0); }
+                    }
+                    lit = huffman(lengths.slice(0, nlit));
+                    dist = huffman(lengths.slice(nlit, nlit + ndist));
+                } else if (type !== 1) {
+                    throw new Error('bad block');
+                }
+                // Walk the codes; what they stand for isn't needed, only where they end.
+                for (let k = 1; ; k++) {
+                    if (!(k & 4095)) await fill();
+                    const sym = decode(lit);
+                    if (sym < 256) continue;
+                    if (sym === 256) break;
+                    const i = sym - 257;
+                    if (i >= 29) throw new Error('bad length');
+                    bits(LEXTRA[i]);
+                    const ds = decode(dist);
+                    if (ds >= 30) throw new Error('bad distance');
+                    bits(DEXTRA[ds]);
+                }
+            }
+            return base + pos;
+        }
+
+        let fixed = null;
+        function fixedCodes() {
+            if (!fixed) fixed = {
+                lit: huffman(Array.from({ length: 288 }, (_, i) => (i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8))),
+                dist: huffman(new Array(30).fill(5)),
+            };
+            return fixed;
+        }
+
         function inflateRaw(src, expected = 0) {
             let pos = 0, cur = 0, have = 0;
             let out = new Uint8Array(expected || Math.max(4096, Math.min(src.length * 4, src.length + (16 << 20)))), len = 0;
@@ -904,8 +1006,7 @@
                 }
                 throw new Error('bad code');
             };
-            const fixedLit = huffman(Array.from({ length: 288 }, (_, i) => (i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8)));
-            const fixedDist = huffman(new Array(30).fill(5));
+            const { lit: fixedLit, dist: fixedDist } = fixedCodes();
 
             for (let last = 0; !last;) {
                 last = bits(1);
