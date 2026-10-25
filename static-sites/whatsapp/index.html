@@ -822,7 +822,7 @@
                 const late = !info.fixed;
                 await fixPlaces(e.file);
                 if (late && info.map === entries && current) {
-                    try { await addUnlisted(e.file, mentionedMissing(current)); } catch (err) { /* they stay missing */ }
+                    try { await addUnlisted(e.file, mentionedMissing(current)); } catch (err) { current.searchError = (err && err.message) || String(err); }
                     current.zipCheck = await zipCheck(e.file, current);
                     refreshMedia();
                 }
@@ -1358,14 +1358,19 @@
             if (!info) return '';
             const left = [...new Set(c.messages.filter(m => m.file && ['photo', 'video', 'gif'].includes(m.file.kind) && !findEntry(m.file.name)).map(m => m.file.name))];
             if (!left.length) return '';
+            const base = n => n.normalize('NFC').slice(n.lastIndexOf('/') + 1);
             const lost = [...info.map.values()].filter(e => e.lost).length;
+            const listedAs = new Map([...info.map.values()].map(e => [base(e.name), e]));
+            const inTable = left.filter(n => listedAs.has(base(n))).length;
+            const failed = c.searchError ? ` Search failed: ${c.searchError}.` : '';
             let line = `Zip check: ${plural(info.listed, 'file')} listed`;
-            if (!info.scan) return `${line}. Left out: ${left.length}; in the zip's list: 0.`;
+            if (!info.scan) return `${line}. Left out: ${left.length} (listed: ${inTable}); the zip wasn't searched.${failed}`;
             const headers = await info.scan;
-            const bases = new Set([...headers.keys()].map(n => n.slice(n.lastIndexOf('/') + 1).toLowerCase()));
-            const inZip = left.filter(n => bases.has(n.slice(n.lastIndexOf('/') + 1).toLowerCase())).length;
+            const exact = left.filter(n => headers.has(n.normalize('NFC'))).length;
+            const bases = new Set([...headers.keys()].map(n => base(n).toLowerCase()));
+            const inZip = left.filter(n => bases.has(base(n).toLowerCase())).length;
             line += `${lost ? ` (${lost} not where listed)` : ''}, ${info.added} found by searching ${plural(headers.size, 'file header')}`;
-            return `${line}. Left out: ${left.length}; found in the zip after all: ${inZip}.`;
+            return `${line}. Left out: ${left.length} (listed: ${inTable}); found in the zip after all: ${inZip} (same name: ${exact}).${failed}`;
         }
 
         // Returns true when the chat opened, false when it couldn't, and null when another file
@@ -1403,12 +1408,16 @@
 
             const c = found.parsed;
             // A zip that leaves sizes out may leave files out of its table too.
-            if (isZip(file) && [...entries.values()].some(e => !e.csize && !e.usize) && mentionedMissing(c).length) {
+            // A zip with wrong places, or with sizes left out, may leave files out of its table too.
+            const unreliable = isZip(file) && (zipInfo.get(file).fixed || [...entries.values()].some(e => !e.csize && !e.usize));
+            if (unreliable && mentionedMissing(c).length) {
                 setMsg('Opening… looking for the files the chat mentions');
                 try {
                     await fixPlaces(file);   // fixing places can show more files missing, so ask after it
                     await addUnlisted(file, mentionedMissing(c));
-                } catch (err) { /* those stay "not in this export" */ }
+                } catch (err) {
+                    c.searchError = (err && err.message) || String(err);   // shown in the zip check
+                }
                 if (gen !== openGen) return null;
             }
             if (isZip(file)) c.zipCheck = await zipCheck(file, c);
