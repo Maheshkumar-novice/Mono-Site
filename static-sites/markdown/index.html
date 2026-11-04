@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-name" content="Markdown">
+    <meta name="app-section" content="Tools">
+    <title>Markdown Reader</title>
+    <meta name="description" content="Paste markdown or open a .md file and read it as a clean page. Everything stays on your device.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-raised: #1c1c1c;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --accent-soft: rgba(16, 185, 129, 0.15);
+            --border: #262626;
+            --border-strong: #3a3a3a;
+            --code-bg: #121212;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            --border-radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* clip, not hidden: hidden would make the body a scroll box and the reader bar would stop sticking */
+        body { overflow-x: clip; }
+
+        body {
+            margin: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .nav-brand:hover { color: var(--accent); }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+        .page-head h1 { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.25rem; }
+        .subtitle { color: var(--text-secondary); margin: 0 0 1.5rem; }
+
+        button, .btn {
+            font: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:hover, .btn:hover { border-color: var(--text-muted); }
+        button:disabled { opacity: 0.4; cursor: default; }
+        button:disabled:hover { border-color: var(--border-strong); }
+
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #04140d; font-weight: 600; }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        .hint { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+        .msg { font-size: 0.9rem; color: #fbbf24; margin: 0; }
+        .msg:empty { display: none; }
+
+        input[type=file] { display: none; }
+        [hidden] { display: none !important; }
+
+        /* ---------- start ---------- */
+
+        .start { display: flex; flex-direction: column; gap: 1rem; }
+
+        .last {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .last-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .last-label { color: var(--text-muted); font-size: 0.8rem; }
+        .last-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .last-actions { display: flex; gap: 0.5rem; }
+
+        .drop {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            text-align: center;
+            padding: 2.25rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--border-radius);
+        }
+
+        .drop.dragover { border-color: var(--accent); }
+
+        .or { color: var(--text-muted); font-size: 0.85rem; text-align: center; margin: 0; }
+
+        .paste-box { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            resize: vertical;
+            padding: 0.75rem 0.9rem;
+            font: 13px/1.55 var(--mono);
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--border-radius);
+            outline: none;
+            caret-color: var(--accent);
+        }
+
+        textarea::placeholder { color: var(--text-muted); }
+        textarea:focus { border-color: var(--accent); }
+
+        .paste-box .btn-primary { align-self: flex-start; }
+
+        /* ---------- reader ---------- */
+
+        .bar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .doc-name {
+            flex: 1;
+            min-width: 0;
+            font-weight: 500;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .toc-wrap { position: relative; }
+
+        .toc {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            width: min(340px, calc(100vw - 48px));
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 0.35rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+        }
+
+        .toc button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            padding: 0.45rem 0.6rem;
+            color: var(--text-primary);
+            line-height: 1.35;
+        }
+
+        .toc button:hover { background: var(--accent-soft); color: var(--accent-hover); }
+        .toc .lvl-2 { padding-left: 1.35rem; }
+        .toc .lvl-3 { padding-left: 2.1rem; color: var(--text-secondary); font-size: 0.82rem; }
+        .toc .to-top { color: var(--text-muted); border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; margin-bottom: 0.2rem; }
+
+        .note { margin: 0.75rem 0 0; }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+            transform: translateX(-50%);
+            z-index: 40;
+            max-width: calc(100vw - 48px);
+            padding: 0.6rem 0.9rem;
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            font-size: 0.875rem;
+        }
+
+        /* ---------- the document ---------- */
+
+        .md {
+            max-width: 72ch;
+            padding-top: 1.25rem;
+            font-size: 16px;
+            line-height: 1.7;
+            overflow-wrap: break-word;
+        }
+
+        .md > :first-child { margin-top: 0; }
+
+        .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+            line-height: 1.3;
+            font-weight: 600;
+            margin: 1.8em 0 0.6em;
+            scroll-margin-top: 4rem;
+            text-wrap: balance;
+        }
+
+        .md h1 { font-size: 1.6em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+        .md h2 { font-size: 1.3em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
+        .md h3 { font-size: 1.12em; }
+        .md h4 { font-size: 1em; }
+        .md h5, .md h6 { font-size: 0.9em; color: var(--text-secondary); }
+
+        .md p, .md ul, .md ol, .md blockquote, .md pre, .md .table-wrap, .md details, .md hr { margin: 0 0 1.1em; }
+
+        .md ul, .md ol { padding-left: 1.6em; }
+        .md li + li, .md li > ul, .md li > ol { margin-top: 0.3em; }
+        .md li > ul, .md li > ol { margin-bottom: 0; }
+        .md li > p { margin-bottom: 0.5em; }
+        .md li:has(> input[type=checkbox]) { list-style: none; margin-left: -1.4em; }
+        /* drawn by hand: the browser's own locked box is grey even when ticked */
+        .md input[type=checkbox] {
+            appearance: none;
+            display: inline-grid;
+            place-content: center;
+            width: 15px;
+            height: 15px;
+            margin: 0 0.5em 0 0;
+            vertical-align: -2px;
+            background: var(--bg-raised);
+            border: 1.5px solid var(--border-strong);
+            border-radius: 4px;
+        }
+        .md input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
+        .md input[type=checkbox]:checked::after {
+            content: '';
+            width: 4px;
+            height: 8px;
+            border: solid #04140d;
+            border-width: 0 2px 2px 0;
+            transform: translateY(-1px) rotate(45deg);
+        }
+
+        .md a { text-decoration: underline; text-decoration-color: rgba(16, 185, 129, 0.4); text-underline-offset: 2px; }
+        .md a:hover { text-decoration-color: var(--accent-hover); }
+
+        .md strong { font-weight: 600; }
+
+        .md blockquote {
+            padding: 0.1em 0 0.1em 1em;
+            border-left: 3px solid var(--accent);
+            color: var(--text-secondary);
+            margin-left: 0;
+        }
+
+        .md blockquote > :last-child { margin-bottom: 0; }
+
+        .md hr { border: none; border-top: 1px solid var(--border-strong); margin: 2em 0; }
+
+        .md img { max-width: 100%; height: auto; border-radius: 6px; }
+
+        .md .img-missing {
+            display: inline-block;
+            padding: 0.15em 0.5em;
+            font-size: 0.85em;
+            color: var(--text-muted);
+            border: 1px dashed var(--border-strong);
+            border-radius: 6px;
+        }
+
+        .md code {
+            font-family: var(--mono);
+            font-size: 0.86em;
+            padding: 0.15em 0.4em;
+            background: var(--bg-raised);
+            border-radius: 5px;
+        }
+
+        .md pre {
+            padding: 0.9em 1em;
+            overflow-x: auto;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            line-height: 1.55;
+        }
+
+        .md pre code { padding: 0; background: none; font-size: 0.84em; border-radius: 0; }
+
+        .md .table-wrap { overflow-x: auto; }
+
+        .md table { border-collapse: collapse; font-size: 0.92em; line-height: 1.5; }
+        .md th, .md td { padding: 0.45em 0.8em; border: 1px solid var(--border-strong); text-align: left; vertical-align: top; }
+        .md th { background: var(--bg-secondary); font-weight: 600; }
+        .md tr:nth-child(2n) td { background: rgba(255, 255, 255, 0.02); }
+
+        .md details { padding: 0.5em 0.9em; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--border-radius); }
+        .md summary { cursor: pointer; }
+        .md details[open] > summary { margin-bottom: 0.5em; }
+        .md .front-matter pre { margin: 0; font-size: 0.95em; color: var(--text-secondary); }
+
+        .md kbd {
+            font-family: var(--mono);
+            font-size: 0.82em;
+            padding: 0.1em 0.4em;
+            border: 1px solid var(--border-strong);
+            border-bottom-width: 2px;
+            border-radius: 4px;
+        }
+
+        .md mark { background: rgba(251, 191, 36, 0.25); color: inherit; }
+
+        /* code colours, the same as the formatter's */
+        .hljs-keyword, .hljs-selector-tag, .hljs-section, .hljs-name, .hljs-doctag { color: #22d3ee; }
+        .hljs-string, .hljs-regexp, .hljs-addition, .hljs-template-tag { color: #86efac; }
+        .hljs-number, .hljs-built_in, .hljs-symbol, .hljs-bullet { color: #fbbf24; }
+        .hljs-literal, .hljs-type, .hljs-selector-pseudo { color: #f472b6; }
+        .hljs-title, .hljs-title.function_, .hljs-title.class_ { color: #c4b5fd; }
+        .hljs-attr, .hljs-attribute, .hljs-property, .hljs-variable, .hljs-template-variable, .hljs-selector-class, .hljs-selector-id { color: #67e8f9; }
+        .hljs-comment, .hljs-quote { color: #737373; font-style: italic; }
+        .hljs-meta, .hljs-punctuation, .hljs-operator { color: #a3a3a3; }
+        .hljs-deletion { color: #f87171; }
+        .hljs-emphasis { font-style: italic; }
+        .hljs-strong { font-weight: 600; }
+
+        @media (max-width: 600px) {
+            .site-nav { padding: 1rem 24px; }
+            .container { padding: 1.5rem 24px 2.5rem; }
+            .md { font-size: 15.5px; }
+            .md h1 { font-size: 1.45em; }
+            .md h2 { font-size: 1.22em; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav"><a href="/" class="nav-brand">Maheshkumar</a></nav>
+
+    <main class="container">
+        <header class="page-head">
+            <h1>Markdown Reader</h1>
+            <p class="subtitle" id="subtitle">Paste markdown or open a .md file and read it as a clean page. Everything stays on your device.</p>
+        </header>
+
+        <section class="start" id="start">
+            <div class="last" id="last" hidden>
+                <div class="last-text">
+                    <span class="last-label">Last read</span>
+                    <span class="last-name" id="last-name"></span>
+                </div>
+                <div class="last-actions">
+                    <button type="button" class="btn-primary" id="last-open">Open</button>
+                    <button type="button" id="last-forget">Forget</button>
+                </div>
+            </div>
+
+            <div class="drop" id="drop">
+                <label class="btn btn-primary" for="file">Open a file</label>
+                <input type="file" id="file">
+                <p class="hint">A .md or .txt file. You can also drop it here.</p>
+            </div>
+
+            <p class="or">or</p>
+
+            <div class="paste-box">
+                <textarea id="paste" placeholder="Paste markdown here" aria-label="Paste markdown here" spellcheck="false"></textarea>
+                <button type="button" class="btn-primary" id="read" disabled>Read</button>
+            </div>
+
+            <p class="msg" id="msg" role="status"></p>
+        </section>
+
+        <section id="reader" hidden>
+            <div class="bar">
+                <button type="button" id="back">‹ Back</button>
+                <span class="doc-name" id="doc-name"></span>
+                <div class="toc-wrap" id="toc-wrap" hidden>
+                    <button type="button" id="toc-btn" aria-expanded="false" aria-controls="toc">Contents</button>
+                    <div class="toc" id="toc" hidden></div>
+                </div>
+            </div>
+            <p class="hint note" id="note" hidden></p>
+            <article class="md" id="doc"></article>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+
+    <script src="marked.min.js"></script>
+    <script src="purify.min.js"></script>
+    <script>
+    (() => {
+        const $ = (id) => document.getElementById(id);
+        const KEEP = 'markdown:last';          // { name, text }
+        const SCROLL = 'markdown:scroll';      // where you were in it
+        const PAGE_TITLE = 'Markdown Reader';
+        const MAX_FILE = 20 * 1024 * 1024;
+
+        // the page puts you back where you were itself; the browser's own guess fights it on Back and Forward
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+        // ---------- keeping the last text on this device ----------
+
+        function readKept() {
+            try {
+                const kept = JSON.parse(localStorage.getItem(KEEP) || 'null');
+                return kept && typeof kept.text === 'string' ? kept : null;
+            } catch { return null; }
+        }
+
+        function keep(name, text) {
+            try {
+                localStorage.setItem(KEEP, JSON.stringify({ name, text }));
+                localStorage.removeItem(SCROLL);
+                return true;
+            } catch {
+                try { localStorage.removeItem(KEEP); localStorage.removeItem(SCROLL); } catch {}
+                return false;
+            }
+        }
+
+        function forget() {
+            try { localStorage.removeItem(KEEP); localStorage.removeItem(SCROLL); } catch {}
+        }
+
+        function keptScroll() {
+            try { return Number(localStorage.getItem(SCROLL)) || 0; } catch { return 0; }
+        }
+
+        let scrollTimer = 0;
+        let keptNow = false;   // is the open text the kept one?
+        window.addEventListener('scroll', () => {
+            if (!keptNow || $('reader').hidden) return;
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                if (!keptNow || $('reader').hidden) return;   // left the reader before this ran
+                try { localStorage.setItem(SCROLL, String(Math.round(window.scrollY))); } catch {}
+            }, 300);
+        }, { passive: true });
+
+        // ---------- turning markdown into a page ----------
+
+        marked.use({ gfm: true, breaks: false });
+
+        const FRONT = /^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
+
+        function slugify(text) {
+            return text.trim().toLowerCase()
+                .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, '')   // \p{M} keeps Tamil vowel signs
+                .replace(/\s/g, '-');
+        }
+
+        let hljsLoad = null;
+        function loadHighlighter() {
+            if (window.hljs) return Promise.resolve(window.hljs);
+            hljsLoad = hljsLoad || new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'highlight.min.js';
+                s.onload = () => resolve(window.hljs);
+                s.onerror = () => { hljsLoad = null; s.remove(); reject(new Error('highlighter')); };
+                document.head.append(s);
+            });
+            return hljsLoad;
+        }
+
+        function colourCode(blocks) {
+            if (!blocks.length) return;
+            loadHighlighter().then((hljs) => {
+                hljs.configure({ ignoreUnescapedHTML: true });
+                for (const { el, lang } of blocks) {
+                    if (el.isConnected && hljs.getLanguage(lang)) hljs.highlightElement(el);
+                }
+            }).catch(() => {});   // plain code is still fine to read
+        }
+
+        function render(text) {
+            const doc = $('doc');
+            doc.replaceChildren();
+
+            text = text.replace(/^﻿/, '');
+            const front = text.match(FRONT);
+            if (front) {
+                text = text.slice(front[0].length);
+                const box = document.createElement('details');
+                box.className = 'front-matter';
+                const sum = document.createElement('summary');
+                sum.textContent = 'File details';
+                const pre = document.createElement('pre');
+                pre.textContent = front[1];
+                box.append(sum, pre);
+                doc.append(box);
+            }
+
+            const html = marked.parse(text);
+            doc.append(DOMPurify.sanitize(html, {
+                RETURN_DOM_FRAGMENT: true,
+                SANITIZE_NAMED_PROPS: true,
+                FORBID_TAGS: ['style', 'form', 'button', 'select', 'option', 'textarea'],
+                FORBID_ATTR: ['style'],
+            }));
+
+            // only tick boxes from task lists, and they can't be changed
+            for (const input of doc.querySelectorAll('input')) {
+                if (input.type === 'checkbox') input.disabled = true;
+                else input.remove();
+            }
+
+            // headings get a name so "#section" links and the contents list can find them
+            const used = new Map();
+            for (const h of doc.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+                const base = slugify(h.textContent) || 'section';
+                const n = used.get(base) || 0;
+                used.set(base, n + 1);
+                h.dataset.slug = n ? `${base}-${n}` : base;
+            }
+
+            for (const a of doc.querySelectorAll('a[href]')) {
+                const href = a.getAttribute('href');
+                if (/^(https?:|mailto:|tel:)/i.test(href)) {
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                }
+            }
+
+            for (const img of doc.querySelectorAll('img')) {
+                img.loading = 'lazy';
+                img.addEventListener('error', () => {
+                    const span = document.createElement('span');
+                    span.className = 'img-missing';
+                    span.textContent = img.alt ? `Picture: ${img.alt}` : 'Picture not found';
+                    img.replaceWith(span);
+                }, { once: true });
+            }
+
+            for (const table of doc.querySelectorAll('table')) {
+                const wrap = document.createElement('div');
+                wrap.className = 'table-wrap';
+                table.replaceWith(wrap);
+                wrap.append(table);
+            }
+
+            const blocks = [];
+            for (const el of doc.querySelectorAll('pre > code[class*="language-"]')) {
+                const m = el.className.match(/language-([\w+#.-]+)/);
+                if (m) blocks.push({ el, lang: m[1].toLowerCase() });
+            }
+            colourCode(blocks);
+
+            buildContents();
+        }
+
+        function titleOf() {
+            const h = $('doc').querySelector('h1, h2, h3');
+            return (h && h.textContent.trim()) || 'Pasted text';
+        }
+
+        // ---------- contents list ----------
+
+        function buildContents() {
+            const heads = [...$('doc').querySelectorAll('h1, h2, h3')];
+            const toc = $('toc');
+            toc.replaceChildren();
+            closeContents();
+            $('toc-wrap').hidden = heads.length < 3;
+            if (heads.length < 3) return;
+
+            const top = document.createElement('button');
+            top.type = 'button';
+            top.className = 'to-top';
+            top.textContent = 'Top';
+            top.addEventListener('click', () => { closeContents(); window.scrollTo({ top: 0 }); });
+            toc.append(top);
+
+            // the biggest heading level in the file starts at the left
+            const minLevel = Math.min(...heads.map((h) => Number(h.tagName[1])));
+            for (const h of heads) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = `lvl-${Number(h.tagName[1]) - minLevel + 1}`;
+                b.textContent = h.textContent.trim() || '(no title)';
+                b.addEventListener('click', () => { closeContents(); h.scrollIntoView({ block: 'start' }); });
+                toc.append(b);
+            }
+        }
+
+        function openContents() {
+            $('toc').hidden = false;
+            $('toc-btn').setAttribute('aria-expanded', 'true');
+        }
+
+        function closeContents() {
+            $('toc').hidden = true;
+            $('toc-btn').setAttribute('aria-expanded', 'false');
+        }
+
+        $('toc-btn').addEventListener('click', () => ($('toc').hidden ? openContents() : closeContents()));
+        document.addEventListener('click', (e) => {
+            if (!$('toc').hidden && !$('toc-wrap').contains(e.target)) closeContents();
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeContents(); });
+
+        // ---------- links inside the document ----------
+
+        let toastTimer = 0;
+        function toast(text) {
+            const t = $('toast');
+            t.textContent = text;
+            t.hidden = false;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
+        }
+
+        function findTarget(name) {
+            const doc = $('doc');
+            const esc = CSS.escape(name);
+            return doc.querySelector(`[data-slug="${esc}"]`)
+                || doc.querySelector(`[data-slug="${CSS.escape(slugify(name))}"]`)
+                || doc.querySelector(`#user-content-${esc}, [name="user-content-${esc}"]`)
+                || doc.querySelector(`[id="${esc}"], [name="${esc}"]`);
+        }
+
+        $('doc').addEventListener('click', (e) => {
+            const a = e.target.closest('a[href]');
+            if (!a) return;
+            const href = a.getAttribute('href');
+            if (/^(https?:|mailto:|tel:)/i.test(href)) return;
+            e.preventDefault();
+            if (href.startsWith('#')) {
+                let name = href.slice(1);
+                try { name = decodeURIComponent(name); } catch {}
+                const target = findTarget(name);
+                if (target) target.scrollIntoView({ block: 'start' });
+                else toast('That part isn’t in this file.');
+            } else {
+                toast('That link opens another file. Open that file here to read it.');
+            }
+        });
+
+        // ---------- screens ----------
+
+        function showStart() {
+            if (keptNow && !$('reader').hidden) {
+                clearTimeout(scrollTimer);
+                try { localStorage.setItem(SCROLL, String(Math.round(window.scrollY))); } catch {}
+            }
+            keptNow = false;
+            closeContents();
+            $('reader').hidden = true;
+            $('start').hidden = false;
+            $('subtitle').hidden = false;
+            document.title = PAGE_TITLE;
+            const kept = readKept();
+            $('last').hidden = !kept;
+            if (kept) $('last-name').textContent = kept.name;
+            window.scrollTo({ top: 0 });
+        }
+
+        function showReader(name, text, { fromKept = false, push = true } = {}) {
+            $('msg').textContent = '';
+            render(text);
+            if (!name) name = titleOf();
+
+            let stays = true;
+            if (!fromKept) stays = keep(name, text);
+            keptNow = stays;
+            $('note').hidden = stays;
+            $('note').textContent = stays ? '' : 'This one is too big to keep for next time.';
+
+            $('doc-name').textContent = name;
+            document.title = `${name} · ${PAGE_TITLE}`;
+            $('start').hidden = true;
+            $('subtitle').hidden = true;
+            $('reader').hidden = false;
+            // one history step for the reader, even when a new file is opened while reading
+            if (push && !(history.state && history.state.reader)) history.pushState({ reader: true }, '');
+
+            const y = fromKept ? keptScroll() : 0;
+            window.scrollTo({ top: y });
+            if (y) requestAnimationFrame(() => window.scrollTo({ top: y }));
+        }
+
+        $('back').addEventListener('click', () => {
+            if (history.state && history.state.reader) history.back();
+            else showStart();
+        });
+
+        window.addEventListener('popstate', () => {
+            if (history.state && history.state.reader) {
+                const kept = readKept();
+                if (kept && $('reader').hidden) showReader(kept.name, kept.text, { fromKept: true, push: false });
+                else if (!kept) { history.replaceState(null, ''); showStart(); }
+            } else if (!$('reader').hidden) {
+                showStart();
+            }
+        });
+
+        $('last-open').addEventListener('click', () => {
+            const kept = readKept();
+            if (kept) showReader(kept.name, kept.text, { fromKept: true });
+            else showStart();
+        });
+
+        $('last-forget').addEventListener('click', () => { forget(); showStart(); });
+
+        // ---------- getting text in ----------
+
+        const paste = $('paste');
+        paste.addEventListener('input', () => { $('read').disabled = !paste.value.trim(); });
+        $('read').addEventListener('click', () => {
+            const text = paste.value;
+            if (!text.trim()) return;
+            paste.value = '';
+            $('read').disabled = true;
+            showReader('', text);
+        });
+
+        async function openFile(file) {
+            $('msg').textContent = '';
+            if (!file) return;
+            if (file.size > MAX_FILE) {
+                $('msg').textContent = 'That file is too big for this page (over 20 MB).';
+                return;
+            }
+            let text;
+            try { text = await file.text(); }
+            catch { $('msg').textContent = 'That file couldn’t be read.'; return; }
+            if (text.slice(0, 8000).includes('\u0000')) {
+                $('msg').textContent = 'That doesn’t look like a text file. Open a .md or .txt file.';
+                return;
+            }
+            if (!text.trim()) {
+                $('msg').textContent = 'That file is empty.';
+                return;
+            }
+            const name = file.name.replace(/\.(md|markdown|mdown|mkd|txt)$/i, '') || file.name;
+            showReader(name, text);
+        }
+
+        $('file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            e.target.value = '';
+            openFile(file);
+        });
+
+        let dragDepth = 0;
+        const hasFiles = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+        window.addEventListener('dragenter', (e) => {
+            if (!hasFiles(e)) return;
+            dragDepth++;
+            $('drop').classList.add('dragover');
+        });
+        window.addEventListener('dragleave', (e) => {
+            if (!hasFiles(e)) return;
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (!dragDepth) $('drop').classList.remove('dragover');
+        });
+        window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+        window.addEventListener('drop', (e) => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            dragDepth = 0;
+            $('drop').classList.remove('dragover');
+            openFile(e.dataTransfer.files[0]);
+        });
+
+        // ---------- first look ----------
+
+        // a refresh while reading stays in the reader; a fresh visit starts at the start screen,
+        // where the Last read card picks it up again
+        const kept = readKept();
+        if (kept && history.state && history.state.reader) {
+            showReader(kept.name, kept.text, { fromKept: true, push: false });
+        } else {
+            if (history.state && history.state.reader) history.replaceState(null, '');
+            showStart();
+        }
+    })();
+    </script>
+</body>
+</html>
