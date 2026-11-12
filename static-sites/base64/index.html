@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-name" content="Base64 Gzip">
+    <meta name="app-name" content="Base64">
     <meta name="app-section" content="Tools">
-    <title>Base64 Gzip</title>
-    <meta name="description" content="Unpack base64 gzip text, or pack text into it. Everything stays on your device.">
+    <title>Base64</title>
+    <meta name="description" content="Decode and encode base64, with gzip when you need it. Everything stays on your device.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -88,6 +88,7 @@
         .btn-primary { background: var(--accent); border-color: var(--accent); color: #04140d; font-weight: 600; }
         .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
+        /* On/off switches (Gunzip, Gzip first, URL-safe, Wrap) */
         button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-hover); }
 
         .hint { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
@@ -135,13 +136,30 @@
             caret-color: var(--accent);
         }
 
+        textarea::placeholder { color: var(--text-muted); }
+        textarea:focus, .dragover { border-color: var(--accent) !important; }
+
         /* base64 is one long word, so it may break anywhere; text in Encode breaks between words */
         #in { word-break: break-all; }
 
-        textarea::placeholder { color: var(--text-muted); }
-        textarea:focus, textarea.dragover { border-color: var(--accent); }
+        /* A file picked to encode takes the text box's place. */
+        .picked {
+            display: flex;
+            align-items: baseline;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            padding: 1.1rem 0.9rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--border-radius);
+        }
 
-        .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .picked-name { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+        .picked-size { color: var(--text-muted); font-size: 0.875rem; }
+
+        /* Buttons on the left, switches on the right; on a narrow screen the switches go under, on the left. */
+        .row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+        .buttons, .switches { display: flex; gap: 0.5rem; }
 
         /* ---------- what came out ---------- */
 
@@ -203,8 +221,8 @@
 
     <main class="container">
         <header class="page-head">
-            <h1>Base64 Gzip</h1>
-            <p class="subtitle">Unpack base64 gzip text, or pack text into it. Everything stays on your device.</p>
+            <h1>Base64</h1>
+            <p class="subtitle">Decode and encode base64, with gzip when you need it. Everything stays on your device.</p>
         </header>
 
         <div class="tabs" role="tablist" aria-label="Mode">
@@ -215,30 +233,47 @@
         <section class="panel" id="decode" role="tabpanel" aria-labelledby="tab-decode">
             <textarea id="in" placeholder="Paste base64 here, or drop a file" aria-label="Base64 text" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
             <div class="row">
-                <label class="btn" for="file">Open a file</label>
-                <input type="file" id="file">
-                <button type="button" id="clear" disabled>Clear</button>
+                <div class="buttons">
+                    <label class="btn" for="file">Open a file</label>
+                    <input type="file" id="file">
+                    <button type="button" id="clear" disabled>Clear</button>
+                </div>
+                <div class="switches">
+                    <button type="button" data-switch="gunzip" aria-pressed="true">Gunzip</button>
+                </div>
             </div>
             <p class="msg" id="msg" role="status"></p>
             <div class="result" id="result" hidden>
                 <div class="result-bar">
                     <span class="meta" id="meta"></span>
                     <div class="actions">
-                        <button type="button" id="wrap" aria-pressed="true">Wrap</button>
+                        <button type="button" id="wrap" data-switch="wrap" aria-pressed="true">Wrap</button>
                         <button type="button" id="copy">Copy</button>
                         <button type="button" class="btn-primary" id="save">Save</button>
                     </div>
                 </div>
                 <p class="hint" id="note" hidden></p>
                 <pre class="out wrap" id="out"></pre>
-                <img class="preview" id="img" alt="The unpacked image" hidden>
+                <img class="preview" id="img" alt="The decoded image" hidden>
             </div>
         </section>
 
         <section class="panel" id="encode" role="tabpanel" aria-labelledby="tab-encode" hidden>
-            <textarea id="plain" placeholder="Type or paste text here" aria-label="Text to pack" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+            <textarea id="plain" placeholder="Type or paste text here, or drop a file" aria-label="Text to encode" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+            <div class="picked" id="picked" hidden>
+                <span class="picked-name" id="picked-name"></span>
+                <span class="picked-size" id="picked-size"></span>
+            </div>
             <div class="row">
-                <button type="button" id="clear2" disabled>Clear</button>
+                <div class="buttons">
+                    <label class="btn" for="file2">Open a file</label>
+                    <input type="file" id="file2">
+                    <button type="button" id="clear2" disabled>Clear</button>
+                </div>
+                <div class="switches">
+                    <button type="button" data-switch="gzip" aria-pressed="false">Gzip first</button>
+                    <button type="button" data-switch="urlsafe" aria-pressed="false">URL-safe</button>
+                </div>
             </div>
             <p class="msg" id="msg2" role="status"></p>
             <div class="result" id="result2" hidden>
@@ -258,24 +293,26 @@
     <div class="toast" id="toast" role="status" hidden></div>
 
     <script>
-        // Everything happens here, in the browser: nothing typed or opened is sent anywhere,
-        // and nothing is kept after the page closes.
+        // Everything happens here, in the browser: nothing typed or opened is sent anywhere.
+        // Only the on/off switches are remembered on this device; the text and files never are.
 
         const $ = id => document.getElementById(id);
 
-        const SHOW_LIMIT = 1 << 20;            // characters drawn on screen; Copy and Save get everything
+        const SHOW_LIMIT = 1 << 20;             // characters drawn on screen; Copy and Save get everything
         const UNPACK_LIMIT = 100 * 1024 * 1024; // stop past this, so a tiny "zip bomb" can't freeze the phone
+        const ENCODE_LIMIT = 100 * 1024 * 1024; // biggest file Encode takes
         const PRETTY_LIMIT = 20 * 1024 * 1024;  // bigger JSON is shown as it came
 
         /** A problem with what was pasted, in words for the reader. */
         class Problem extends Error {}
 
+        /** "140 B", "8.4 KB", "3.0 MB", with a space that doesn't break. */
         function sizeText(n) {
-            if (n < 1024) return `${n} B`;
+            if (n < 1024) return `${n}\u00a0B`;
             const kb = n / 1024;
-            if (kb < 1024) return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
+            if (kb < 1024) return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)}\u00a0KB`;
             const mb = kb / 1024;
-            return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+            return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)}\u00a0MB`;
         }
 
         let toastTimer;
@@ -285,6 +322,20 @@
             t.hidden = false;
             clearTimeout(toastTimer);
             toastTimer = setTimeout(() => { t.hidden = true; }, 2500);
+        }
+
+        // ---------- switches, remembered on this device ----------
+
+        const SWITCHES_KEY = 'base64:switches';
+        const switches = { gunzip: true, gzip: false, urlsafe: false, wrap: true };
+        try {
+            const kept = JSON.parse(localStorage.getItem(SWITCHES_KEY) || '{}');
+            for (const k of Object.keys(switches)) if (typeof kept?.[k] === 'boolean') switches[k] = kept[k];
+        } catch { /* nothing kept, or storage is off: use the usual settings */ }
+
+        function showSwitches() {
+            for (const b of document.querySelectorAll('[data-switch]')) b.setAttribute('aria-pressed', String(switches[b.dataset.switch]));
+            $('out').classList.toggle('wrap', switches.wrap);
         }
 
         // ---------- base64 ----------
@@ -311,17 +362,19 @@
         }
 
         // Big inputs are turned into text a piece at a time, since one huge call can run out of room.
-        function toBase64(bytes) {
+        function toBase64(bytes, urlSafe) {
             let s = '';
             for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-            return btoa(s);
+            const b64 = btoa(s);
+            return urlSafe ? b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : b64;
         }
 
         // ---------- gzip ----------
 
         const isGzip = b => b.length >= 2 && b[0] === 0x1f && b[1] === 0x8b;
-        // zlib is gzip's close cousin (same packing, different wrapper), so it's opened too.
-        const isZlib = b => b.length >= 2 && (b[0] & 0x0f) === 8 && (b[0] >> 4) <= 7 && ((b[0] << 8) | b[1]) % 31 === 0;
+        // zlib is gzip's close cousin (same packing, different wrapper). Its 2-byte start can also
+        // happen in plain text ("HK…", "x^…"), so a zlib unpack that fails shows the bytes as they are.
+        const isZlib = b => b.length >= 2 && (b[0] & 0x0f) === 8 && (b[0] >> 4) <= 7 && (b[1] & 0x20) === 0 && ((b[0] << 8) | b[1]) % 31 === 0;
 
         /**
          * Unpacks with the browser's own unzipper. When the data is cut short or damaged, whatever
@@ -352,12 +405,12 @@
             return { bytes: out, damaged, tooBig };
         }
 
-        async function pack(text) {
-            const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+        async function gzip(bytes) {
+            const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
             return new Uint8Array(await new Response(stream).arrayBuffer());
         }
 
-        // ---------- what the unpacked bytes are ----------
+        // ---------- what the decoded bytes are ----------
 
         const FILES = [
             { sig: [0x89, 0x50, 0x4e, 0x47], label: 'PNG image', ext: 'png', type: 'image/png', image: true },
@@ -408,10 +461,18 @@
             return { label: 'Text', ext: 'txt', text, blob: new Blob([bytes], { type: 'text/plain;charset=utf-8' }) };
         }
 
+        /** "report.json.gz" → "report.json"; "photo.jpg.base64.txt" → "photo.jpg"; "payload.txt" → "payload.json". */
+        function saveName(name, ext) {
+            const base = (name || 'decoded').replace(/(\.(gz|gzip|b64|base64|txt))+$/i, '') || 'decoded';
+            if (ext === 'gz') return `${base}.gz`;
+            return /\.[a-z0-9]{1,5}$/i.test(base) ? base : `${base}.${ext}`;
+        }
+
         // ---------- Decode ----------
 
         let shown = null;      // what Copy and Save use: { text?, blob, name }
         let fileName = '';     // the opened file, until the text is changed by hand
+        let rawFile = null;    // a .gz file opened as it is, kept so Gunzip can be switched
         let decodeRun = 0;
         let imageUrl = '';
 
@@ -424,29 +485,25 @@
             if (imageUrl) URL.revokeObjectURL(imageUrl);
             imageUrl = '';
             shown = null;
-            $('clear').disabled = !$('in').value && !fileName;
-        }
-
-        /** "report.json.gz" → "report.json"; "payload.txt" → "payload.json". */
-        function saveName(name, ext) {
-            if (!name) return `unpacked.${ext}`;
-            const base = name.replace(/\.(gz|gzip|b64|base64|txt)$/i, '');
-            return /\.[a-z0-9]{1,5}$/i.test(base) ? base : `${base}.${ext}`;
+            $('clear').disabled = !$('in').value && !rawFile;
         }
 
         async function decodeBytes(bytes, run) {
-            const format = isGzip(bytes) ? 'gzip' : isZlib(bytes) ? 'deflate' : null;
-            const got = format ? await unpack(bytes, format) : { bytes, damaged: false, tooBig: false };
+            const packedAs = isGzip(bytes) ? 'gzip' : isZlib(bytes) ? 'deflate' : null;
+            let format = switches.gunzip ? packedAs : null;
+            let got = format ? await unpack(bytes, format) : { bytes, damaged: false, tooBig: false };
             if (run !== decodeRun) return;
-            if (format && got.damaged && !got.bytes.length) {
-                throw new Problem(format === 'gzip' ? 'This gzip data is damaged or cut short.' : 'This zlib data is damaged or cut short.');
+            if (format === 'deflate' && got.damaged) {
+                format = null;
+                got = { bytes, damaged: false, tooBig: false };
             }
-            if (!got.bytes.length) throw new Problem('This unpacks to nothing: it’s empty.');
+            if (format && got.damaged && !got.bytes.length) throw new Problem('This gzip data is damaged or cut short.');
+            if (!got.bytes.length) throw new Problem(format ? 'This unpacks to nothing: it’s empty.' : 'This decodes to nothing: it’s empty.');
 
             const what = describe(got.bytes, got.damaged || got.tooBig);
             const meta = [what.label, sizeText(got.bytes.length)];
-            if (format === 'deflate') meta.push('zlib, not gzip');
-            if (!format) meta.push('not gzip, just base64');
+            if (format === 'gzip') meta.push(`gunzipped from ${sizeText(bytes.length)}`);
+            if (format === 'deflate') meta.push(`unpacked zlib from ${sizeText(bytes.length)}`);
             if (fileName) meta.push(fileName);
             $('meta').textContent = meta.join(' · ');
 
@@ -471,7 +528,7 @@
                 $('img').src = imageUrl;
                 $('img').hidden = false;
             } else {
-                note.textContent = 'Save it to open it.';
+                note.textContent = !switches.gunzip && packedAs ? 'Turn on Gunzip to see what’s inside.' : 'Save it to open it.';
                 note.hidden = false;
             }
             $('result').hidden = false;
@@ -488,102 +545,108 @@
             } catch (e) {
                 if (run !== decodeRun) return;
                 resetDecode();
-                $('msg').textContent = e instanceof Problem ? e.message : `Couldn’t unpack this: ${e.message || e}`;
+                $('msg').textContent = e instanceof Problem ? e.message : `Couldn’t decode this: ${e.message || e}`;
             }
         }
 
-        function decodeTyped() {
-            decode(() => ($('in').value.trim() ? fromBase64($('in').value) : null));
+        function redecode() {
+            if (rawFile) decode(() => rawFile);
+            else decode(() => ($('in').value.trim() ? fromBase64($('in').value) : null));
         }
 
-        async function openFile(file) {
+        async function openForDecode(file) {
             if (!file) return;
             const bytes = new Uint8Array(await file.arrayBuffer());
             fileName = file.name;
             if (isGzip(bytes)) {
-                // A .gz file itself: no base64 to read, so unpack it straight away.
+                // A .gz file itself: no base64 to read, so it's used as it is.
+                rawFile = bytes;
                 $('in').value = '';
-                decode(() => bytes);
             } else {
+                rawFile = null;
                 $('in').value = new TextDecoder().decode(bytes);
-                decodeTyped();
             }
+            redecode();
         }
 
         let typingTimer;
         $('in').addEventListener('input', () => {
             fileName = '';
+            rawFile = null;
             clearTimeout(typingTimer);
-            typingTimer = setTimeout(decodeTyped, 150);
+            typingTimer = setTimeout(redecode, 150);
         });
 
         $('file').addEventListener('change', e => {
-            openFile(e.target.files[0]);
+            openForDecode(e.target.files[0]);
             e.target.value = '';
         });
 
         $('clear').addEventListener('click', () => {
             decodeRun++;
             fileName = '';
+            rawFile = null;
             $('in').value = '';
             resetDecode();
             $('in').focus();
         });
 
-        $('wrap').addEventListener('click', () => {
-            const on = $('out').classList.toggle('wrap');
-            $('wrap').setAttribute('aria-pressed', String(on));
-        });
-
-        // Drop a file anywhere on the Decode side.
-        const decodeSide = $('decode');
-        const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
-        decodeSide.addEventListener('dragover', e => {
-            if (!hasFiles(e)) return;
-            e.preventDefault();
-            $('in').classList.add('dragover');
-        });
-        decodeSide.addEventListener('dragleave', e => {
-            if (!decodeSide.contains(e.relatedTarget)) $('in').classList.remove('dragover');
-        });
-        decodeSide.addEventListener('drop', e => {
-            $('in').classList.remove('dragover');
-            if (!hasFiles(e)) return;
-            e.preventDefault();
-            openFile(e.dataTransfer.files[0]);
-        });
-
         // ---------- Encode ----------
 
-        let packed = '';
+        let packed = '';       // what Copy and Save use
+        let picked = null;     // a file to encode: { name, bytes }
         let encodeRun = 0;
 
         async function encode() {
             const run = ++encodeRun;
             const text = $('plain').value;
-            $('clear2').disabled = !text;
+            const source = picked ? picked.bytes : text ? new TextEncoder().encode(text) : null;
+            $('clear2').disabled = !source;
             $('msg2').textContent = '';
-            if (!text) {
+            if (!source) {
                 packed = '';
                 $('result2').hidden = true;
                 return;
             }
             try {
-                const bytes = await pack(text);
+                const bytes = switches.gzip ? await gzip(source) : source;
                 if (run !== encodeRun) return;
-                packed = toBase64(bytes);
+                packed = toBase64(bytes, switches.urlsafe);
                 const long = packed.length > SHOW_LIMIT;
                 $('out2').textContent = long ? packed.slice(0, SHOW_LIMIT) : packed;
                 $('note2').textContent = long ? `Showing the first ${sizeText(SHOW_LIMIT)}. Copy or Save to get all of it.` : '';
                 $('note2').hidden = !long;
-                $('meta2').textContent = `Base64 · ${sizeText(packed.length)} · from ${sizeText(new Blob([text]).size)} of text`;
+                const from = picked ? `${picked.name}, ${sizeText(source.length)}` : `${sizeText(source.length)} of text`;
+                const meta = ['Base64', sizeText(packed.length), `${switches.gzip ? 'gzipped from' : 'from'} ${from}`];
+                if (switches.urlsafe) meta.push('URL\u2011safe'); // a hyphen that doesn't break
+                $('meta2').textContent = meta.join(' · ');
                 $('result2').hidden = false;
             } catch (e) {
                 if (run !== encodeRun) return;
                 packed = '';
                 $('result2').hidden = true;
-                $('msg2').textContent = `Couldn’t pack this: ${e.message || e}`;
+                $('msg2').textContent = `Couldn’t encode this: ${e.message || e}`;
             }
+        }
+
+        function showPicked() {
+            $('plain').hidden = !!picked;
+            $('picked').hidden = !picked;
+            if (picked) {
+                $('picked-name').textContent = picked.name;
+                $('picked-size').textContent = sizeText(picked.bytes.length);
+            }
+        }
+
+        async function openForEncode(file) {
+            if (!file) return;
+            if (file.size > ENCODE_LIMIT) {
+                $('msg2').textContent = `This file is too big. The most this page encodes is ${sizeText(ENCODE_LIMIT)}.`;
+                return;
+            }
+            picked = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
+            showPicked();
+            encode();
         }
 
         let packTimer;
@@ -592,11 +655,52 @@
             packTimer = setTimeout(encode, 150);
         });
 
+        $('file2').addEventListener('change', e => {
+            openForEncode(e.target.files[0]);
+            e.target.value = '';
+        });
+
         $('clear2').addEventListener('click', () => {
+            picked = null;
             $('plain').value = '';
+            showPicked();
             encode();
             $('plain').focus();
         });
+
+        // ---------- dropping a file on either side ----------
+
+        const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+        for (const [side, box, open] of [['decode', 'in', openForDecode], ['encode', 'plain', openForEncode]]) {
+            const el = $(side);
+            const mark = on => { $(box).classList.toggle('dragover', on); $('picked').classList.toggle('dragover', on && side === 'encode'); };
+            el.addEventListener('dragover', e => {
+                if (!hasFiles(e)) return;
+                e.preventDefault();
+                mark(true);
+            });
+            el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) mark(false); });
+            el.addEventListener('drop', e => {
+                mark(false);
+                if (!hasFiles(e)) return;
+                e.preventDefault();
+                open(e.dataTransfer.files[0]);
+            });
+        }
+
+        // ---------- switches ----------
+
+        for (const b of document.querySelectorAll('[data-switch]')) {
+            b.addEventListener('click', () => {
+                const k = b.dataset.switch;
+                switches[k] = !switches[k];
+                showSwitches();
+                try { localStorage.setItem(SWITCHES_KEY, JSON.stringify(switches)); } catch { /* not kept this time */ }
+                if (k === 'gunzip') redecode();
+                if (k === 'gzip' || k === 'urlsafe') encode();
+            });
+        }
+        showSwitches();
 
         // ---------- Copy and Save ----------
 
@@ -633,7 +737,7 @@
         $('save').addEventListener('click', () => { if (shown) saveBlob(shown.blob, shown.name); });
         $('copy2').addEventListener('click', () => { if (packed) copyText(packed); });
         $('save2').addEventListener('click', () => {
-            if (packed) saveBlob(new Blob([packed], { type: 'text/plain' }), 'packed-base64.txt');
+            if (packed) saveBlob(new Blob([packed], { type: 'text/plain' }), picked ? `${picked.name}.base64.txt` : 'encoded-base64.txt');
         });
 
         // ---------- tabs ----------
