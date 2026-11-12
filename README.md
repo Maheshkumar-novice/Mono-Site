@@ -77,9 +77,11 @@ Epictetus's manual in 53 short chapters, George Long's translation (public domai
 </details>
 
 <details>
-<summary><strong>Explore</strong> — /explore</summary>
+<summary><strong>Explore</strong> — hidden for now</summary>
 
-Books, guides and things I want to read, learn and try, drawn as a night sky. Each theme is a constellation and each thing a star, coloured by status (want to, exploring, done); tap one for a note and a link. Everything comes from one plain list, `static-sites/explore/list.txt`, and the page lays the stars out itself. Static HTML/CSS/JS.
+Hidden for now: the files wait in `parked/explore/`, outside `static-sites/`, so the build doesn't publish them. To bring it back, move the folder back to `static-sites/explore/`.
+
+Books, guides and things I want to read, learn and try, drawn as a night sky. Each theme is a constellation and each thing a star, coloured by status (want to, exploring, done); tap one for a note and a link. Everything comes from one plain list, `list.txt`, and the page lays the stars out itself. Static HTML/CSS/JS.
 </details>
 
 <details>
