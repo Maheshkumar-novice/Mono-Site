@@ -220,10 +220,12 @@
         }
 
         .fold[open] > summary::after { transform: translateY(1px) rotate(225deg); }
-        .fold > summary:hover { color: var(--accent-hover); }
+        @media (hover: hover) { .fold > summary:hover { color: var(--accent-hover); } }
         .fold[open] > summary { border-bottom: 1px solid var(--border); border-radius: var(--border-radius) var(--border-radius) 0 0; }
         .fold.key[open] { border-color: rgba(16, 185, 129, 0.45); }
         .fold .md { padding: 1rem 1rem 0.1rem; }
+        .how { max-width: 72ch; margin-bottom: 1.25rem; }
+        .how ol li::marker { color: var(--text-muted); }
 
         .pager { display: flex; justify-content: space-between; gap: 0.75rem; max-width: 72ch; margin-top: 1.75rem; }
 
@@ -299,6 +301,21 @@
         <p class="msg" id="msg" role="status"></p>
 
         <section id="list" hidden>
+            <details class="fold how" id="how">
+                <summary>How to use this</summary>
+                <div class="md">
+                    <ol>
+                        <li><strong>Read the problem.</strong> Then stop and guess: which pattern is it, and roughly how would you solve it? A wrong guess is fine. Guessing is what makes it stick.</li>
+                        <li><strong>Open Concept and Why it fits</strong> and check your guess against them.</li>
+                        <li><strong>Open Steps.</strong> Read them, close the fold, and try to say the steps in your own words.</li>
+                        <li><strong>Do Try by hand on paper,</strong> then open Answers to check.</li>
+                        <li><strong>Read the Key idea.</strong> It's the one line to remember.</li>
+                        <li><strong>Open the Code last</strong> and match each line to a step.</li>
+                    </ol>
+                    <p><strong>To review,</strong> switch to By pattern, open an old problem, and recall its key idea before opening anything. Now and then, write the code yourself on LeetCode, using the link at the top of the problem.</p>
+                </div>
+            </details>
+
             <div class="views" role="group" aria-label="Order">
                 <button type="button" data-view="newest" aria-pressed="true">Newest</button>
                 <button type="button" data-view="pattern" aria-pressed="false">By pattern</button>
