@@ -28,6 +28,9 @@
             --robot: #10b981;
             --robot-off: rgba(16, 185, 129, 0.32);
             --gold: #fbbf24;
+            --wall: #4a4a4a;
+            --trail: rgba(16, 185, 129, 0.3);
+            --trail-faint: rgba(16, 185, 129, 0.12);
             --bar: #2f3b36;
             --border: #262626;
             --border-strong: #3a3a3a;
@@ -804,7 +807,7 @@ p=96,73 v=49,6
 
         const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         const COLORS = {};
-        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "bar", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
+        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "wall", "trail", "trail-faint", "bar", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
             COLORS[name] = css("--" + name);
         }
 
@@ -868,6 +871,48 @@ p=96,73 v=49,6
                 ctx.setLineDash([]);
             },
 
+            // A line through cell centres; points are [x, y] in cells and may be fractions.
+            line(points, color, width) {
+                if (points.length < 2) return;
+                const c = this.cell, ctx = this.ctx;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.lineJoin = "round";
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                points.forEach(([x, y], i) => (i ? ctx.lineTo(x * c + c / 2, y * c + c / 2) : ctx.moveTo(x * c + c / 2, y * c + c / 2)));
+                ctx.stroke();
+            },
+
+            // An arrow head in cell (x, y), pointing at `angle` (radians, 0 = right).
+            arrow(x, y, angle, color) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x * c + c / 2, y * c + c / 2);
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.moveTo(c * 0.4, 0);
+                ctx.lineTo(-c * 0.3, c * 0.32);
+                ctx.lineTo(-c * 0.14, 0);
+                ctx.lineTo(-c * 0.3, -c * 0.32);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.lineWidth = Math.max(1, c * 0.05);
+                ctx.strokeStyle = COLORS["bg-primary"];
+                ctx.stroke();
+                ctx.restore();
+            },
+
+            // A round dot in cell (x, y); r is a share of the cell.
+            dot(x, y, color, r) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x * c + c / 2, y * c + c / 2, Math.max(1.5, r * c), 0, Math.PI * 2);
+                ctx.fill();
+            },
+
             text(x, y, label, color, scale = 0.38) {
                 const c = this.cell, ctx = this.ctx;
                 ctx.fillStyle = color;
@@ -877,6 +922,273 @@ p=96,73 v=49,6
                 ctx.fillText(label, x * c + c / 2, y * c + c / 2 + 1);
             },
         };
+
+        /* ---------- Day 6: Guard Gallivant ---------- */
+
+        const EXAMPLE_6 = `
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...`;
+
+        // Made-up, not my real input: a random map with a long walk.
+        const MADE_UP_6 = `
+................................
+.......#.......#...#...........#
+..........#.....................
+.................#..............
+.....................#..#.......
+...............................#
+........##..............#.......
+............................#...
+...................#............
+............#.....#.............
+.......................#........
+..........#.....................
+................................
+..............................#.
+.#.........#..#.................
+#........#.#............#.#.#...
+.#...........................#..
+......#........#....##..........
+..#.............#........#..#...
+...#...#........^......#........
+.......#............#...........
+....#....#...............##.....
+...##.....................#.....
+........#.......#...............
+...#.............#......#.......
+..#...........................#.
+..#...............#.............
+....#..............#............
+.##..........................#..
+.#....#...............##........
+................#...............
+................................`;
+
+        const STEP = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // up, right, down, left as [row, col]
+
+        function parseMap(text) {
+            const lines = text.trim().split("\n");
+            const rows = lines.length, cols = lines[0].length;
+            const wall = new Uint8Array(rows * cols);
+            let start = [0, 0], walls = 0;
+            lines.forEach((line, r) => [...line].forEach((ch, c) => {
+                if (ch === "#") { wall[r * cols + c] = 1; walls++; }
+                if (ch === "^") start = [r, c];
+            }));
+            return { rows, cols, wall, start, walls };
+        }
+
+        // Walk like my code: straight on, turn right at an obstacle, stop on walking off the map,
+        // or when the same obstacle is hit from the same side twice (a loop).
+        // `extra` is one more obstacle (a cell index), for part 2.
+        function guardWalk(map, extra = -1) {
+            const { rows, cols, wall } = map;
+            let [r, c] = map.start, d = 0;
+            const states = [[r, c, d]];          // every move and every turn
+            const bumps = new Map();             // obstacle + side -> when it was first hit
+            for (;;) {
+                const nr = r + STEP[d][0], nc = c + STEP[d][1];
+                if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) {
+                    states.push([nr, nc, d]);
+                    return { states, loop: false, cycleStart: -1 };
+                }
+                const i = nr * cols + nc;
+                if (wall[i] || i === extra) {
+                    const key = i * 4 + d;
+                    if (bumps.has(key)) return { states, loop: true, cycleStart: bumps.get(key) };
+                    bumps.set(key, states.length - 1);
+                    d = (d + 1) % 4;
+                    states.push([r, c, d]);
+                    continue;
+                }
+                r = nr; c = nc;
+                states.push([r, c, d]);
+            }
+        }
+
+        // Points for drawing a walk: one per move (turns don't move), as [x, y], plus which point each state is at.
+        function walkPoints(states) {
+            const points = [], pointOf = [];
+            for (const [r, c] of states) {
+                const last = points[points.length - 1];
+                if (!last || last[0] !== c || last[1] !== r) points.push([c, r]);
+                pointOf.push(points.length - 1);
+            }
+            return { points, pointOf };
+        }
+
+        // The first `upto` segments of a line (upto may be a fraction), and where its end is.
+        function partOf(points, upto) {
+            const whole = Math.floor(upto), f = upto - whole;
+            const out = points.slice(0, whole + 1);
+            if (f > 0 && whole + 1 < points.length) {
+                const [ax, ay] = points[whole], [bx, by] = points[whole + 1];
+                out.push([ax + (bx - ax) * f, ay + (by - ay) * f]);
+            }
+            return out;
+        }
+
+        function drawFloor(map, tint) {
+            const c = grid.cell, inset = c >= 8 ? Math.max(0.5, c * 0.05) : 0, radius = Math.max(1, c * 0.12);
+            grid.clear(COLORS.floor);
+            for (let r = 0; r < map.rows; r++) {
+                for (let col = 0; col < map.cols; col++) {
+                    const i = r * map.cols + col;
+                    grid.square(col, r, map.wall[i] ? COLORS.wall : tint(i) || COLORS.tile, inset, radius);
+                }
+            }
+            return { inset, radius };
+        }
+
+        const lineWidth = () => Math.max(1.5, grid.cell * 0.09);
+        const smooth = p => p * p * (3 - 2 * p);
+
+        function day6Part1(text, { speeds, speed, big }) {
+            const map = parseMap(text);
+            const { states } = guardWalk(map);
+            const last = states.length - 1;      // the last step walks off the map
+            const firstSeen = new Int32Array(map.rows * map.cols).fill(-1);
+            const visitedBy = [];                 // cells visited after each step
+            let count = 0;
+            states.forEach(([r, c], k) => {
+                if (r >= 0 && c >= 0 && r < map.rows && c < map.cols && firstSeen[r * map.cols + c] < 0) {
+                    firstSeen[r * map.cols + c] = k;
+                    count++;
+                }
+                visitedBy.push(count);
+            });
+
+            const clock = k => (k === 0 ? "Start" : `Step ${num(k)} of ${num(last)}`);
+
+            return {
+                line: "The guard walks straight ahead and turns right at every obstacle, until walking off the map. Count the cells the guard steps on.",
+                sizeLabel: `${map.cols} × ${map.rows} · ${map.walls} obstacles`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+                layout: () => grid.size(map.cols, map.rows, big ? 17 : 44, big ? 560 : 480),
+
+                draw(t) {
+                    const k = Math.floor(t), frac = t - k;
+                    drawFloor(map, i => (firstSeen[i] >= 0 && firstSeen[i] <= k ? COLORS.trail : null));
+
+                    const points = walkPoints(states.slice(0, k + 1)).points;
+                    let head = null;
+                    if (k < last) {
+                        const [ar, ac, ad] = states[k], [br, bc] = states[k + 1];
+                        const p = smooth(frac);
+                        if (ar !== br || ac !== bc) {
+                            head = { x: ac + (bc - ac) * p, y: ar + (br - ar) * p, angle: (ad * 90 - 90) * Math.PI / 180 };
+                            if (frac > 0) points.push([head.x, head.y]);
+                        } else {
+                            head = { x: ac, y: ar, angle: ((ad + p) * 90 - 90) * Math.PI / 180 };   // turning right
+                        }
+                    }
+                    grid.line(points, COLORS.accent, lineWidth());
+                    if (head) grid.arrow(head.x, head.y, head.angle, COLORS["text-primary"]);
+                },
+
+                clock: t => clock(Math.floor(t)),
+
+                readout(t) {
+                    const k = Math.floor(t);
+                    return { text: `Visited ${num(visitedBy[k])}`, hit: k === last };
+                },
+
+                describe(t) {
+                    const k = Math.floor(t);
+                    return `${clock(k)}. ${visitedBy[k]} cells visited.`;
+                },
+            };
+        }
+
+        function day6Part2(text, { speeds, speed, big }) {
+            const map = parseMap(text);
+            const { states } = guardWalk(map);
+            const startIndex = map.start[0] * map.cols + map.start[1];
+
+            // My code tries a new obstacle on every cell the guard walked on, except where it starts.
+            const tries = [];
+            const tried = new Set([startIndex]);
+            for (const [r, c] of states) {
+                if (r < 0 || c < 0 || r >= map.rows || c >= map.cols) continue;
+                const i = r * map.cols + c;
+                if (tried.has(i)) continue;
+                tried.add(i);
+                const walk = guardWalk(map, i);
+                const { points, pointOf } = walkPoints(walk.states);
+                tries.push({ i, x: c, y: r, loop: walk.loop, points, cycleAt: walk.loop ? pointOf[walk.cycleStart] : points.length });
+            }
+            const last = tries.length;
+            const loopsBy = [0];
+            for (const t of tries) loopsBy.push(loopsBy[loopsBy.length - 1] + (t.loop ? 1 : 0));
+            const tryOf = new Map(tries.map((t, j) => [t.i, j]));
+
+            const clock = k => {
+                if (k === 0) return "Start";
+                return `Try ${num(k)} of ${num(last)} · ${tries[k - 1].loop ? "loop" : "walks off"}`;
+            };
+
+            return {
+                line: "Add one new obstacle on the guard's path. How many spots trap the guard in a loop? A loop is the same obstacle hit from the same side twice.",
+                sizeLabel: `${map.cols} × ${map.rows} · ${map.walls} obstacles`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+                layout: () => grid.size(map.cols, map.rows, big ? 17 : 44, big ? 560 : 480),
+
+                draw(t) {
+                    const k = Math.floor(t), frac = t - k;
+                    const running = frac > 0 && k < last;
+                    const cur = running ? k : k - 1;          // the try on screen
+                    const progress = running ? frac : 1;
+
+                    // Faint green: cells still to try. Gold dots: spots already found to make a loop.
+                    const { inset, radius } = drawFloor(map, i => {
+                        const j = tryOf.get(i);
+                        return j !== undefined && j > cur ? COLORS["trail-faint"] : null;
+                    });
+                    for (let j = 0; j < Math.min(cur, last); j++) if (tries[j].loop) grid.dot(tries[j].x, tries[j].y, COLORS.gold, 0.22);
+                    if (cur < 0) {
+                        grid.arrow(map.start[1], map.start[0], -Math.PI / 2, COLORS["text-primary"]);
+                        return;
+                    }
+
+                    const now = tries[cur];
+                    grid.square(now.x, now.y, COLORS.gold, inset, radius);
+                    const segments = now.points.length - 1;
+                    const upto = segments * smooth(progress);
+                    const drawn = partOf(now.points, upto);
+                    // Grey on the way in, gold once the guard is going round the loop.
+                    grid.line(drawn.slice(0, now.cycleAt + 1), COLORS["text-muted"], lineWidth());
+                    if (drawn.length > now.cycleAt + 1) grid.line(drawn.slice(now.cycleAt), COLORS.gold, lineWidth());
+                    if (progress < 1 && segments > 0) {
+                        // the guard, at the front of the line
+                        const end = drawn[drawn.length - 1], j = Math.min(Math.floor(upto), segments - 1);
+                        const [ax, ay] = now.points[j], [bx, by] = now.points[j + 1];
+                        grid.arrow(end[0], end[1], Math.atan2(by - ay, bx - ax), COLORS["text-primary"]);
+                    }
+                },
+
+                clock: t => clock(Math.floor(t)),
+
+                readout(t) {
+                    const k = Math.floor(t);
+                    return { text: `Loops ${num(loopsBy[k])}`, hit: k === last };
+                },
+
+                describe(t) {
+                    const k = Math.floor(t);
+                    return `${clock(k)}. ${loopsBy[k]} loop spots found.`;
+                },
+            };
+        }
 
         /* ---------- Day 9: Disk Fragmenter ---------- */
 
@@ -1187,6 +1499,20 @@ p=9,5 v=-3,-3`;
 
         // Each part has one or more inputs; each input makes its scene the first time it's opened.
         const DAYS = [
+            {
+                day: 6,
+                title: "Guard Gallivant",
+                parts: [
+                    { inputs: [
+                        { name: "Example", make: () => day6Part1(EXAMPLE_6, { speeds: [2, 5, 10], speed: 5 }) },
+                        { name: "Made-up", make: () => day6Part1(MADE_UP_6, { speeds: [5, 20, 50], speed: 20, big: true }) },
+                    ] },
+                    { inputs: [
+                        { name: "Example", make: () => day6Part2(EXAMPLE_6, { speeds: [1, 2, 5], speed: 2 }) },
+                        { name: "Made-up", make: () => day6Part2(MADE_UP_6, { speeds: [5, 15, 40], speed: 15, big: true }) },
+                    ] },
+                ],
+            },
             {
                 day: 9,
                 title: "Disk Fragmenter",
