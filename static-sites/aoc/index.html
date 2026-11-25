@@ -32,6 +32,7 @@
             --trail: rgba(16, 185, 129, 0.3);
             --trail-faint: rgba(16, 185, 129, 0.12);
             --bar: #2f3b36;
+            --box: #9a948c;
             --border: #262626;
             --border-strong: #3a3a3a;
             --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -801,13 +802,50 @@ p=24,57 v=-27,-83
 p=96,73 v=49,6
     </script>
 
+    <!-- Made-up warehouse for Day 15, not my real input: random boxes and moves, picked for some big pushes. -->
+    <script type="text/plain" id="day15-made-up">
+####################
+#.O....O.OO....OOOO#
+#..OO..O..........O#
+##.O..O...O.O......#
+#..O...O..O.OO.O...#
+#...O.O.O.O.....O..#
+#.OO..O#.O...O....O#
+#O.OO.OOO....O...OO#
+#...O.O..O...O..OO.#
+#.OO..#.....O.#O...#
+#.........@.OO.#..O#
+#.#OO...........O..#
+#..O.O.O......O..O.#
+#...O..OO....O.....#
+#...O..OO#..O.OOO.O#
+#........OOO.......#
+#O.#O..........OO..#
+#O...O...OO.....OO.#
+#O.OO..O......#.O..#
+####################
+
+<<<<<^vvvvv^<<<<<vvv>>>>>>>>vvvv>>>>>>^vvvvvv<<<<^^^<<>><<<<<v<>>>>><<<^^^^^vvvvv<<<<<<<<<^^^<<<vvv^
+^<<<^^>>>^^^<<<><>>>>>vvvv>^^^^^^^^^<vvvvv>>>><<>>>>^^vv>>^^^>>>>^^^^>><<<<<>>>>>><<<<<vvvv<<>>>>>>>
+>>>>vvvvv^^^^^v><<<<<v<<<<<<<<<v<<^^^^^^^^^<<<^^^^<<<>>>><<<<<<<<<<<^^^^^<<^^<<<>><<<>>>>><<<^^^vvvv
+<<<<<<<^^^<>>>><<<<>>^>>>>vvvvvv^^v^^vvvvv<>>>>>>>^^^<<<<<>>^^^^^^^^^^>>>><<<<<<<^^^^^^^^^v^^>>>>>>v
+v<<^^^^^^^^^^^^^^<<<<^^vvvvvvv<<<>>>>^^^^<^^^>vvvvv<vvvvvv^^^v<<<<<<<vv>>><<<<<<<<>>>>vvvv^^^vvv>>>>
+>>>^^^vvv<<<<<v<<<<<<<^^<<<<^^^^>>><vvv^vvv<<<<<vvvvv>>>>>>v<<^^^vvvv^^^>>>>>>>>>>>>>><<<<>>><<<<<vv
+<<<<<<<<^^<<<<^^^^^^vvvvv<<<<<<^^^^^^^^^>vvv<<v<<<<<<<<<<<<<<vvvv<<<<>>>v<<<^^^^^^^^vvvvv^^^^^><<^^^
+^vvvvv<<>vv><<>>>>>vv^^^^>^^^>>>><<<<<<<vvvvv<<^>>>>><<<>>^^^>>>>>^^^^^>>>>>><<^^^^^^^^^<^^^^^>>>>vv
+vvv<<<<<<<>>^^<<>>>vvv^^^>>>>>>vvvv<<>>>>>>>^^^>>>>^^^^^^^^^^^^^vvvv^^>vv^^^^vvvvv>>>v<<<<<^^^^^>>>>
+>vv>>>>><<<v^^v<<<^>>>>vvvvv<<<<<^^^^^<<<<<<v<<<<<v<<<<<<>>>>vv^^^^^<<<<<^^>>>>><<<^^^^^<<<<<<vvvvvv
+vvv^^^^<<<<>>>>>>>vvv><<<<>>>>^^^^^^^^^^^vv^^^^^^^v>>>>>v^^^^^^^^vvvvvvvv>>>><v^^^^>>>>>^>>>>><<<<<>
+>>>>>>>>>>^^^^<<<<vvvv<vvvvvvvv<>>><<<<<vvvvv>>>v<<<<vvv>>>>^^^^^^<>v<v<<<<>>>>>vv<<vvvv>>>>>^^^^^^^
+    </script>
+
     <script>
     (() => {
         "use strict";
 
         const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         const COLORS = {};
-        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "wall", "trail", "trail-faint", "bar", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
+        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "wall", "trail", "trail-faint", "bar", "box", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
             COLORS[name] = css("--" + name);
         }
 
@@ -855,6 +893,16 @@ p=96,73 v=49,6
                 } else {
                     ctx.fillRect(x * c + inset, y * c + inset, c - 2 * inset, c - 2 * inset);
                 }
+            },
+
+            // Like square, but over w × h cells from (x, y): a box two cells wide, say.
+            block(x, y, w, h, color, inset = 0, radius = 0) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                if (radius > 0 && ctx.roundRect) ctx.roundRect(x * c + inset, y * c + inset, w * c - 2 * inset, h * c - 2 * inset, radius);
+                else ctx.rect(x * c + inset, y * c + inset, w * c - 2 * inset, h * c - 2 * inset);
+                ctx.fill();
             },
 
             // A ring around cell (x, y), for "this one is next".
@@ -1496,6 +1544,215 @@ p=9,5 v=-3,-3`;
             };
         }
 
+        /* ---------- Day 15: Warehouse Woes ---------- */
+
+        const EXAMPLE_15 = `
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
+
+        const MADE_UP_15 = () => document.getElementById("day15-made-up").textContent;
+
+        const PUSH = { "<": [0, -1], ">": [0, 1], "^": [-1, 0], v: [1, 0] };     // [row, col]
+        const ARROWS = { "<": "←", ">": "→", "^": "↑", v: "↓" };
+        const WORDS = { "<": "left", ">": "right", "^": "up", v: "down" };
+        const EMPTY = 0, WALL = 1, BOX = 2, BOX_L = 3, BOX_R = 4;               // BOX_L/BOX_R: the two halves of a wide box
+
+        // The map as cell codes (twice as wide for part 2, the way my code widens it), the robot and the moves.
+        function parseWarehouse(text, wide) {
+            const [top, bottom] = text.trim().split("\n\n");
+            let lines = top.trim().split("\n");
+            if (wide) lines = lines.map(line => line.replace(/[#O.@]/g, ch => ({ "#": "##", O: "[]", ".": "..", "@": "@." })[ch]));
+            const rows = lines.length, cols = lines[0].length;
+            const cells = new Uint8Array(rows * cols);
+            let robot = 0, boxes = 0;
+            lines.forEach((line, r) => [...line].forEach((ch, c) => {
+                const i = r * cols + c;
+                if (ch === "#") cells[i] = WALL;
+                else if (ch === "O") { cells[i] = BOX; boxes++; }
+                else if (ch === "[") { cells[i] = BOX_L; boxes++; }
+                else if (ch === "]") cells[i] = BOX_R;
+                else if (ch === "@") robot = i;
+            }));
+            return { rows, cols, cells, robot, boxes, moves: bottom.replace(/[^<>^v]/g, "") };
+        }
+
+        // Every move, the way my code does it, with a copy of the map after each one.
+        function warehouseRun(map, wide) {
+            const { rows, cols, moves } = map, n = rows * cols;
+            const cells = map.cells.slice();
+            const snaps = new Uint8Array((moves.length + 1) * n);
+            const robots = new Int32Array(moves.length + 1);
+            const gps = [];
+            const steps = [];
+            let robot = map.robot;
+            const save = k => {
+                snaps.set(cells, k * n);
+                robots[k] = robot;
+                let sum = 0;
+                for (let i = 0; i < n; i++) if (cells[i] === BOX || cells[i] === BOX_L) sum += 100 * Math.floor(i / cols) + (i % cols);
+                gps.push(sum);
+            };
+            save(0);
+
+            for (let k = 0; k < moves.length; k++) {
+                const dir = moves[k], [dr, dc] = PUSH[dir], d = dr * cols + dc, next = robot + d;
+                let step = { dir, kind: "walk", boxes: [], hits: [] };
+                if (cells[next] === WALL) step.kind = "wall";
+                else if (cells[next] === EMPTY) robot = next;
+                else if (!wide) {
+                    // Part 1: look down the line of boxes to the first gap or wall.
+                    let at = next;
+                    while (cells[at] === BOX) { step.boxes.push(at); at += d; }
+                    if (cells[at] === WALL) Object.assign(step, { kind: "blocked", hits: [at] });
+                    else {
+                        cells[at] = BOX;
+                        cells[next] = EMPTY;
+                        robot = next;
+                        step.kind = "push";
+                    }
+                } else {
+                    // Part 2: gather every box the push reaches (a stack of box halves still to look past),
+                    // then move them all, but only if none of them would hit a wall.
+                    const left = i => (cells[i] === BOX_L ? i : i - 1);
+                    const boxes = step.boxes, first = left(next), stack = [first, first + 1];
+                    boxes.push(first);
+                    while (stack.length) {
+                        const at = stack.pop() + d;
+                        if (cells[at] !== BOX_L && cells[at] !== BOX_R) continue;
+                        const b = left(at);
+                        if (!boxes.includes(b)) { boxes.push(b); stack.push(b, b + 1); }
+                    }
+                    for (const b of boxes) for (const at of [b + d, b + 1 + d]) if (cells[at] === WALL && !step.hits.includes(at)) step.hits.push(at);
+                    if (step.hits.length) step.kind = "blocked";
+                    else {
+                        for (const b of boxes) cells[b] = cells[b + 1] = EMPTY;
+                        for (const b of boxes) { cells[b + d] = BOX_L; cells[b + 1 + d] = BOX_R; }
+                        robot = next;
+                        step.kind = "push";
+                    }
+                }
+                steps.push(step);
+                save(k + 1);
+            }
+            return { snaps, robots, gps, steps };
+        }
+
+        function day15(text, part, { speeds, speed, maxCell, maxHeight }) {
+            const wide = part === 2;
+            const map = parseWarehouse(text, wide);
+            const { rows, cols } = map, n = rows * cols;
+            const { snaps, robots, gps, steps } = warehouseRun(map, wide);
+            const last = steps.length, boxW = wide ? 2 : 1;
+            const LOOK = 0.4;      // a push spends the first part of its time finding the boxes, then they slide
+
+            // The move on screen at time t: the one playing, or else the last one done.
+            const onScreen = t => {
+                const k = Math.floor(t), moving = t - k > 0 && k < last;
+                return { k, moving, j: moving ? k : k - 1 };
+            };
+            const boxesText = s => `${s.boxes.length} ${s.boxes.length === 1 ? "box" : "boxes"}`;
+
+            const clock = t => {
+                const { j } = onScreen(t);
+                if (j < 0) return "Start";
+                const s = steps[j];
+                const what = { walk: "", wall: " wall", push: " " + boxesText(s), blocked: " blocked" }[s.kind];
+                return `Move ${num(j + 1)} of ${num(last)} · ${ARROWS[s.dir]}${what}`;
+            };
+
+            return {
+                line: part === 1
+                    ? "The robot follows its list of moves. Walking into a box, it looks down the line of boxes: a gap means they all shift one step, a wall means nothing moves. Then add up 100 × row + column for every box."
+                    : "Now everything is twice as wide, so one box can push two. The robot first gathers every box the push reaches, then moves them all, but only if none of them would hit a wall.",
+                sizeLabel: `${cols} × ${rows} · ${map.boxes} boxes · ${num(last)} moves`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+                layout: () => grid.size(cols, rows, maxCell, maxHeight),
+
+                draw(t) {
+                    const { k, moving, j } = onScreen(t), f = t - k, c = grid.cell;
+                    const step = j >= 0 ? steps[j] : null;
+                    const [dr, dc] = step ? PUSH[step.dir] : [0, 0];
+                    const d = dr * cols + dc, base = k * n;
+                    const inset = c >= 8 ? Math.max(0.5, c * 0.06) : 0.5, radius = Math.max(1, c * 0.14);
+
+                    // How many boxes the code has found so far, and how far the move has got.
+                    const found = !step ? 0 : moving ? Math.ceil(step.boxes.length * Math.min(1, f / LOOK)) : step.boxes.length;
+                    const go = !moving ? 1 : step.boxes.length ? Math.max(0, (f - LOOK) / (1 - LOOK)) : f;
+                    const p = smooth(go);
+                    const sliding = moving && step.kind === "push";
+                    // Gold: the boxes in this push. Once a push is done they sit one step further on.
+                    const gold = new Set();
+                    for (let i = 0; i < found; i++) gold.add(!moving && step.kind === "push" ? step.boxes[i] + d : step.boxes[i]);
+
+                    grid.clear(COLORS.floor);
+                    for (let i = 0; i < n; i++) grid.square(i % cols, Math.floor(i / cols), snaps[base + i] === WALL ? COLORS.wall : COLORS.tile, inset, radius);
+                    for (let i = 0; i < n; i++) {
+                        const v = snaps[base + i];
+                        if (v !== BOX && v !== BOX_L) continue;
+                        const x = i % cols, y = Math.floor(i / cols), isGold = gold.has(i), off = isGold && sliding ? p : 0;
+                        grid.block(x + dc * off, y + dr * off, boxW, 1, isGold ? COLORS.gold : COLORS.box, inset, radius);
+                    }
+                    // A blocked push: ring the walls in the way.
+                    if (step && step.kind === "blocked" && found === step.boxes.length) {
+                        for (const h of step.hits) grid.outline(h % cols, Math.floor(h / cols), COLORS.gold, inset, radius, Math.max(1.5, c * 0.1));
+                    }
+
+                    // The robot slides, or bumps and comes back when nothing can move.
+                    let rx = robots[k] % cols, ry = Math.floor(robots[k] / cols);
+                    if (moving) {
+                        const m = step.kind === "walk" || step.kind === "push" ? p : 0.2 * Math.sin(Math.PI * go);
+                        rx += dc * m;
+                        ry += dr * m;
+                    }
+                    // Never smaller than 9px, with a dark edge, so it stays easy to find on a phone.
+                    const ri = Math.min(inset, 0.5, (c - 9) / 2), rr = Math.max(1.5, c * 0.3);
+                    grid.square(rx, ry, COLORS.robot, ri, rr);
+                    if (ri < 0) grid.outline(rx, ry, COLORS["bg-primary"], ri - 1, rr, 1);
+                    if (step && c >= 12) {
+                        // a small chevron: which way it's facing
+                        const a = Math.atan2(dr, dc), s = 0.17;
+                        const pt = (u, v) => [rx + u * Math.cos(a) - v * Math.sin(a), ry + u * Math.sin(a) + v * Math.cos(a)];
+                        grid.line([pt(-s * 0.6, -s), pt(s * 0.6, 0), pt(-s * 0.6, s)], COLORS["bg-primary"], Math.max(1.5, c * 0.08));
+                    }
+                },
+
+                clock,
+
+                readout(t) {
+                    const k = Math.floor(t);
+                    return { text: `GPS sum ${num(gps[k])}`, hit: k === last };
+                },
+
+                describe(t) {
+                    const { k, j } = onScreen(t);
+                    if (j < 0) return `Start. GPS sum ${num(gps[k])}.`;
+                    const s = steps[j];
+                    const what = { walk: "", wall: ", into a wall", push: `, pushing ${boxesText(s)}`, blocked: ", but the boxes are stuck" }[s.kind];
+                    return `Move ${j + 1} of ${last}: ${WORDS[s.dir]}${what}. GPS sum ${num(gps[k])}.`;
+                },
+            };
+        }
+
         /* ---------- the days ---------- */
 
         // Each part has one or more inputs; each input makes its scene the first time it's opened.
@@ -1534,6 +1791,20 @@ p=9,5 v=-3,-3`;
                 parts: [
                     { inputs: [{ name: "Example", make: day14Part1 }] },
                     { inputs: [{ name: "Made-up", make: day14Part2 }] },
+                ],
+            },
+            {
+                day: 15,
+                title: "Warehouse Woes",
+                parts: [
+                    { inputs: [
+                        { name: "Example", make: () => day15(EXAMPLE_15, 1, { speeds: [5, 30, 70], speed: 30, maxCell: 44, maxHeight: 440 }) },
+                        { name: "Made-up", make: () => day15(MADE_UP_15(), 1, { speeds: [10, 60, 150], speed: 60, maxCell: 26, maxHeight: 520 }) },
+                    ] },
+                    { inputs: [
+                        { name: "Example", make: () => day15(EXAMPLE_15, 2, { speeds: [5, 30, 70], speed: 30, maxCell: 40, maxHeight: 440 }) },
+                        { name: "Made-up", make: () => day15(MADE_UP_15(), 2, { speeds: [10, 60, 150], speed: 60, maxCell: 21, maxHeight: 520 }) },
+                    ] },
                 ],
             },
         ];
