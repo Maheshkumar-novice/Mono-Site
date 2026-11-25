@@ -933,9 +933,10 @@ vvv^^^^<<<<>>>>>>>vvv><<<<>>>>^^^^^^^^^^^vv^^^^^^^v>>>>>v^^^^^^^^vvvvvvvv>>>><v^
             },
 
             // An arrow head in cell (x, y), pointing at `angle` (radians, 0 = right).
-            // Never smaller than 18px, so it stays easy to see on small cells.
-            arrow(x, y, angle, color) {
-                const c = this.cell, s = Math.max(c, 18), ctx = this.ctx;
+            // Never smaller than `min` px (18 unless asked), so it stays easy to see on small cells.
+            // `scale` shrinks it, for one that matters less.
+            arrow(x, y, angle, color, min = 18, scale = 1) {
+                const c = this.cell, s = Math.max(c, min) * scale, ctx = this.ctx;
                 ctx.save();
                 ctx.translate(x * c + c / 2, y * c + c / 2);
                 ctx.rotate(angle);
@@ -1753,6 +1754,250 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
             };
         }
 
+        /* ---------- Day 16: Reindeer Maze ---------- */
+
+        const EXAMPLE_16 = `
+###############
+#.......#....E#
+#.#.###.#.###.#
+#.....#.#...#.#
+#.###.#####.#.#
+#.#.#.......#.#
+#.#.#####.###.#
+#...........#.#
+###.#.#####.#.#
+#...#.....#.#.#
+#.#.#.###.#.#.#
+#.....#...#.#.#
+#.###.#.#.#.#.#
+#S..#.....#...#
+###############`;
+
+        // Made-up, not my real input: a random maze laid out like the real one (walls on a
+        // grid, S bottom left, E top right), with some walls knocked out so there are loops.
+        const MADE_UP_16 = `
+###############################
+#.......#...#.........#......E#
+#.#.#.#.#.###.###.###.#.#.###.#
+#.#.#.........#.#...#.....#...#
+#.#.#.#####.###.###.#.###.###.#
+#.#.......#.#.....#.#.#.#...#.#
+#.#.#####.#.###.#.#.#.#.###.###
+#.#...#...#...#.#.#.......#...#
+#.###.#.#.###.#.#######.#.###.#
+#...#.#.#...#...#...#.....#...#
+#.###.#.#####.#.#.#.#.###.#.#.#
+#.....#.#.....#.......#...#...#
+#.#####.#.#####.#######.#.#.#.#
+#.......................#.#.#.#
+#.#.#.#.###.#.#####.#.#.###.#.#
+#.........#.....#...#.......#.#
+#.#.#####.#.#.#.###.#.#.#.###.#
+#.#.....#...#.......#.#.#...#.#
+#.#######.#.#######.#.#.###.###
+#.........#.....#...#.#...#...#
+#.#.#######.###.###.###.#.###.#
+#.........#.#.....#...#.#...#.#
+###.###.#.#.#####.###.#.#.###.#
+#...#.....#.....#.#.#.....#...#
+#.###.###.###.#.#.#.###.###.#.#
+#...#...#.......#.#.....#...#.#
+#.#####.#########.#######.###.#
+#.#...#...#.....#.........#...#
+###.#.#.#.#.#.#.#.#.#.#.###.#.#
+#S............#...............#
+###############################`;
+
+        const FACE = [[-1, 0], [0, 1], [1, 0], [0, -1]];              // north, east, south, west as [row, col]
+        const FACE_ANGLE = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+        const SIDEWAYS = d => (d % 2 === 0 ? [1, 3] : [0, 2]);       // north/south turn east or west, east/west turn north or south
+
+        // The search, the way my code does it: a plain first-in, first-out queue of reindeer,
+        // each with a tile, a facing and a score. Each one steps ahead (+1) or turns toward an
+        // open tile (+1000). One that reaches a tile and facing already reached for less is
+        // dropped. Stepping onto E only notes the score; the search goes on until the queue is empty.
+        // Each reindeer is one step or turn further on than the one that added it, and the queue
+        // is first in, first out, so the search runs in rounds.
+        function reindeerSearch(text) {
+            const lines = text.trim().split("\n");
+            const rows = lines.length, cols = lines[0].length, n = rows * cols;
+            const wall = new Uint8Array(n);
+            let start = 0, end = 0, open = 0;
+            lines.forEach((line, r) => [...line].forEach((ch, c) => {
+                const i = r * cols + c;
+                if (ch === "#") wall[i] = 1;
+                else open++;
+                if (ch === "S") start = i;
+                if (ch === "E") end = i;
+            }));
+
+            // The queue, in the order my code takes it out.
+            const at = [start], face = [1], score = [0], parent = [-1], round = [0], dropped = [];
+            const best = new Float64Array(n * 4).fill(Infinity);     // lowest score per tile and facing
+            const arrivals = [];                                     // reaching E: { from, score, face, round }
+            const push = (i, d, s, from) => { at.push(i); face.push(d); score.push(s); parent.push(from); round.push(round[from] + 1); };
+            for (let j = 0; j < at.length; j++) {
+                const i = at[j], d = face[j], s = score[j];
+                if (s > best[i * 4 + d]) { dropped[j] = 1; continue; }
+                dropped[j] = 0;
+                best[i * 4 + d] = s;
+                const r = Math.floor(i / cols), c = i % cols;
+                for (const nd of [d, ...SIDEWAYS(d)]) {
+                    const nr = r + FACE[nd][0], nc = c + FACE[nd][1], ni = nr * cols + nc;
+                    if (nr < 0 || nc < 0 || nr >= rows || nc >= cols || wall[ni]) continue;
+                    if (ni === end) arrivals.push({ from: j, score: s + 1, face: nd, round: round[j] + 1 });
+                    else if (nd === d) push(ni, nd, s + 1, j);
+                    else push(i, nd, s + 1000, j);
+                }
+            }
+
+            const last = Math.max(round[round.length - 1], ...arrivals.map(a => a.round));
+            const roundStart = new Int32Array(last + 2).fill(at.length);
+            for (let j = at.length - 1; j >= 0; j--) roundStart[round[j]] = j;
+
+            // After each round: how many turns the cheapest reindeer on each tile took (-1: none yet).
+            const turns = new Int16Array((last + 1) * n).fill(-1);
+            const low = new Float64Array(n).fill(Infinity);
+            let maxTurns = 0;
+            for (let k = 0, j = 0; k <= last; k++) {
+                for (; j < at.length && round[j] === k; j++) if (!dropped[j] && score[j] < low[at[j]]) low[at[j]] = score[j];
+                for (let i = 0; i < n; i++) {
+                    if (low[i] === Infinity) continue;
+                    turns[k * n + i] = Math.floor(low[i] / 1000);
+                    maxTurns = Math.max(maxTurns, turns[k * n + i]);
+                }
+            }
+
+            // A reindeer's whole path, as tiles from S, the way my part 2 carries it along.
+            const pathOf = j => {
+                const tiles = [];
+                for (; j >= 0; j = parent[j]) tiles.push(at[j]);
+                return tiles.reverse();
+            };
+            for (const a of arrivals) a.tiles = [...pathOf(a.from), end];
+
+            // After each round: the lowest score at E so far, the first reindeer to get it,
+            // and the pile of tiles (with E) from every path that got it.
+            // (Arrivals are already in round order, since the queue is.)
+            const lowest = [], first = [], pile = [];
+            const piles = new Map();
+            let lowSoFar = Infinity, firstSoFar = null, a = 0;
+            for (let k = 0; k <= last; k++) {
+                for (; a < arrivals.length && arrivals[a].round === k; a++) {
+                    const arr = arrivals[a];
+                    if (!piles.has(arr.score)) piles.set(arr.score, new Set());
+                    for (const i of arr.tiles) piles.get(arr.score).add(i);
+                    if (arr.score < lowSoFar) { lowSoFar = arr.score; firstSoFar = arr; }
+                }
+                lowest.push(lowSoFar);
+                first.push(firstSoFar);
+                pile.push(firstSoFar ? [...piles.get(lowSoFar)] : []);
+            }
+
+            return { rows, cols, n, wall, start, end, open, at, face, parent, dropped, roundStart, arrivals, last, turns, maxTurns, lowest, first, pile };
+        }
+
+        function day16(text, part, { speeds, speed, maxCell, maxHeight }) {
+            const m = reindeerSearch(text);
+            const { rows, cols, n, wall, start, end, at, face, parent, dropped, roundStart, arrivals, last, turns, lowest, first, pile } = m;
+            // Green for no turns, bluer with every turn.
+            const shades = Array.from({ length: m.maxTurns + 1 }, (_, v) => {
+                const p = m.maxTurns ? v / m.maxTurns : 0;
+                return `hsl(${158 + 82 * p} ${62 - 14 * p}% ${40 - 10 * p}%)`;
+            });
+            const inQueue = k => roundStart[k + 1] - roundStart[k];
+            const arrivedIn = k => arrivals.filter(a => a.round === k);
+            const xy = i => [i % cols, Math.floor(i / cols)];
+            const points = tiles => {
+                const out = [];
+                for (const i of tiles) if (out[out.length - 1] !== i) out.push(i);
+                return out.map(xy);
+            };
+
+            const clock = k => {
+                if (k === 0) return "Start";
+                const queue = inQueue(k) ? ` · ${num(inQueue(k))} in the queue` : "";
+                const reached = arrivedIn(k).length ? " · reached E" : "";
+                return `Round ${num(k)} of ${num(last)}${queue}${reached}`;
+            };
+            const answer = k => {
+                if (lowest[k] === Infinity) return part === 1 ? "Lowest —" : "Tiles —";
+                return part === 1 ? `Lowest ${num(lowest[k])}` : `Tiles ${num(pile[k].length)}`;
+            };
+
+            return {
+                line: part === 1
+                    ? "A step costs 1 and a turn costs 1000: find the cheapest way from S to E. Each round, every reindeer in my queue steps or turns, one that reaches a spot for more than before is dropped (grey), and tiles go bluer with every turn taken."
+                    : "Now count the tiles on any cheapest path. Every reindeer in my queue carries its whole path, and each one that reaches E adds its tiles to a pile for its score. The answer is the pile for the lowest score.",
+                sizeLabel: `${cols} × ${rows} · ${num(m.open)} open tiles`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+                layout: () => grid.size(cols, rows, maxCell, maxHeight),
+
+                draw(t) {
+                    const whole = Number.isInteger(t);
+                    const k = whole ? t : Math.floor(t);                       // the round whose colours are on screen
+                    const r = whole ? t : k + 1, p = whole ? 1 : smooth(t - k);  // the round on the move, and how far it's got
+                    const c = grid.cell, inset = c >= 8 ? Math.max(0.5, c * 0.05) : 0.5, radius = Math.max(1, c * 0.12);
+                    const base = k * n;
+
+                    grid.clear(COLORS.floor);
+                    for (let i = 0; i < n; i++) {
+                        const [x, y] = xy(i), v = turns[base + i];
+                        grid.square(x, y, wall[i] ? COLORS.wall : v >= 0 ? shades[v] : COLORS.tile, inset, radius);
+                    }
+
+                    const [ex, ey] = xy(end), [sx, sy] = xy(start), onGold = part === 2 && pile[k].length > 0;
+                    if (part === 1) {
+                        // the cheapest way found so far
+                        if (first[k]) grid.line(points(first[k].tiles), COLORS.gold, Math.max(2, c * 0.18));
+                    } else {
+                        // the pile for the lowest score so far
+                        for (const i of pile[k]) { const [x, y] = xy(i); grid.square(x, y, COLORS.gold, inset, radius); }
+                    }
+                    grid.outline(ex, ey, COLORS.gold, inset, radius, Math.max(1.5, c * 0.08));
+                    if (c >= 16) {
+                        grid.text(sx, sy, "S", onGold ? COLORS["bg-primary"] : COLORS["text-primary"], 0.5);
+                        if (!onGold) grid.text(ex, ey, "E", COLORS.gold, 0.5);
+                    }
+
+                    // The reindeer: each slides or turns from where its parent was.
+                    const min = c >= 16 ? 18 : 12;
+                    const reindeer = (from, to, d0, d1, color, scale = 1) => {
+                        const [fx, fy] = xy(from), [tx, ty] = xy(to);
+                        let turn = FACE_ANGLE[d1] - FACE_ANGLE[d0];
+                        if (turn > Math.PI) turn -= 2 * Math.PI;
+                        if (turn < -Math.PI) turn += 2 * Math.PI;
+                        grid.arrow(fx + (tx - fx) * p, fy + (ty - fy) * p, FACE_ANGLE[d0] + turn * p, color, min, scale);
+                    };
+                    if (r === 0) {
+                        grid.arrow(sx, sy, FACE_ANGLE[1], COLORS["text-primary"], min);
+                        return;
+                    }
+                    for (const pass of [1, 0]) {
+                        for (let j = roundStart[r]; j < roundStart[r + 1]; j++) {
+                            if (dropped[j] !== pass) continue;
+                            const q = parent[j];
+                            reindeer(at[q], at[j], face[q], face[j], pass ? COLORS["text-muted"] : COLORS["text-primary"], pass ? 0.7 : 1);
+                        }
+                    }
+                    for (const a of arrivedIn(r)) reindeer(at[a.from], end, face[a.from], a.face, onGold ? COLORS["text-primary"] : COLORS.gold);
+                },
+
+                clock: t => clock(Math.floor(t)),
+
+                readout(t) {
+                    const k = Math.floor(t);
+                    return { text: answer(k), hit: k === last };
+                },
+
+                describe(t) {
+                    const k = Math.floor(t);
+                    return `${clock(k)}. ${answer(k)}.`;
+                },
+            };
+        }
+
         /* ---------- the days ---------- */
 
         // Each part has one or more inputs; each input makes its scene the first time it's opened.
@@ -1804,6 +2049,20 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
                     { inputs: [
                         { name: "Example", make: () => day15(EXAMPLE_15, 2, { speeds: [5, 30, 70], speed: 30, maxCell: 40, maxHeight: 440 }) },
                         { name: "Made-up", make: () => day15(MADE_UP_15(), 2, { speeds: [10, 60, 150], speed: 60, maxCell: 21, maxHeight: 520 }) },
+                    ] },
+                ],
+            },
+            {
+                day: 16,
+                title: "Reindeer Maze",
+                parts: [
+                    { inputs: [
+                        { name: "Example", make: () => day16(EXAMPLE_16, 1, { speeds: [1, 3, 6], speed: 3, maxCell: 36, maxHeight: 480 }) },
+                        { name: "Made-up", make: () => day16(MADE_UP_16, 1, { speeds: [2, 6, 15], speed: 6, maxCell: 20, maxHeight: 560 }) },
+                    ] },
+                    { inputs: [
+                        { name: "Example", make: () => day16(EXAMPLE_16, 2, { speeds: [1, 3, 6], speed: 3, maxCell: 36, maxHeight: 480 }) },
+                        { name: "Made-up", make: () => day16(MADE_UP_16, 2, { speeds: [2, 6, 15], speed: 6, maxCell: 20, maxHeight: 560 }) },
                     ] },
                 ],
             },
