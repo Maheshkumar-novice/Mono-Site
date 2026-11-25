@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-name" content="Advent of Code">
+    <meta name="app-section" content="Fun">
+    <title>Advent of Code</title>
+    <meta name="description" content="My Advent of Code 2024 solutions, drawn. Play, pause and step through each puzzle.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-raised: #1c1c1c;
+            --floor: #0e0e0e;
+            --tile: #1a1a1a;
+            --tile-off: #121212;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --accent-soft: rgba(16, 185, 129, 0.15);
+            --robot: #10b981;
+            --robot-off: rgba(16, 185, 129, 0.32);
+            --gold: #fbbf24;
+            --bar: #2f3b36;
+            --border: #262626;
+            --border-strong: #3a3a3a;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            --border-radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            overflow-x: clip;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        [hidden] { display: none !important; }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .nav-brand { font-weight: 600; color: var(--text-primary); font-size: 1.125rem; }
+        .nav-brand:hover { color: var(--accent); }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+        .page-head h1 { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.25rem; }
+        .subtitle { color: var(--text-secondary); margin: 0 0 1.25rem; }
+
+        button {
+            font: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:hover { border-color: var(--text-muted); }
+        button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        /* ---------- days and parts ---------- */
+
+        .days { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+
+        .days button {
+            border-radius: 999px;
+            padding: 0.3rem 0.8rem;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border-color: var(--border);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .days button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+
+        .day-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem 1rem; }
+        .day-head h2 { font-size: 1rem; font-weight: 600; margin: 0; text-wrap: balance; }
+        .links { display: flex; gap: 1rem; font-size: 0.875rem; }
+
+        .parts {
+            display: inline-flex;
+            padding: 3px;
+            margin: 1rem 0 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .parts button { background: none; border: none; padding: 0.4rem 0.95rem; color: var(--text-secondary); }
+        .parts button[aria-selected="true"] { background: var(--bg-raised); color: var(--text-primary); font-weight: 500; }
+
+        .part-line { color: var(--text-secondary); margin: 0 0 1rem; max-width: 62ch; }
+
+        /* ---------- the stage ---------- */
+
+        .stage {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 1rem 1rem;
+        }
+
+        .stage-top {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.25rem 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .grid-wrap { display: flex; justify-content: center; }
+        canvas { display: block; }
+
+        .readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.25rem 1rem;
+            margin-top: 0.85rem;
+            font-family: var(--mono);
+            font-size: 0.9rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .readout .clock { color: var(--text-secondary); }
+        .readout .answer { color: var(--text-secondary); }
+        .readout .answer.hit { color: var(--accent); font-weight: 600; }
+
+        /* ---------- controls ---------- */
+
+        .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1rem; }
+        .btns { display: flex; gap: 0.375rem; }
+
+        .icon-btn { width: 40px; height: 40px; padding: 0; }
+        .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        .icon-btn.play { background: var(--accent); border-color: var(--accent); color: var(--bg-primary); }
+        .icon-btn.play:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        .speeds {
+            display: inline-flex;
+            padding: 3px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+        }
+
+        .speeds button { background: none; border: none; padding: 0.35rem 0.7rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+        .speeds button[aria-pressed="true"] { background: var(--bg-raised); color: var(--text-primary); font-weight: 500; }
+
+        .goal { margin-left: auto; height: 40px; color: var(--accent); border-color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+        .goal:hover { border-color: var(--accent-hover); color: var(--accent-hover); }
+
+        .scrub { width: 100%; margin: 1rem 0 0; accent-color: var(--accent); }
+
+        /* ---------- chart ---------- */
+
+        .chart { position: relative; margin-top: 1.25rem; }
+        .chart-head { display: flex; flex-wrap: wrap; gap: 0 1rem; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+        .chart canvas { width: 100%; cursor: crosshair; touch-action: pan-y; }
+
+        .tip {
+            position: absolute;
+            top: 1.4rem;
+            pointer-events: none;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            color: var(--text-primary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 600px) {
+            .site-nav { padding: 1rem 24px; }
+            .container { padding: 1.5rem 24px 2.5rem; }
+            .stage { padding: 0.75rem 0.75rem 0.85rem; }
+            .goal { margin-left: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav"><a href="/" class="nav-brand">Maheshkumar</a></nav>
+
+    <main class="container">
+        <header class="page-head">
+            <h1>Advent of Code</h1>
+            <p class="subtitle">My 2024 solutions, drawn.</p>
+        </header>
+
+        <div class="days" id="days" role="tablist" aria-label="Day"></div>
+
+        <section>
+            <div class="day-head">
+                <h2 id="dayTitle"></h2>
+                <div class="links">
+                    <a id="puzzleLink" target="_blank" rel="noopener">Puzzle ↗</a>
+                    <a id="codeLink" target="_blank" rel="noopener">My code ↗</a>
+                </div>
+            </div>
+
+            <div class="parts" id="parts" role="tablist" aria-label="Part"></div>
+            <p class="part-line" id="partLine"></p>
+
+            <div class="stage">
+                <div class="stage-top"><span id="inputLabel"></span><span id="sizeLabel"></span></div>
+                <div class="grid-wrap" id="gridWrap"><canvas id="grid" role="img"></canvas></div>
+                <div class="readout">
+                    <span class="clock" id="clock"></span>
+                    <span class="answer" id="answer"></span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="btns">
+                    <button class="icon-btn" id="restart" aria-label="Back to the start" title="Back to the start">
+                        <svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg>
+                    </button>
+                    <button class="icon-btn" id="back" aria-label="One second back" title="One second back">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 5.5 9 12l6.5 6.5-1.6 1.6L5.8 12l8.1-8.1z"/></svg>
+                    </button>
+                    <button class="icon-btn play" id="play" aria-label="Play" title="Play">
+                        <svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button class="icon-btn" id="fwd" aria-label="One second forward" title="One second forward">
+                        <svg viewBox="0 0 24 24"><path d="M8.5 5.5 15 12l-6.5 6.5 1.6 1.6 8.1-8.1-8.1-8.1z"/></svg>
+                    </button>
+                </div>
+                <div class="speeds" id="speeds" role="group" aria-label="Speed"></div>
+                <button class="goal" id="goal" hidden></button>
+            </div>
+
+            <input class="scrub" id="scrub" type="range" min="0" max="100" step="1" value="0" aria-label="Second">
+
+            <div class="chart" id="chartBox" hidden>
+                <div class="chart-head"><span id="chartTitle"></span><span id="chartNote"></span></div>
+                <canvas id="chart" aria-hidden="true"></canvas>
+                <div class="tip" id="tip" hidden></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Made-up robots for Day 14 part 2, not my real input: they draw a tree at one second. -->
+    <script type="text/plain" id="day14-made-up">
+p=79,83 v=-69,4
+p=86,16 v=-28,43
+p=47,91 v=41,18
+p=30,81 v=-53,-53
+p=24,56 v=62,24
+p=16,4 v=26,75
+p=29,55 v=62,-80
+p=38,92 v=-90,23
+p=84,77 v=91,-44
+p=83,17 v=-28,-6
+p=18,89 v=-56,5
+p=46,12 v=7,-81
+p=0,7 v=94,-85
+p=97,85 v=-40,-7
+p=66,94 v=96,-30
+p=87,82 v=82,93
+p=83,61 v=41,88
+p=9,100 v=-57,-28
+p=78,28 v=1,-14
+p=28,2 v=30,-29
+p=96,100 v=68,-27
+p=74,71 v=-64,7
+p=3,71 v=35,25
+p=82,19 v=64,-24
+p=11,82 v=-48,-19
+p=9,42 v=44,22
+p=96,53 v=22,-17
+p=68,15 v=-14,56
+p=17,65 v=31,-80
+p=3,16 v=91,56
+p=34,46 v=-40,-41
+p=10,47 v=30,24
+p=3,70 v=-93,67
+p=27,56 v=-76,44
+p=41,87 v=-70,-3
+p=60,11 v=-64,-27
+p=41,36 v=-95,-84
+p=28,5 v=-44,36
+p=69,90 v=78,-44
+p=25,16 v=-13,84
+p=31,91 v=57,9
+p=20,96 v=-67,-73
+p=52,52 v=-68,3
+p=53,19 v=56,-6
+p=25,61 v=54,60
+p=8,33 v=27,56
+p=48,79 v=-29,-52
+p=45,92 v=-84,15
+p=67,6 v=-55,54
+p=60,30 v=51,94
+p=46,17 v=-49,-23
+p=25,15 v=76,97
+p=57,68 v=-36,-76
+p=81,92 v=40,-60
+p=79,26 v=96,-43
+p=61,72 v=45,78
+p=87,97 v=57,85
+p=85,75 v=-24,42
+p=78,5 v=-87,-8
+p=16,11 v=-77,-24
+p=62,99 v=-73,-9
+p=14,99 v=-48,-70
+p=100,24 v=79,77
+p=24,33 v=39,-82
+p=27,75 v=80,69
+p=70,43 v=-32,1
+p=81,101 v=-90,89
+p=34,91 v=-3,-50
+p=89,102 v=-42,-57
+p=42,93 v=68,-70
+p=9,57 v=-29,45
+p=92,42 v=13,-60
+p=92,51 v=-65,23
+p=25,96 v=-2,52
+p=3,45 v=17,21
+p=11,84 v=-71,-96
+p=67,93 v=-9,54
+p=72,64 v=18,25
+p=19,49 v=86,-43
+p=9,30 v=-89,39
+p=13,89 v=-20,-91
+p=75,56 v=28,85
+p=16,81 v=85,-74
+p=100,48 v=98,-46
+p=2,87 v=45,-38
+p=95,40 v=51,49
+p=31,79 v=62,-12
+p=73,26 v=-37,-24
+p=84,25 v=98,-94
+p=41,26 v=-26,16
+p=77,62 v=44,-97
+p=45,35 v=75,-21
+p=7,24 v=-25,43
+p=34,23 v=-87,14
+p=12,101 v=-75,28
+p=52,21 v=-42,13
+p=93,92 v=34,5
+p=75,54 v=-16,-67
+p=89,87 v=-65,-29
+p=31,75 v=86,-56
+p=22,32 v=-39,82
+p=52,41 v=-22,-17
+p=56,67 v=28,87
+p=97,31 v=26,17
+p=65,5 v=34,92
+p=77,93 v=-37,33
+p=74,32 v=24,95
+p=82,40 v=9,84
+p=57,93 v=-85,49
+p=42,32 v=6,-61
+p=87,43 v=-42,1
+p=33,67 v=-67,88
+p=22,51 v=-30,23
+p=65,33 v=-17,-71
+p=12,75 v=53,67
+p=14,26 v=90,-2
+p=48,47 v=-40,22
+p=4,82 v=-44,-72
+p=97,77 v=-24,-11
+p=54,10 v=47,98
+p=2,24 v=-40,-65
+p=72,21 v=-41,-86
+p=78,9 v=-92,-3
+p=56,70 v=86,55
+p=62,85 v=5,-92
+p=65,45 v=92,-82
+p=28,82 v=66,-33
+p=12,38 v=44,81
+p=56,25 v=-66,-12
+p=27,87 v=-32,21
+p=39,14 v=66,96
+p=84,64 v=-30,21
+p=87,91 v=18,6
+p=10,61 v=-98,-84
+p=66,87 v=-96,94
+p=93,50 v=16,22
+p=68,31 v=28,83
+p=9,91 v=-96,-25
+p=35,39 v=51,-61
+p=25,61 v=-30,-57
+p=60,27 v=-40,-17
+p=78,1 v=-37,-89
+p=4,0 v=95,76
+p=29,83 v=-76,32
+p=54,68 v=33,91
+p=2,27 v=-70,-86
+p=12,19 v=-20,-87
+p=71,6 v=14,99
+p=3,55 v=-61,-98
+p=15,16 v=-80,-26
+p=93,98 v=91,74
+p=87,84 v=26,17
+p=19,74 v=67,70
+p=78,65 v=-69,-79
+p=55,98 v=-54,94
+p=22,27 v=-7,-2
+p=85,36 v=64,-84
+p=19,83 v=99,70
+p=18,25 v=76,-21
+p=3,16 v=-84,76
+p=4,99 v=37,70
+p=92,68 v=-81,89
+p=75,20 v=41,-47
+p=73,44 v=-37,1
+p=1,71 v=-10,-36
+p=85,89 v=-12,-71
+p=66,22 v=-39,37
+p=83,60 v=41,-38
+p=48,23 v=24,38
+p=5,64 v=7,-83
+p=92,35 v=-92,47
+p=79,80 v=-46,31
+p=78,19 v=-55,58
+p=15,81 v=99,92
+p=28,17 v=-35,15
+p=72,10 v=-27,54
+p=53,99 v=80,-46
+p=72,76 v=37,-94
+p=44,3 v=-35,-71
+p=27,18 v=-38,-35
+p=87,19 v=-46,98
+p=33,33 v=49,42
+p=67,27 v=70,-82
+p=21,52 v=-34,-80
+p=77,83 v=60,8
+p=17,14 v=-80,-6
+p=49,21 v=70,99
+p=33,32 v=-77,-75
+p=81,69 v=32,-99
+p=12,26 v=-84,38
+p=0,90 v=40,95
+p=98,25 v=-38,-43
+p=54,78 v=56,48
+p=20,23 v=71,73
+p=57,69 v=-82,55
+p=74,62 v=87,-78
+p=40,39 v=98,-38
+p=84,57 v=87,-98
+p=61,2 v=-36,-27
+p=4,81 v=-53,-87
+p=40,13 v=-3,-48
+p=72,1 v=-82,11
+p=27,12 v=-7,-68
+p=8,17 v=26,-2
+p=38,38 v=74,24
+p=70,69 v=-59,57
+p=73,45 v=-41,-20
+p=60,102 v=60,62
+p=82,83 v=-17,26
+p=9,84 v=90,55
+p=75,84 v=82,-47
+p=6,73 v=40,-75
+p=67,31 v=-37,-91
+p=22,45 v=85,23
+p=98,99 v=-84,53
+p=58,45 v=-89,24
+p=13,43 v=-75,84
+p=37,60 v=14,3
+p=6,70 v=-52,-95
+p=29,93 v=-16,10
+p=10,67 v=53,-63
+p=98,55 v=50,-40
+p=56,16 v=51,15
+p=55,78 v=84,89
+p=37,28 v=48,-66
+p=67,78 v=51,69
+p=71,36 v=34,-57
+p=86,62 v=82,19
+p=53,57 v=47,23
+p=31,4 v=11,-87
+p=25,66 v=-49,-80
+p=0,4 v=-74,-74
+p=54,44 v=-50,21
+p=83,32 v=-90,-51
+p=82,71 v=-69,-34
+p=91,59 v=46,-27
+p=67,6 v=-24,-80
+p=25,28 v=-48,79
+p=79,22 v=32,81
+p=49,9 v=93,-87
+p=93,34 v=-46,47
+p=52,95 v=4,-29
+p=74,53 v=-70,-56
+p=95,48 v=82,85
+p=89,14 v=-69,-14
+p=59,29 v=-32,32
+p=6,87 v=-66,52
+p=56,61 v=-82,-99
+p=51,84 v=88,21
+p=6,7 v=70,-74
+p=81,23 v=-43,-91
+p=54,77 v=56,68
+p=30,61 v=-30,-56
+p=71,60 v=-96,65
+p=84,101 v=-1,-72
+p=89,78 v=-28,-66
+p=49,59 v=24,-58
+p=26,14 v=9,-46
+p=56,95 v=33,-52
+p=1,33 v=-66,39
+p=78,55 v=-66,-5
+p=72,73 v=-9,-14
+p=57,32 v=-17,83
+p=6,0 v=63,-9
+p=17,54 v=-20,64
+p=26,102 v=-39,-50
+p=64,73 v=67,-2
+p=91,69 v=-10,-54
+p=65,73 v=60,29
+p=78,52 v=3,-53
+p=55,98 v=-40,-30
+p=12,13 v=94,33
+p=24,79 v=80,9
+p=39,85 v=-96,-67
+p=21,29 v=44,99
+p=27,5 v=43,-95
+p=7,47 v=62,17
+p=50,80 v=-73,42
+p=8,61 v=-24,-79
+p=25,75 v=-78,-31
+p=94,6 v=47,89
+p=80,37 v=23,-21
+p=78,26 v=-37,40
+p=81,38 v=82,-20
+p=70,95 v=37,95
+p=85,10 v=82,-88
+p=37,100 v=15,-71
+p=28,6 v=-58,96
+p=1,54 v=-72,92
+p=35,89 v=-39,26
+p=30,18 v=71,-85
+p=49,28 v=-54,-1
+p=98,64 v=-43,45
+p=93,101 v=-1,55
+p=36,72 v=-44,-56
+p=82,9 v=98,-17
+p=5,96 v=35,12
+p=75,27 v=-14,-65
+p=91,61 v=-15,-80
+p=37,13 v=29,38
+p=26,90 v=4,-28
+p=88,26 v=-88,-65
+p=66,99 v=-92,-51
+p=31,14 v=-85,83
+p=52,66 v=53,-24
+p=11,18 v=-89,-46
+p=52,50 v=74,1
+p=80,6 v=32,-47
+p=38,39 v=85,76
+p=56,7 v=-82,14
+p=83,76 v=4,48
+p=13,32 v=-88,73
+p=75,55 v=9,64
+p=97,66 v=31,-13
+p=0,51 v=42,-63
+p=74,6 v=78,-48
+p=100,10 v=-62,-33
+p=78,2 v=-23,-49
+p=62,10 v=74,77
+p=11,54 v=17,-18
+p=5,91 v=-66,-93
+p=13,47 v=72,44
+p=86,4 v=-68,-61
+p=73,28 v=49,16
+p=95,66 v=-10,-14
+p=84,65 v=67,93
+p=51,2 v=-94,82
+p=65,30 v=-70,-32
+p=10,4 v=-25,-68
+p=51,13 v=-20,22
+p=78,81 v=48,11
+p=10,99 v=35,-92
+p=23,24 v=-57,59
+p=34,4 v=53,25
+p=20,66 v=-30,-36
+p=46,95 v=-19,-74
+p=41,83 v=70,91
+p=41,93 v=-99,-23
+p=27,7 v=-21,-68
+p=20,13 v=-66,-6
+p=55,73 v=-42,-20
+p=10,71 v=73,-28
+p=57,42 v=-22,84
+p=78,78 v=-92,-35
+p=24,16 v=16,49
+p=99,6 v=26,-6
+p=14,22 v=44,-87
+p=23,35 v=99,-82
+p=24,40 v=-16,-83
+p=60,51 v=-68,85
+p=96,16 v=-51,14
+p=35,25 v=-90,38
+p=8,102 v=-1,-71
+p=54,92 v=-27,10
+p=5,44 v=-52,85
+p=74,102 v=-32,27
+p=52,58 v=38,-79
+p=93,88 v=-21,-34
+p=86,53 v=-37,-43
+p=30,54 v=14,-79
+p=45,35 v=-8,62
+p=64,40 v=28,-61
+p=5,16 v=40,39
+p=54,75 v=24,-94
+p=2,40 v=40,-17
+p=45,12 v=38,-87
+p=22,35 v=88,-92
+p=29,94 v=11,-50
+p=17,42 v=44,64
+p=60,39 v=-18,-1
+p=92,53 v=-1,-99
+p=57,56 v=21,25
+p=97,22 v=4,-29
+p=21,46 v=86,70
+p=17,37 v=62,40
+p=21,96 v=1,7
+p=12,85 v=-72,31
+p=58,43 v=49,-68
+p=74,101 v=-5,73
+p=79,71 v=87,-14
+p=41,98 v=-40,8
+p=96,50 v=67,25
+p=78,56 v=18,-15
+p=68,36 v=-4,19
+p=78,66 v=-14,47
+p=78,94 v=1,-73
+p=34,0 v=25,-51
+p=47,39 v=-65,-11
+p=67,56 v=16,-92
+p=99,66 v=-48,83
+p=73,9 v=23,-44
+p=5,67 v=89,-2
+p=29,95 v=30,-31
+p=75,30 v=64,19
+p=77,28 v=-12,-58
+p=53,57 v=-17,-39
+p=71,75 v=69,-96
+p=55,56 v=42,-39
+p=12,57 v=-89,-16
+p=56,5 v=56,97
+p=50,89 v=-86,-93
+p=15,81 v=-48,31
+p=49,92 v=-95,-72
+p=80,5 v=23,56
+p=67,67 v=-93,31
+p=5,34 v=-47,-63
+p=87,13 v=-49,94
+p=0,16 v=-18,-93
+p=91,82 v=-42,-72
+p=29,62 v=66,67
+p=77,7 v=9,-48
+p=15,91 v=-63,-60
+p=62,5 v=60,54
+p=44,56 v=97,-8
+p=19,12 v=-94,-89
+p=31,88 v=-12,49
+p=62,56 v=97,44
+p=17,37 v=12,92
+p=81,65 v=-14,28
+p=63,35 v=-4,8
+p=43,15 v=-47,-38
+p=63,67 v=10,-35
+p=22,44 v=-12,-27
+p=75,52 v=32,-36
+p=26,102 v=95,-35
+p=54,0 v=-91,-85
+p=69,50 v=28,65
+p=99,45 v=-15,3
+p=89,95 v=18,71
+p=5,98 v=8,-50
+p=76,96 v=-9,34
+p=45,85 v=-8,-71
+p=41,47 v=-3,4
+p=18,89 v=80,7
+p=57,86 v=-82,10
+p=17,77 v=21,-31
+p=97,102 v=-24,-67
+p=2,79 v=-29,-53
+p=76,39 v=-92,42
+p=46,63 v=21,27
+p=6,50 v=12,-19
+p=7,42 v=-80,82
+p=57,4 v=-82,54
+p=27,33 v=-12,-83
+p=88,92 v=-97,-49
+p=38,87 v=-17,-52
+p=38,39 v=-99,42
+p=44,56 v=-12,-99
+p=47,13 v=93,-44
+p=15,36 v=-8,94
+p=14,47 v=-89,-21
+p=82,13 v=8,3
+p=61,8 v=-50,-68
+p=18,2 v=-2,16
+p=62,33 v=10,41
+p=51,59 v=-45,2
+p=10,66 v=-89,-79
+p=18,32 v=1,-91
+p=47,7 v=49,-56
+p=15,3 v=35,-69
+p=14,28 v=47,-55
+p=30,80 v=12,-88
+p=54,74 v=-86,-14
+p=23,77 v=-42,-48
+p=63,34 v=19,-42
+p=24,46 v=-71,1
+p=35,76 v=-28,-18
+p=50,6 v=37,72
+p=37,85 v=66,72
+p=35,7 v=52,36
+p=82,21 v=18,-46
+p=89,59 v=68,26
+p=59,73 v=43,-72
+p=16,18 v=-94,-86
+p=94,79 v=91,-55
+p=27,27 v=77,38
+p=82,38 v=32,-83
+p=29,90 v=94,52
+p=95,32 v=-24,97
+p=86,42 v=63,-80
+p=58,68 v=-36,-58
+p=69,31 v=-60,-85
+p=21,15 v=-69,42
+p=56,2 v=1,96
+p=43,82 v=4,-25
+p=54,56 v=70,44
+p=59,24 v=-99,-72
+p=73,18 v=64,16
+p=6,71 v=-18,-94
+p=81,3 v=-26,-66
+p=12,78 v=58,-95
+p=60,101 v=5,53
+p=85,59 v=73,45
+p=65,26 v=-18,-25
+p=60,9 v=-96,95
+p=58,4 v=-27,76
+p=7,74 v=67,-56
+p=96,42 v=-24,88
+p=24,57 v=-27,-83
+p=96,73 v=49,6
+    </script>
+
+    <script>
+    (() => {
+        "use strict";
+
+        const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        const COLORS = {};
+        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "bar", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
+            COLORS[name] = css("--" + name);
+        }
+
+        const mod = (a, m) => ((a % m) + m) % m;
+        const num = n => n.toLocaleString("en-US");
+        const parseRobots = text => text.trim().split("\n").map(line => line.match(/-?\d+/g).map(Number));
+
+        /* ---------- the grid drawer, shared by every grid day ---------- */
+
+        const grid = {
+            canvas: document.getElementById("grid"),
+            cols: 1, rows: 1, cell: 1,
+
+            size(cols, rows, maxCell, maxHeight) {
+                const wrap = document.getElementById("gridWrap");
+                const width = wrap.clientWidth;
+                const cell = Math.max(2, Math.min(maxCell, Math.floor(width / cols), Math.floor(maxHeight / rows)));
+                const dpr = window.devicePixelRatio || 1;
+                Object.assign(this, { cols, rows, cell });
+                this.canvas.style.width = cols * cell + "px";
+                this.canvas.style.height = rows * cell + "px";
+                this.canvas.width = Math.round(cols * cell * dpr);
+                this.canvas.height = Math.round(rows * cell * dpr);
+                this.ctx = this.canvas.getContext("2d");
+                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            },
+
+            clear(color) {
+                this.ctx.fillStyle = color;
+                this.ctx.fillRect(0, 0, this.cols * this.cell, this.rows * this.cell);
+            },
+
+            // A square in cell (x, y), shrunk by `inset` px on each side. x and y may be fractions.
+            square(x, y, color, inset = 0, radius = 0) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.fillStyle = color;
+                if (radius > 0 && ctx.roundRect) {
+                    ctx.beginPath();
+                    ctx.roundRect(x * c + inset, y * c + inset, c - 2 * inset, c - 2 * inset, radius);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(x * c + inset, y * c + inset, c - 2 * inset, c - 2 * inset);
+                }
+            },
+
+            text(x, y, label, color) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.fillStyle = color;
+                ctx.font = `600 ${Math.round(c * 0.38)}px Inter, system-ui, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(label, x * c + c / 2, y * c + c / 2 + 1);
+            },
+        };
+
+        /* ---------- Day 14: Restroom Redoubt ---------- */
+
+        const EXAMPLE_14 = `p=0,4 v=3,-3
+p=6,3 v=-1,-3
+p=10,3 v=-1,2
+p=2,0 v=2,-1
+p=0,0 v=1,3
+p=3,0 v=-2,-2
+p=7,6 v=-1,-3
+p=3,0 v=-1,-2
+p=9,3 v=2,3
+p=7,3 v=-1,2
+p=2,4 v=2,-3
+p=9,5 v=-3,-3`;
+
+        // Where every robot is at second t, as whole cells.
+        function robotsAt(robots, t, W, H) {
+            return robots.map(([px, py, vx, vy]) => [mod(px + vx * t, W), mod(py + vy * t, H)]);
+        }
+
+        function day14Part1() {
+            const W = 11, H = 7, MX = 5, MY = 3;
+            const robots = parseRobots(EXAMPLE_14);
+
+            const quadrants = t => {
+                const q = [0, 0, 0, 0];
+                for (const [x, y] of robotsAt(robots, t, W, H)) {
+                    if (x !== MX && y !== MY) q[(x > MX ? 1 : 0) + (y > MY ? 2 : 0)]++;
+                }
+                return q;
+            };
+
+            return {
+                line: "Robots walk in straight lines and wrap around the edges. After 100 seconds, count the robots in each quarter and multiply.",
+                input: "Example input",
+                sizeLabel: `${W} × ${H} · ${robots.length} robots`,
+                max: 100, speeds: [1, 5, 20], speed: 5, smooth: true,
+                start: 0,
+                layout: () => grid.size(W, H, 56, 420),
+
+                draw(t) {
+                    const c = grid.cell, gap = Math.max(1, Math.round(c * 0.06));
+                    grid.clear(COLORS.floor);
+                    for (let y = 0; y < H; y++) {
+                        for (let x = 0; x < W; x++) {
+                            grid.square(x, y, x === MX || y === MY ? COLORS["tile-off"] : COLORS.tile, gap, Math.max(2, c * 0.12));
+                        }
+                    }
+
+                    const whole = Number.isInteger(t);
+                    const counts = new Map();
+                    const inset = c * 0.16, radius = c * 0.22;
+                    for (const [px, py, vx, vy] of robots) {
+                        const x = mod(px + vx * t, W), y = mod(py + vy * t, H);
+                        const cx = Math.round(x) % W, cy = Math.round(y) % H;
+                        const color = cx === MX || cy === MY ? COLORS["robot-off"] : COLORS.robot;
+                        // Draw a second copy past the edge, so a robot slides out one side and in the other.
+                        for (const dx of x > W - 1 ? [0, -W] : [0]) {
+                            for (const dy of y > H - 1 ? [0, -H] : [0]) {
+                                grid.square(x + dx, y + dy, color, inset, radius);
+                            }
+                        }
+                        if (whole) counts.set(cx + "," + cy, (counts.get(cx + "," + cy) || 0) + 1);
+                    }
+                    for (const [key, n] of counts) {
+                        if (n < 2) continue;
+                        const [x, y] = key.split(",").map(Number);
+                        grid.text(x, y, String(n), COLORS["bg-primary"]);
+                    }
+                },
+
+                readout(t) {
+                    const q = quadrants(Math.floor(t));
+                    return { text: `${q.join(" × ")} = ${q.reduce((a, b) => a * b, 1)}`, hit: Math.floor(t) === 100 };
+                },
+
+                describe(t) {
+                    const q = quadrants(Math.floor(t));
+                    return `Second ${Math.floor(t)}: quarters hold ${q.join(", ")} robots.`;
+                },
+            };
+        }
+
+        function day14Part2() {
+            const W = 101, H = 103, RULE = 7;
+            const robots = parseRobots(document.getElementById("day14-made-up").textContent);
+            const seconds = W * H;      // after this many seconds every robot is back where it started
+
+            // For every second: the longest row of robots side by side, and where it starts.
+            // My solution stops at the first second with 7 in a row.
+            const longest = new Uint8Array(seconds);
+            const runAt = new Int32Array(seconds);
+            const stamp = new Int32Array(W * H);
+            const xs = new Int32Array(robots.length), ys = new Int32Array(robots.length);
+            let first = -1;
+            for (let t = 0; t < seconds; t++) {
+                for (let i = 0; i < robots.length; i++) {
+                    const [px, py, vx, vy] = robots[i];
+                    xs[i] = mod(px + vx * t, W);
+                    ys[i] = mod(py + vy * t, H);
+                    stamp[ys[i] * W + xs[i]] = t + 1;
+                }
+                let best = 0, at = 0;
+                for (let i = 0; i < robots.length; i++) {
+                    const x = xs[i], row = ys[i] * W;
+                    if (x > 0 && stamp[row + x - 1] === t + 1) continue;     // not the left end of a row
+                    let n = 1;
+                    while (x + n < W && stamp[row + x + n] === t + 1) n++;
+                    if (n > best) { best = n; at = row + x; }
+                }
+                longest[t] = best;
+                runAt[t] = at;
+                if (first < 0 && t > 0 && best >= RULE) first = t;
+            }
+
+            return {
+                line: "Same robots, a bigger room. Somewhere the robots draw a Christmas tree: find the first second it shows up.",
+                input: "Made-up input",
+                sizeLabel: `${W} × ${H} · ${robots.length} robots`,
+                max: seconds - 1, speeds: [1, 10, 100], speed: 10, smooth: false,
+                start: 0,
+                layout: () => grid.size(W, H, 6, 560),
+                goal: { label: "Find the tree", target: first },
+
+                draw(t) {
+                    const c = grid.cell, inset = c >= 5 ? 0.5 : 0;
+                    grid.clear(COLORS.floor);
+                    for (const [x, y] of robotsAt(robots, t, W, H)) grid.square(x, y, COLORS.robot, inset);
+                    if (longest[t] >= RULE) {
+                        const x0 = runAt[t] % W, y0 = Math.floor(runAt[t] / W);
+                        for (let n = 0; n < longest[t]; n++) grid.square(x0 + n, y0, COLORS.gold, inset);
+                    }
+                },
+
+                readout(t) {
+                    const n = longest[t];
+                    return { text: `${n} in a row`, hit: n >= RULE };
+                },
+
+                describe(t) {
+                    return t === first ? `Second ${num(t)}: the robots draw a Christmas tree.` : `Second ${num(t)}: robots scattered, longest row ${longest[t]}.`;
+                },
+
+                chart: {
+                    title: "Longest row, each second",
+                    note: `My code stops at the first ${RULE} in a row`,
+                    values: longest,
+                    rule: RULE,
+                    tip: (t, v) => `Second ${num(t)} · ${v} in a row`,
+                },
+            };
+        }
+
+        /* ---------- the days ---------- */
+
+        const DAYS = [
+            {
+                day: 14,
+                title: "Restroom Redoubt",
+                parts: [day14Part1, day14Part2],
+            },
+        ];
+
+        /* ---------- the player, shared by every day ---------- */
+
+        const $ = id => document.getElementById(id);
+        const els = {
+            days: $("days"), parts: $("parts"), dayTitle: $("dayTitle"), puzzleLink: $("puzzleLink"), codeLink: $("codeLink"),
+            partLine: $("partLine"), inputLabel: $("inputLabel"), sizeLabel: $("sizeLabel"), clock: $("clock"), answer: $("answer"),
+            restart: $("restart"), back: $("back"), play: $("play"), playIcon: $("playIcon"), fwd: $("fwd"),
+            speeds: $("speeds"), goal: $("goal"), scrub: $("scrub"),
+            chartBox: $("chartBox"), chart: $("chart"), chartTitle: $("chartTitle"), chartNote: $("chartNote"), tip: $("tip"),
+        };
+
+        const ICON_PLAY = "M8 5v14l11-7z";
+        const ICON_PAUSE = "M7 5h4v14H7zM13 5h4v14h-4z";
+
+        const state = {
+            dayIndex: 0, partIndex: 0,
+            scene: null, scenes: new Map(),
+            t: 0, playing: false, speed: 1, last: 0,
+            seek: null,              // { from, to, start, ms } while "Find" runs
+            hover: null,
+        };
+
+        function sceneFor(dayIndex, partIndex) {
+            const key = dayIndex + ":" + partIndex;
+            if (!state.scenes.has(key)) state.scenes.set(key, DAYS[dayIndex].parts[partIndex]());
+            return state.scenes.get(key);
+        }
+
+        function shownTime() {
+            return state.scene.smooth ? state.t : Math.floor(state.t);
+        }
+
+        function render() {
+            const s = state.scene, t = shownTime(), whole = Math.floor(state.t);
+            s.draw(t);
+            const r = s.readout(t);
+            els.clock.textContent = `Second ${num(whole)}`;
+            els.answer.textContent = r.text;
+            els.answer.classList.toggle("hit", r.hit);
+            els.scrub.value = whole;
+            grid.canvas.setAttribute("aria-label", s.describe(t));
+            if (s.chart) drawChart();
+        }
+
+        function setPlaying(on) {
+            state.playing = on;
+            if (!on) state.seek = null;
+            els.playIcon.setAttribute("d", on ? ICON_PAUSE : ICON_PLAY);
+            els.play.setAttribute("aria-label", on ? "Pause" : "Play");
+            els.play.title = on ? "Pause" : "Play";
+            if (on) {
+                state.last = performance.now();
+                requestAnimationFrame(tick);
+            }
+        }
+
+        const easeOut = p => 1 - Math.pow(1 - p, 3);
+
+        function tick(now) {
+            if (!state.playing) return;
+            const s = state.scene;
+            if (state.seek) {
+                const { from, to, start, ms } = state.seek;
+                const p = Math.min(1, (now - start) / ms);
+                state.t = p >= 1 ? to : Math.min(to, Math.floor(from + (to - from) * easeOut(p)));
+                if (p >= 1) setPlaying(false);
+            } else {
+                state.t += ((now - state.last) / 1000) * state.speed;
+                if (state.t >= s.max) { state.t = s.max; setPlaying(false); }
+            }
+            state.last = now;
+            render();
+            if (state.playing) requestAnimationFrame(tick);
+        }
+
+        function jump(t) {
+            setPlaying(false);
+            state.t = Math.max(0, Math.min(state.scene.max, t));
+            render();
+        }
+
+        function showPart(partIndex) {
+            setPlaying(false);
+            state.partIndex = partIndex;
+            const s = state.scene = sceneFor(state.dayIndex, partIndex);
+            state.t = s.start;
+            state.speed = s.speed;
+
+            for (const b of els.parts.children) b.setAttribute("aria-selected", String(Number(b.dataset.part) === partIndex));
+            els.partLine.textContent = s.line;
+            els.inputLabel.textContent = s.input;
+            els.sizeLabel.textContent = s.sizeLabel;
+            els.scrub.max = s.max;
+
+            els.speeds.replaceChildren(...s.speeds.map(v => {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.textContent = v + "×";
+                b.setAttribute("aria-pressed", String(v === state.speed));
+                b.addEventListener("click", () => {
+                    state.speed = v;
+                    for (const o of els.speeds.children) o.setAttribute("aria-pressed", String(o === b));
+                });
+                return b;
+            }));
+
+            els.goal.hidden = !s.goal;
+            if (s.goal) els.goal.textContent = s.goal.label;
+
+            els.chartBox.hidden = !s.chart;
+            if (s.chart) {
+                els.chartTitle.textContent = s.chart.title;
+                els.chartNote.textContent = s.chart.note;
+            }
+
+            layout();
+        }
+
+        function showDay(dayIndex) {
+            state.dayIndex = dayIndex;
+            const d = DAYS[dayIndex];
+            for (const b of els.days.children) b.setAttribute("aria-selected", String(Number(b.dataset.day) === dayIndex));
+            els.dayTitle.textContent = `Day ${d.day}: ${d.title}`;
+            els.puzzleLink.href = `https://adventofcode.com/2024/day/${d.day}`;
+            els.codeLink.href = `https://github.com/Maheshkumar-novice/Advent-Of-Code-Solutions/tree/main/2024/Day-${String(d.day).padStart(2, "0")}`;
+            els.parts.replaceChildren(...d.parts.map((_, i) => {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.setAttribute("role", "tab");
+                b.dataset.part = i;
+                b.textContent = `Part ${i + 1}`;
+                b.addEventListener("click", () => showPart(i));
+                return b;
+            }));
+            showPart(0);
+        }
+
+        function layout() {
+            state.scene.layout();
+            if (state.scene.chart) sizeChart();
+            render();
+        }
+
+        /* ---------- the chart under the grid ---------- */
+
+        const chart = { w: 0, h: 88, top: 6 };
+
+        function sizeChart() {
+            const dpr = window.devicePixelRatio || 1;
+            chart.w = els.chart.clientWidth || els.chartBox.clientWidth;
+            els.chart.style.height = chart.h + "px";
+            els.chart.width = Math.round(chart.w * dpr);
+            els.chart.height = Math.round(chart.h * dpr);
+            chart.ctx = els.chart.getContext("2d");
+            chart.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // The highest value in the seconds that fall on one pixel column, and which second it was.
+        function column(values, px) {
+            const n = values.length;
+            const a = Math.floor((px * n) / chart.w), b = Math.max(a + 1, Math.floor(((px + 1) * n) / chart.w));
+            let best = -1, at = a;
+            for (let i = a; i < b && i < n; i++) if (values[i] > best) { best = values[i]; at = i; }
+            return { v: best, t: at };
+        }
+
+        function drawChart() {
+            const c = state.scene.chart, ctx = chart.ctx, w = chart.w, h = chart.h, top = chart.top;
+            const values = c.values, n = values.length;
+            let max = 0;
+            for (let i = 0; i < n; i++) if (values[i] > max) max = values[i];
+            const y = v => h - 1 - ((h - 1 - top) * v) / max;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // where we are now, behind the bars so it never hides the spike
+            const nowX = Math.min(w - 1, Math.round((Math.floor(state.t) / n) * w));
+            ctx.fillStyle = COLORS["text-muted"];
+            ctx.fillRect(nowX, 0, 1, h);
+            ctx.fillStyle = COLORS["text-primary"];
+            ctx.fillRect(nowX - 2, 0, 5, 3);
+
+            for (let px = 0; px < w; px++) {
+                const { v } = column(values, px);
+                if (v >= c.rule) continue;
+                ctx.fillStyle = COLORS.bar;
+                ctx.fillRect(px, y(v), 1, h - 1 - y(v));
+            }
+            // seconds at or past the rule, drawn wider and on top
+            ctx.fillStyle = COLORS.accent;
+            for (let px = 0; px < w; px++) {
+                const { v } = column(values, px);
+                if (v >= c.rule) ctx.fillRect(px - 1, y(v), 3, h - 1 - y(v));
+            }
+
+            // the rule line
+            ctx.strokeStyle = COLORS["text-muted"];
+            ctx.setLineDash([3, 3]);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, Math.round(y(c.rule)) + 0.5);
+            ctx.lineTo(w, Math.round(y(c.rule)) + 0.5);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // baseline
+            ctx.fillStyle = COLORS["border-strong"];
+            ctx.fillRect(0, h - 1, w, 1);
+
+            if (state.hover) {
+                ctx.fillStyle = COLORS["text-muted"];
+                ctx.fillRect(state.hover.px, 0, 1, h);
+            }
+        }
+
+        function chartPoint(e) {
+            const rect = els.chart.getBoundingClientRect();
+            const px = Math.max(0, Math.min(chart.w - 1, Math.floor(e.clientX - rect.left)));
+            return { px, ...column(state.scene.chart.values, px) };
+        }
+
+        function showTip(p) {
+            state.hover = p;
+            els.tip.hidden = false;
+            els.tip.textContent = state.scene.chart.tip(p.t, p.v);
+            const half = els.tip.offsetWidth / 2;
+            els.tip.style.left = Math.max(0, Math.min(chart.w - 2 * half, p.px - half)) + "px";
+            drawChart();
+        }
+
+        function hideTip() {
+            state.hover = null;
+            els.tip.hidden = true;
+            if (state.scene.chart) drawChart();
+        }
+
+        let dragging = false;
+        els.chart.addEventListener("pointerdown", e => {
+            dragging = true;
+            els.chart.setPointerCapture(e.pointerId);
+            const p = chartPoint(e);
+            jump(p.t);
+            showTip(p);
+        });
+        els.chart.addEventListener("pointermove", e => {
+            const p = chartPoint(e);
+            if (dragging) jump(p.t);
+            showTip(p);
+        });
+        els.chart.addEventListener("pointerup", () => { dragging = false; });
+        els.chart.addEventListener("pointercancel", () => { dragging = false; hideTip(); });
+        els.chart.addEventListener("pointerleave", () => { if (!dragging) hideTip(); });
+
+        /* ---------- controls ---------- */
+
+        els.play.addEventListener("click", () => {
+            if (state.playing) return setPlaying(false);
+            if (Math.floor(state.t) >= state.scene.max) state.t = 0;
+            setPlaying(true);
+        });
+        els.restart.addEventListener("click", () => jump(0));
+        els.back.addEventListener("click", () => jump(Math.ceil(state.t) - 1));
+        els.fwd.addEventListener("click", () => jump(Math.floor(state.t) + 1));
+        els.scrub.addEventListener("input", () => jump(Number(els.scrub.value)));
+
+        els.goal.addEventListener("click", () => {
+            const target = state.scene.goal.target;
+            const from = Math.floor(state.t) < target ? Math.floor(state.t) : 0;
+            setPlaying(false);
+            state.t = from;
+            state.seek = { from, to: target, start: performance.now(), ms: target - from > 50 ? 4500 : 1200 };
+            setPlaying(true);
+            state.seek.start = performance.now();
+        });
+
+        document.addEventListener("keydown", e => {
+            if (e.target !== document.body || e.metaKey || e.ctrlKey || e.altKey) return;
+            if (e.key === " ") { e.preventDefault(); els.play.click(); }
+            else if (e.key === "ArrowRight") { e.preventDefault(); els.fwd.click(); }
+            else if (e.key === "ArrowLeft") { e.preventDefault(); els.back.click(); }
+        });
+
+        let resizeTimer = 0;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(layout, 120);
+        });
+
+        els.days.replaceChildren(...DAYS.map((d, i) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.setAttribute("role", "tab");
+            b.dataset.day = i;
+            b.textContent = `Day ${d.day}`;
+            b.addEventListener("click", () => showDay(i));
+            return b;
+        }));
+
+        showDay(0);
+        document.fonts?.ready.then(() => render());
+    })();
+    </script>
+</body>
+</html>
