@@ -1601,11 +1601,12 @@ p=9,5 v=-3,-3`;
             const s = state.scene;
             if (state.seek) {
                 const { from, to, start, ms } = state.seek;
-                const p = Math.min(1, (now - start) / ms);
+                const p = Math.min(1, Math.max(0, (now - start) / ms));
                 state.t = p >= 1 ? to : Math.min(to, Math.floor(from + (to - from) * easeOut(p)));
                 if (p >= 1) setPlaying(false);
             } else {
-                state.t += ((now - state.last) / 1000) * state.speed;
+                // A frame's timestamp can be a little before the click that started playing; never go backwards.
+                state.t += (Math.max(0, now - state.last) / 1000) * state.speed;
                 if (state.t >= s.max) { state.t = s.max; setPlaying(false); }
             }
             state.last = now;
