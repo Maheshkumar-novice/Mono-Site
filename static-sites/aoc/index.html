@@ -135,6 +135,7 @@
         .stage-top {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
             gap: 0.25rem 1rem;
             font-size: 0.75rem;
@@ -182,6 +183,18 @@
 
         .speeds button { background: none; border: none; padding: 0.35rem 0.7rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
         .speeds button[aria-pressed="true"] { background: var(--bg-raised); color: var(--text-primary); font-weight: 500; }
+
+        .inputs {
+            display: inline-flex;
+            gap: 2px;
+            padding: 2px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .inputs button { background: none; border: none; border-radius: 4px; padding: 0.15rem 0.6rem; font-size: 0.75rem; color: var(--text-muted); }
+        .inputs button[aria-pressed="true"] { background: var(--bg-raised); color: var(--text-primary); }
 
         .goal { margin-left: auto; height: 40px; color: var(--accent); border-color: var(--accent); background: var(--accent-soft); font-weight: 500; }
         .goal:hover { border-color: var(--accent-hover); color: var(--accent-hover); }
@@ -240,7 +253,11 @@
             <p class="part-line" id="partLine"></p>
 
             <div class="stage">
-                <div class="stage-top"><span id="inputLabel"></span><span id="sizeLabel"></span></div>
+                <div class="stage-top">
+                    <span id="inputLabel"></span>
+                    <div class="inputs" id="inputs" role="group" aria-label="Input" hidden></div>
+                    <span id="sizeLabel"></span>
+                </div>
                 <div class="grid-wrap" id="gridWrap"><canvas id="grid" role="img"></canvas></div>
                 <div class="readout">
                     <span class="clock" id="clock"></span>
@@ -801,9 +818,13 @@ p=96,73 v=49,6
             canvas: document.getElementById("grid"),
             cols: 1, rows: 1, cell: 1,
 
+            // How much room the grid has across.
+            width() {
+                return document.getElementById("gridWrap").clientWidth;
+            },
+
             size(cols, rows, maxCell, maxHeight) {
-                const wrap = document.getElementById("gridWrap");
-                const width = wrap.clientWidth;
+                const width = this.width();
                 const cell = Math.max(2, Math.min(maxCell, Math.floor(width / cols), Math.floor(maxHeight / rows)));
                 const dpr = window.devicePixelRatio || 1;
                 Object.assign(this, { cols, rows, cell });
@@ -833,15 +854,183 @@ p=96,73 v=49,6
                 }
             },
 
-            text(x, y, label, color) {
+            // A ring around cell (x, y), for "this one is next".
+            outline(x, y, color, inset = 0, radius = 0, width = 2, dash = null) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.setLineDash(dash || []);
+                ctx.beginPath();
+                const o = inset + width / 2;
+                if (radius > 0 && ctx.roundRect) ctx.roundRect(x * c + o, y * c + o, c - 2 * o, c - 2 * o, radius);
+                else ctx.rect(x * c + o, y * c + o, c - 2 * o, c - 2 * o);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            },
+
+            text(x, y, label, color, scale = 0.38) {
                 const c = this.cell, ctx = this.ctx;
                 ctx.fillStyle = color;
-                ctx.font = `600 ${Math.round(c * 0.38)}px Inter, system-ui, sans-serif`;
+                ctx.font = `600 ${Math.round(c * scale)}px Inter, system-ui, sans-serif`;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(label, x * c + c / 2, y * c + c / 2 + 1);
             },
         };
+
+        /* ---------- Day 9: Disk Fragmenter ---------- */
+
+        const EXAMPLE_9 = "2333133121414131402";
+
+        // Made-up, not my real input: 100 files with random sizes and gaps.
+        const MADE_UP_9 = "8662311394239613347132113523224271527260407074304326114260219091854323413110553211723690652326644346136071428261522510757462234175656151501151263010827213518551255123819332832055312140418495713586552";
+
+        // The disk map alternates file sizes and gap sizes. Each block holds its file number, or -1 for free.
+        function parseDisk(map) {
+            const disk = [];
+            for (let i = 0; i < map.length; i++) {
+                const id = i % 2 === 0 ? i / 2 : -1;
+                for (let n = Number(map[i]); n > 0; n--) disk.push(id);
+            }
+            return disk;
+        }
+
+        // Part 1, like my solution: the first free block from the left takes the last file block from the right.
+        function blockMoves(disk) {
+            const d = disk.slice(), moves = [];
+            let left = 0, right = d.length - 1;
+            for (;;) {
+                while (left < d.length && d[left] !== -1) left++;
+                while (right >= 0 && d[right] === -1) right--;
+                if (left >= right) break;
+                moves.push({ id: d[right], from: right, to: left, n: 1 });
+                d[left] = d[right];
+                d[right] = -1;
+            }
+            return moves;
+        }
+
+        // Part 2: whole files, highest number first. Each one tries once to jump into the first gap on its left that fits.
+        function fileMoves(disk) {
+            const d = disk.slice(), files = [];
+            d.forEach((id, i) => {
+                if (id < 0) return;
+                files[id] ??= { start: i, n: 0 };
+                files[id].n++;
+            });
+            const moves = [];
+            for (let id = files.length - 1; id >= 0; id--) {
+                if (!files[id]) continue;
+                const { start, n } = files[id];
+                let to = -1;
+                for (let i = 0, run = 0; i < start; i++) {
+                    run = d[i] === -1 ? run + 1 : 0;
+                    if (run === n) { to = i - n + 1; break; }
+                }
+                if (to >= 0) for (let k = 0; k < n; k++) { d[to + k] = id; d[start + k] = -1; }
+                moves.push({ id, from: start, to, n });
+            }
+            return moves;
+        }
+
+        function day9(map, part, { speeds, speed, labels }) {
+            const disk = parseDisk(map);
+            const moves = part === 1 ? blockMoves(disk) : fileMoves(disk);
+            const total = disk.length, last = moves.length;
+            const maxId = Math.max(...disk);
+            // Low file numbers are cool green, high ones warm gold, so blocks from the end stand out at the front.
+            const colors = Array.from({ length: maxId + 1 }, (_, id) => {
+                const p = maxId ? id / maxId : 0;
+                return `hsl(${160 - 115 * p} ${64 + 32 * p}% ${50 + 6 * p}%)`;
+            });
+            let cols = 1;
+
+            const diskAt = k => {
+                const d = disk.slice();
+                for (let i = 0; i < k; i++) {
+                    const m = moves[i];
+                    if (m.to < 0) continue;
+                    for (let j = 0; j < m.n; j++) { d[m.to + j] = m.id; d[m.from + j] = -1; }
+                }
+                return d;
+            };
+            const checksum = d => d.reduce((sum, id, i) => (id < 0 ? sum : sum + id * i), 0);
+            const at = i => [i % cols, Math.floor(i / cols)];
+            const smoothStep = p => p * p * (3 - 2 * p);
+
+            const clock = k => {
+                if (k === 0) return "Start";
+                if (part === 1) return `Move ${num(k)} of ${num(last)}`;
+                const m = moves[k - 1];
+                return `File ${m.id} ${m.to >= 0 ? "moved" : "stays"} · ${k} of ${last}`;
+            };
+
+            return {
+                line: part === 1
+                    ? "The disk map takes turns: a file's size, then a gap's size. Move blocks one at a time from the end into the first gap, then add up position × file number."
+                    : "Now move whole files. From the highest number down, each file tries once to jump into the first gap on its left that fits it.",
+                sizeLabel: `${total} blocks · ${maxId + 1} files`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+
+                layout() {
+                    const w = grid.width();
+                    cols = labels ? (w / 21 >= 30 ? 21 : 14) : (w >= 600 ? 47 : 30);
+                    grid.size(cols, Math.ceil(total / cols), labels ? 40 : 16, 600);
+                },
+
+                draw(t) {
+                    const k = Math.floor(t), frac = t - k, c = grid.cell;
+                    const d = diskAt(k);
+                    const m = k < last ? moves[k] : null;
+                    const flying = m && frac > 0 && m.to >= 0;
+                    if (flying) for (let j = 0; j < m.n; j++) d[m.from + j] = -1;
+
+                    const inset = Math.max(1, Math.round(c * 0.06)), radius = Math.max(1.5, c * 0.14);
+                    grid.clear(COLORS.floor);
+                    for (let i = 0; i < total; i++) {
+                        const [x, y] = at(i);
+                        grid.square(x, y, d[i] < 0 ? COLORS.tile : colors[d[i]], inset, radius);
+                        if (labels && d[i] >= 0) grid.text(x, y, String(d[i]), COLORS["bg-primary"], 0.46);
+                    }
+
+                    if (!m) return;
+                    if (flying) {
+                        // The block (or whole file) flies to its new place, lifted a little on the way.
+                        const p = smoothStep(frac), lift = Math.sin(Math.PI * p) * 0.45;
+                        for (let j = 0; j < m.n; j++) {
+                            const [fx, fy] = at(m.from + j), [tx, ty] = at(m.to + j);
+                            const x = fx + (tx - fx) * p, y = fy + (ty - fy) * p - lift;
+                            grid.square(x, y, colors[m.id], inset, radius);
+                            grid.outline(x, y, COLORS["text-primary"], inset, radius, Math.max(1, c * 0.06));
+                            if (labels) grid.text(x, y, String(m.id), COLORS["bg-primary"], 0.46);
+                        }
+                    } else if (frac === 0) {
+                        // Paused: ring what moves next, and where it goes.
+                        for (let j = 0; j < m.n; j++) {
+                            const [x, y] = at(m.from + j);
+                            grid.outline(x, y, COLORS["text-primary"], inset, radius, Math.max(1, c * 0.06));
+                            if (m.to >= 0) {
+                                const [tx, ty] = at(m.to + j);
+                                grid.outline(tx, ty, COLORS["text-muted"], inset, radius, Math.max(1, c * 0.06), [3, 3]);
+                            }
+                        }
+                    }
+                },
+
+                clock: t => clock(Math.floor(t)),
+
+                readout(t) {
+                    const k = Math.floor(t);
+                    return { text: `Checksum ${num(checksum(diskAt(k)))}`, hit: k === last };
+                },
+
+                describe(t) {
+                    const k = Math.floor(t);
+                    return `${clock(k)}. Checksum ${num(checksum(diskAt(k)))}.`;
+                },
+            };
+        }
 
         /* ---------- Day 14: Restroom Redoubt ---------- */
 
@@ -877,7 +1066,6 @@ p=9,5 v=-3,-3`;
 
             return {
                 line: "Robots walk in straight lines and wrap around the edges. After 100 seconds, count the robots in each quarter and multiply.",
-                input: "Example input",
                 sizeLabel: `${W} × ${H} · ${robots.length} robots`,
                 max: 100, speeds: [1, 5, 20], speed: 5, smooth: true,
                 start: 0,
@@ -960,7 +1148,6 @@ p=9,5 v=-3,-3`;
 
             return {
                 line: "Same robots, a bigger room. Somewhere the robots draw a Christmas tree: find the first second it shows up.",
-                input: "Made-up input",
                 sizeLabel: `${W} × ${H} · ${robots.length} robots`,
                 max: seconds - 1, speeds: [1, 10, 100], speed: 10, smooth: false,
                 start: 0,
@@ -998,11 +1185,29 @@ p=9,5 v=-3,-3`;
 
         /* ---------- the days ---------- */
 
+        // Each part has one or more inputs; each input makes its scene the first time it's opened.
         const DAYS = [
+            {
+                day: 9,
+                title: "Disk Fragmenter",
+                parts: [
+                    { inputs: [
+                        { name: "Example", make: () => day9(EXAMPLE_9, 1, { speeds: [1, 2, 5], speed: 2, labels: true }) },
+                        { name: "Made-up", make: () => day9(MADE_UP_9, 1, { speeds: [5, 20, 50], speed: 20 }) },
+                    ] },
+                    { inputs: [
+                        { name: "Example", make: () => day9(EXAMPLE_9, 2, { speeds: [0.5, 1, 2], speed: 1, labels: true }) },
+                        { name: "Made-up", make: () => day9(MADE_UP_9, 2, { speeds: [2, 10, 25], speed: 10 }) },
+                    ] },
+                ],
+            },
             {
                 day: 14,
                 title: "Restroom Redoubt",
-                parts: [day14Part1, day14Part2],
+                parts: [
+                    { inputs: [{ name: "Example", make: day14Part1 }] },
+                    { inputs: [{ name: "Made-up", make: day14Part2 }] },
+                ],
             },
         ];
 
@@ -1011,7 +1216,7 @@ p=9,5 v=-3,-3`;
         const $ = id => document.getElementById(id);
         const els = {
             days: $("days"), parts: $("parts"), dayTitle: $("dayTitle"), puzzleLink: $("puzzleLink"), codeLink: $("codeLink"),
-            partLine: $("partLine"), inputLabel: $("inputLabel"), sizeLabel: $("sizeLabel"), clock: $("clock"), answer: $("answer"),
+            partLine: $("partLine"), inputLabel: $("inputLabel"), inputs: $("inputs"), sizeLabel: $("sizeLabel"), clock: $("clock"), answer: $("answer"),
             restart: $("restart"), back: $("back"), play: $("play"), playIcon: $("playIcon"), fwd: $("fwd"),
             speeds: $("speeds"), goal: $("goal"), scrub: $("scrub"),
             chartBox: $("chartBox"), chart: $("chart"), chartTitle: $("chartTitle"), chartNote: $("chartNote"), tip: $("tip"),
@@ -1021,16 +1226,16 @@ p=9,5 v=-3,-3`;
         const ICON_PAUSE = "M7 5h4v14H7zM13 5h4v14h-4z";
 
         const state = {
-            dayIndex: 0, partIndex: 0,
+            dayIndex: 0, partIndex: 0, inputIndex: 0,
             scene: null, scenes: new Map(),
             t: 0, playing: false, speed: 1, last: 0,
             seek: null,              // { from, to, start, ms } while "Find" runs
             hover: null,
         };
 
-        function sceneFor(dayIndex, partIndex) {
-            const key = dayIndex + ":" + partIndex;
-            if (!state.scenes.has(key)) state.scenes.set(key, DAYS[dayIndex].parts[partIndex]());
+        function sceneFor(dayIndex, partIndex, inputIndex) {
+            const key = [dayIndex, partIndex, inputIndex].join(":");
+            if (!state.scenes.has(key)) state.scenes.set(key, DAYS[dayIndex].parts[partIndex].inputs[inputIndex].make());
             return state.scenes.get(key);
         }
 
@@ -1042,7 +1247,7 @@ p=9,5 v=-3,-3`;
             const s = state.scene, t = shownTime(), whole = Math.floor(state.t);
             s.draw(t);
             const r = s.readout(t);
-            els.clock.textContent = `Second ${num(whole)}`;
+            els.clock.textContent = s.clock ? s.clock(t) : `Second ${num(whole)}`;
             els.answer.textContent = r.text;
             els.answer.classList.toggle("hit", r.hit);
             els.scrub.value = whole;
@@ -1088,15 +1293,33 @@ p=9,5 v=-3,-3`;
         }
 
         function showPart(partIndex) {
-            setPlaying(false);
             state.partIndex = partIndex;
-            const s = state.scene = sceneFor(state.dayIndex, partIndex);
+            for (const b of els.parts.children) b.setAttribute("aria-selected", String(Number(b.dataset.part) === partIndex));
+
+            // One input: a plain label. More than one: a small switch.
+            const inputs = DAYS[state.dayIndex].parts[partIndex].inputs;
+            els.inputLabel.hidden = inputs.length > 1;
+            els.inputs.hidden = inputs.length < 2;
+            els.inputLabel.textContent = inputs[0].name + " input";
+            els.inputs.replaceChildren(...inputs.map((input, i) => {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.textContent = input.name;
+                b.addEventListener("click", () => showInput(i));
+                return b;
+            }));
+            showInput(0);
+        }
+
+        function showInput(inputIndex) {
+            setPlaying(false);
+            state.inputIndex = inputIndex;
+            for (const [i, b] of [...els.inputs.children].entries()) b.setAttribute("aria-pressed", String(i === inputIndex));
+            const s = state.scene = sceneFor(state.dayIndex, state.partIndex, inputIndex);
             state.t = s.start;
             state.speed = s.speed;
 
-            for (const b of els.parts.children) b.setAttribute("aria-selected", String(Number(b.dataset.part) === partIndex));
             els.partLine.textContent = s.line;
-            els.inputLabel.textContent = s.input;
             els.sizeLabel.textContent = s.sizeLabel;
             els.scrub.max = s.max;
 
@@ -1128,6 +1351,7 @@ p=9,5 v=-3,-3`;
             state.dayIndex = dayIndex;
             const d = DAYS[dayIndex];
             for (const b of els.days.children) b.setAttribute("aria-selected", String(Number(b.dataset.day) === dayIndex));
+            history.replaceState(null, "", "#day" + d.day);
             els.dayTitle.textContent = `Day ${d.day}: ${d.title}`;
             els.puzzleLink.href = `https://adventofcode.com/2024/day/${d.day}`;
             els.codeLink.href = `https://github.com/Maheshkumar-novice/Advent-Of-Code-Solutions/tree/main/2024/Day-${String(d.day).padStart(2, "0")}`;
@@ -1304,7 +1528,9 @@ p=9,5 v=-3,-3`;
             return b;
         }));
 
-        showDay(0);
+        // #day14 opens Day 14.
+        const fromLink = DAYS.findIndex(d => location.hash === "#day" + d.day);
+        showDay(fromLink >= 0 ? fromLink : 0);
         document.fonts?.ready.then(() => render());
     })();
     </script>
