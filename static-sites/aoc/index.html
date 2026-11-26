@@ -28,6 +28,7 @@
             --robot: #10b981;
             --robot-off: rgba(16, 185, 129, 0.32);
             --gold: #fbbf24;
+            --gold-faint: rgba(251, 191, 36, 0.16);
             --wall: #4a4a4a;
             --trail: rgba(16, 185, 129, 0.3);
             --trail-faint: rgba(16, 185, 129, 0.12);
@@ -839,13 +840,100 @@ vvv^^^^<<<<>>>>>>>vvv><<<<>>>>^^^^^^^^^^^vv^^^^^^^v>>>>>v^^^^^^^^vvvvvvvv>>>><v^
 >>>>>>>>>>^^^^<<<<vvvv<vvvvvvvv<>>><<<<<vvvvv>>>v<<<<vvv>>>>^^^^^^<>v<v<<<<>>>>>vv<<vvvv>>>>>^^^^^^^
     </script>
 
+    <!-- Made-up network for Day 23, not my real input: six rooms of computers, one where every computer links to every other. -->
+    <script type="text/plain" id="day23-made-up">
+ti-st
+ty-zb
+hy-qw
+vu-hu
+mw-si
+qw-ti
+ti-pv
+tf-vu
+ju-ti
+si-bl
+qt-pr
+rl-bk
+ju-st
+ju-pv
+bk-pe
+jj-sm
+mw-pv
+hu-hs
+sm-bk
+mv-tb
+tb-bk
+ju-hy
+zu-cf
+hs-tf
+pr-ka
+pr-tf
+mw-vp
+tp-ho
+tp-ty
+ka-hu
+vo-bl
+vu-hs
+ru-st
+tf-ka
+st-hs
+hu-zu
+um-jj
+vo-ty
+pv-tf
+ru-vp
+ho-fb
+mv-um
+sm-mv
+hu-pr
+ty-bl
+qd-pe
+vp-si
+rl-tb
+pv-qw
+sm-tb
+bk-qd
+tp-tb
+mw-bl
+um-bk
+tp-zb
+ru-bl
+pr-vu
+qd-cf
+mv-rl
+um-rl
+mw-ru
+mv-zb
+jj-rl
+um-sm
+jj-tb
+tb-um
+fb-tp
+hy-ti
+qw-st
+to-mw
+jj-bk
+zu-pe
+bk-mv
+cf-pe
+vp-bl
+ty-fb
+hu-tf
+zb-fb
+ru-si
+qt-qd
+sm-zb
+jj-mv
+sm-rl
+    </script>
+
     <script>
     (() => {
         "use strict";
 
         const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         const COLORS = {};
-        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "wall", "trail", "trail-faint", "bar", "box", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
+        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "gold-faint", "wall", "trail", "trail-faint", "bar", "box", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
             COLORS[name] = css("--" + name);
         }
 
@@ -970,6 +1058,31 @@ vvv^^^^<<<<>>>>>>>vvv><<<<>>>>^^^^^^^^^^^vv^^^^^^^v>>>>>v^^^^^^^^vvvvvvvv>>>><v^
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(label, x * c + c / 2, y * c + c / 2 + 1);
+            },
+
+            // A round node at (x, y), r px from the middle to the edge, with an optional ring: a computer on Day 23.
+            node(x, y, r, fill, ring = null, width = 1, dash = null) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.beginPath();
+                ctx.arc(x * c + c / 2, y * c + c / 2, r, 0, Math.PI * 2);
+                if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+                if (ring) {
+                    ctx.strokeStyle = ring;
+                    ctx.lineWidth = width;
+                    ctx.setLineDash(dash || []);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            },
+
+            // A filled shape through cell centres, such as a triangle between three nodes.
+            shape(points, color) {
+                const c = this.cell, ctx = this.ctx;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                points.forEach(([x, y], i) => (i ? ctx.lineTo(x * c + c / 2, y * c + c / 2) : ctx.moveTo(x * c + c / 2, y * c + c / 2)));
+                ctx.closePath();
+                ctx.fill();
             },
         };
 
@@ -1998,6 +2111,325 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
             };
         }
 
+        /* ---------- Day 23: LAN Party ---------- */
+
+        const EXAMPLE_23 = `
+kh-tc
+qp-kh
+de-cg
+ka-co
+yn-aq
+qp-ub
+cg-tb
+vc-aq
+tb-ka
+wh-tc
+yn-cg
+kh-ub
+ta-co
+de-co
+tc-td
+tb-wq
+wh-td
+ta-ka
+td-qp
+aq-cg
+wq-ub
+ub-vc
+de-ta
+wq-aq
+wq-vc
+wh-yn
+ka-de
+kh-ta
+co-tc
+wh-qp
+tb-vc
+td-yn`;
+
+        const MADE_UP_23 = () => document.getElementById("day23-made-up").textContent;
+
+        // Computers are numbered in the order they first show up, which is the order networkx keeps them in.
+        function parseNetwork(text) {
+            const names = [], index = new Map(), links = [];
+            const id = name => {
+                if (!index.has(name)) { index.set(name, names.length); names.push(name); }
+                return index.get(name);
+            };
+            for (const line of text.trim().split("\n")) {
+                const [a, b] = line.trim().split("-");
+                links.push([id(a), id(b)]);
+            }
+            const adj = names.map(() => new Set());
+            for (const [a, b] of links) { adj[a].add(b); adj[b].add(a); }
+            return { names, links, adj, n: names.length };
+        }
+
+        // Part 1, the way networkx's enumerate_all_cliques goes: a queue of groups where everyone is linked,
+        // each with the computers further down the list that link to all of it (`could`). Taking a group out,
+        // it adds the group plus each of those computers to the back, so groups come out smallest first.
+        function allGroups(net) {
+            const { adj } = net;
+            const queue = adj.map((s, u) => ({ group: [u], could: [...s].filter(v => v > u).sort((a, b) => a - b) }));
+            for (let j = 0; j < queue.length; j++) {
+                const { group, could } = queue[j];
+                could.forEach((u, i) => queue.push({ group: [...group, u], could: could.slice(i + 1).filter(v => adj[u].has(v)) }));
+            }
+            return queue;
+        }
+
+        // Part 2, the way networkx's find_cliques goes (Bron–Kerbosch with a pivot): grow a group one computer
+        // at a time from the ones linked to all of it, skip the pivot's neighbours, and note a group when
+        // nothing more can join. Where networkx takes any computer from a set, this takes the first one.
+        function maximalGroups(net) {
+            const { adj, n } = net;
+            const pivot = (subg, cand) => {
+                let best = -1, at = subg[0];
+                for (const u of subg) {
+                    let k = 0;
+                    for (const v of cand) if (adj[u].has(v)) k++;
+                    if (k > best) { best = k; at = u; }
+                }
+                return at;
+            };
+            let cand = [...Array(n).keys()], subg = cand.slice();
+            let u = pivot(subg, cand), ext = cand.filter(v => !adj[u].has(v));
+            const stack = [], Q = [null], found = [];
+            for (;;) {
+                if (ext.length) {
+                    const q = ext.shift();
+                    cand = cand.filter(v => v !== q);
+                    Q[Q.length - 1] = q;
+                    const subgQ = subg.filter(v => adj[q].has(v));
+                    if (!subgQ.length) found.push(Q.slice());
+                    else {
+                        const candQ = cand.filter(v => adj[q].has(v));
+                        if (candQ.length) {
+                            stack.push([subg, cand, ext]);
+                            Q.push(null);
+                            subg = subgQ;
+                            cand = candQ;
+                            u = pivot(subg, cand);
+                            ext = cand.filter(v => !adj[u].has(v));
+                        }
+                    }
+                } else {
+                    Q.pop();
+                    if (!stack.length) break;
+                    [subg, cand, ext] = stack.pop();
+                }
+            }
+            return found;
+        }
+
+        // Where each computer sits, worked out once: computers k links apart try to sit k steps apart
+        // (a stress layout), from a few fixed starts, keeping the best. Then each computer is nudged off
+        // links that aren't its own and away from computers too close. Gives [x, y] from 0 to 1.
+        function networkLayout(net) {
+            const { n, adj, links } = net;
+            const hops = [...Array(n)].map((_, s) => {
+                const d = new Array(n).fill(-1), queue = [s];
+                d[s] = 0;
+                for (let h = 0; h < queue.length; h++) for (const v of adj[queue[h]]) if (d[v] < 0) { d[v] = d[queue[h]] + 1; queue.push(v); }
+                return d;
+            });
+            const far = Math.max(...hops.flat()) + 1;
+            for (const d of hops) d.forEach((v, j) => { if (v < 0) d[j] = far; });
+
+            let seed = 2024;
+            const rand = () => {
+                seed = (seed + 0x6d2b79f5) | 0;
+                let z = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+                z = (z + Math.imul(z ^ (z >>> 7), 61 | z)) ^ z;
+                return ((z ^ (z >>> 14)) >>> 0) / 4294967296;
+            };
+            let best = null, bestStress = Infinity;
+            for (let start = 0; start < 6; start++) {
+                const x = Array.from({ length: n }, () => rand() * far), y = Array.from({ length: n }, () => rand() * far);
+                for (let it = 0; it < 200; it++) {
+                    for (let i = 0; i < n; i++) {
+                        let sx = 0, sy = 0, sw = 0;
+                        for (let j = 0; j < n; j++) {
+                            if (j === i) continue;
+                            const d = hops[i][j], w = 1 / (d * d);
+                            const dx = x[i] - x[j], dy = y[i] - y[j], dist = Math.hypot(dx, dy) || 1e-6;
+                            sx += w * (x[j] + (d * dx) / dist);
+                            sy += w * (y[j] + (d * dy) / dist);
+                            sw += w;
+                        }
+                        x[i] = sx / sw;
+                        y[i] = sy / sw;
+                    }
+                }
+                let stress = 0;
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) stress += (Math.hypot(x[i] - x[j], y[i] - y[j]) - hops[i][j]) ** 2 / hops[i][j] ** 2;
+                if (stress < bestStress) { bestStress = stress; best = { x, y }; }
+            }
+
+            const { x, y } = best, CLEAR = 0.32, APART = 0.62;     // in links: room beside a link, room between computers
+            for (let it = 0; it < 120; it++) {
+                for (let i = 0; i < n; i++) {
+                    for (const [a, b] of links) {
+                        if (a === i || b === i) continue;
+                        const ex = x[b] - x[a], ey = y[b] - y[a];
+                        const u = ((x[i] - x[a]) * ex + (y[i] - y[a]) * ey) / (ex * ex + ey * ey || 1e-9);
+                        if (u <= 0 || u >= 1) continue;
+                        const dx = x[i] - (x[a] + u * ex), dy = y[i] - (y[a] + u * ey), dist = Math.hypot(dx, dy) || 1e-6;
+                        if (dist < CLEAR) {
+                            // the computer steps off, and the link moves the other way a little
+                            const push = (CLEAR - dist) * 0.5, ux = dx / dist, uy = dy / dist;
+                            x[i] += ux * push; y[i] += uy * push;
+                            x[a] -= ux * push * 0.25; y[a] -= uy * push * 0.25;
+                            x[b] -= ux * push * 0.25; y[b] -= uy * push * 0.25;
+                        }
+                    }
+                    for (let j = 0; j < n; j++) {
+                        if (j === i) continue;
+                        const dx = x[i] - x[j], dy = y[i] - y[j], dist = Math.hypot(dx, dy) || 1e-6;
+                        if (dist < APART) {
+                            const push = (APART - dist) / 4;
+                            x[i] += (dx / dist) * push; y[i] += (dy / dist) * push;
+                            x[j] -= (dx / dist) * push; y[j] -= (dy / dist) * push;
+                        }
+                    }
+                }
+            }
+
+            const minX = Math.min(...x), maxX = Math.max(...x), minY = Math.min(...y), maxY = Math.max(...y);
+            const s = Math.max(maxX - minX, maxY - minY) || 1;
+            const ox = (1 - (maxX - minX) / s) / 2, oy = (1 - (maxY - minY) / s) / 2;
+            return x.map((_, i) => [(x[i] - minX) / s + ox, (y[i] - minY) / s + oy]);
+        }
+
+        function day23(text, part, { speeds, speed, maxSide, nodeShare, minR, maxR }) {
+            const net = parseNetwork(text);
+            const { names, links, n } = net;
+            const spot = networkLayout(net);
+            const isT = names.map(name => name[0] === "t");
+            const G = 24;            // the canvas is a G × G grid; nodes sit anywhere on it
+            const GROW = 0.6;        // a step spends its first part growing the group, then shows it whole
+            const password = group => group.map(i => names[i]).sort().join(",");
+
+            const steps = part === 1 ? allGroups(net) : maximalGroups(net).map(group => ({ group }));
+            const last = steps.length;
+            // After k steps: part 1 counts the groups of three with a t; part 2 keeps the last group
+            // at least as big as any before it, which is what sorting by size and taking the last gives.
+            const countBy = [0], bigBy = [-1];
+            steps.forEach((s, j) => {
+                s.counted = part === 1 && s.group.length === 3 && s.group.some(i => isT[i]);
+                const prev = j ? steps[j - 1].group : [];
+                let p = 0;
+                while (p < prev.length && p < s.group.length && prev[p] === s.group[p]) p++;
+                s.prefix = part === 2 ? p : s.group.length - 1;     // part 1: one new computer joins an earlier group
+                countBy.push(countBy[j] + (s.counted ? 1 : 0));
+                const b = bigBy[j];
+                bigBy.push(b < 0 || s.group.length >= steps[b].group.length ? j : b);
+            });
+            const countedSteps = steps.flatMap((s, j) => (s.counted ? [j] : []));
+
+            // The step on screen at time t: the one playing, or else the last one done.
+            const onScreen = t => {
+                const k = Math.floor(t), moving = t - k > 0 && k < last;
+                const grow = moving ? Math.min(1, (t - k) / GROW) : 1;
+                return { k, j: moving ? k : k - 1, grow, done: moving && grow >= 1 ? k + 1 : k };
+            };
+            const computers = m => `${m} ${m === 1 ? "computer" : "computers"}`;
+            const clock = t => {
+                const { j } = onScreen(t);
+                return j < 0 ? "Start" : `Group ${num(j + 1)} of ${num(last)} · ${computers(steps[j].group.length)}`;
+            };
+            const answer = t => {
+                const { done } = onScreen(t);
+                if (part === 1) return `Counted ${num(countBy[done])}`;
+                return bigBy[done] < 0 ? "Password —" : `Password ${password(steps[bigBy[done]].group)}`;
+            };
+
+            let X = [], Y = [], r = 10;
+
+            return {
+                line: part === 1
+                    ? "networkx lists every group of computers that all link to each other, smallest first, each one an earlier group plus one more computer (dashed: who could join next). My code counts the groups of three with a name starting with t."
+                    : "Now the biggest group where everyone links to everyone. networkx grows groups one computer at a time and notes each one that nothing more can join. My code sorts those by size and takes the last: its names in order are the password.",
+                sizeLabel: `${n} computers · ${links.length} links`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+
+                layout() {
+                    grid.size(G, G, Math.floor(maxSide / G), maxSide);
+                    const side = G * grid.cell;
+                    r = Math.max(minR, Math.min(maxR, side * nodeShare));
+                    const m = r + 4;
+                    X = spot.map(([x]) => (m + x * (side - 2 * m)) / grid.cell - 0.5);
+                    Y = spot.map(([, y]) => (m + y * (side - 2 * m)) / grid.cell - 0.5);
+                },
+
+                draw(t) {
+                    const { j, grow, done } = onScreen(t), c = grid.cell;
+                    const at = i => [X[i], Y[i]];
+                    const thin = Math.max(1, r * 0.08), thick = Math.max(2, r * 0.22);
+                    grid.clear(COLORS.floor);
+
+                    // Part 1: groups of three with a t, counted so far.
+                    if (part === 1) for (const q of countedSteps) if (q < done) grid.shape(steps[q].group.map(at), COLORS["gold-faint"]);
+                    for (const [a, b] of links) grid.line([at(a), at(b)], COLORS["border-strong"], thin);
+
+                    // Part 2: the biggest group so far, in gold.
+                    const fill = new Array(n).fill(null);
+                    const big = part === 2 ? bigBy[done] : -1;
+                    const linkUp = (group, color) => {
+                        for (let a = 0; a < group.length; a++) for (let b = a + 1; b < group.length; b++) grid.line([at(group[a]), at(group[b])], color, thick);
+                    };
+                    if (big >= 0 && big !== j) {
+                        linkUp(steps[big].group, COLORS.gold);
+                        for (const i of steps[big].group) fill[i] = COLORS.gold;
+                    }
+
+                    // The group on screen: the computers already in it, then the next ones joining.
+                    let could = [];
+                    const ringed = [];       // in the group on screen and in the gold group too: stays gold, with a green ring
+                    if (j >= 0) {
+                        const s = steps[j], group = s.group, whole = grow >= 1;
+                        const color = whole && (s.counted || big === j) ? COLORS.gold : COLORS.accent;
+                        const reach = s.prefix + (group.length - s.prefix) * grow;
+                        const inside = group.slice(0, Math.floor(reach)), joining = group[Math.floor(reach)];
+                        const mark = i => {
+                            if (color === COLORS.accent && fill[i] === COLORS.gold) ringed.push(i);
+                            else fill[i] = color;
+                        };
+                        if (whole && s.counted) grid.shape(group.map(at), COLORS["gold-faint"]);
+                        linkUp(inside, color);
+                        if (joining !== undefined) {
+                            const f = reach - Math.floor(reach), [jx, jy] = at(joining);
+                            for (const i of inside) grid.line([[jx, jy], [jx + (X[i] - jx) * f, jy + (Y[i] - jy) * f]], color, thick);
+                            mark(joining);
+                        }
+                        inside.forEach(mark);
+                        if (part === 1) could = s.could;
+                    }
+
+                    // The computers, and in part 1 a white ring for every name starting with t.
+                    const font = Math.max(8, r * 0.92) / c;
+                    for (let i = 0; i < n; i++) {
+                        const tee = part === 1 && isT[i];
+                        grid.node(X[i], Y[i], r, fill[i] || COLORS.tile, tee ? COLORS["text-primary"] : COLORS["border-strong"], tee ? Math.max(1.5, r * 0.14) : 1);
+                        grid.text(X[i], Y[i], names[i], fill[i] ? COLORS["bg-primary"] : tee ? COLORS["text-primary"] : COLORS["text-muted"], font);
+                    }
+                    for (const i of ringed) grid.node(X[i], Y[i], r + Math.max(2.5, r * 0.25), null, COLORS.accent, Math.max(2, r * 0.18));
+                    for (const i of could) grid.node(X[i], Y[i], r + Math.max(3, r * 0.3), null, COLORS.accent, Math.max(1.5, r * 0.12), [3, 3]);
+                },
+
+                clock,
+
+                readout(t) {
+                    return { text: answer(t), hit: Math.floor(t) === last };
+                },
+
+                describe(t) {
+                    return `${clock(t)}. ${answer(t)}.`;
+                },
+            };
+        }
+
         /* ---------- the days ---------- */
 
         // Each part has one or more inputs; each input makes its scene the first time it's opened.
@@ -2063,6 +2495,20 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
                     { inputs: [
                         { name: "Example", make: () => day16(EXAMPLE_16, 2, { speeds: [1, 3, 6], speed: 3, maxCell: 36, maxHeight: 480 }) },
                         { name: "Made-up", make: () => day16(MADE_UP_16, 2, { speeds: [2, 6, 15], speed: 6, maxCell: 20, maxHeight: 560 }) },
+                    ] },
+                ],
+            },
+            {
+                day: 23,
+                title: "LAN Party",
+                parts: [
+                    { inputs: [
+                        { name: "Example", make: () => day23(EXAMPLE_23, 1, { speeds: [2, 4, 8], speed: 4, maxSide: 456, nodeShare: 0.042, minR: 12, maxR: 19 }) },
+                        { name: "Made-up", make: () => day23(MADE_UP_23(), 1, { speeds: [8, 16, 40], speed: 16, maxSide: 528, nodeShare: 0.027, minR: 8.5, maxR: 14 }) },
+                    ] },
+                    { inputs: [
+                        { name: "Example", make: () => day23(EXAMPLE_23, 2, { speeds: [0.5, 1, 2], speed: 1, maxSide: 456, nodeShare: 0.042, minR: 12, maxR: 19 }) },
+                        { name: "Made-up", make: () => day23(MADE_UP_23(), 2, { speeds: [1, 2, 4], speed: 2, maxSide: 528, nodeShare: 0.027, minR: 8.5, maxR: 14 }) },
                     ] },
                 ],
             },
