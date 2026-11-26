@@ -927,13 +927,92 @@ jj-mv
 sm-rl
     </script>
 
+    <!-- Made-up circuit for Day 24, not my real input: an 11-bit adder with four pairs of output wires swapped. -->
+    <script type="text/plain" id="day24-made-up">
+x00: 0
+x01: 0
+x02: 0
+x03: 1
+x04: 1
+x05: 1
+x06: 1
+x07: 0
+x08: 0
+x09: 0
+x10: 1
+y00: 1
+y01: 0
+y02: 1
+y03: 1
+y04: 0
+y05: 0
+y06: 0
+y07: 0
+y08: 0
+y09: 1
+y10: 0
+
+y01 XOR x01 -> cci
+x09 AND y09 -> z09
+cew XOR jmo -> z08
+hbj AND ldr -> plp
+nwm XOR fxt -> fao
+plp OR jdx -> uki
+gep AND nnk -> qll
+ifn OR fqd -> kil
+x06 AND y06 -> jdx
+luc XOR kil -> z02
+cco OR sep -> gwk
+hbj XOR ldr -> z06
+x02 XOR y02 -> luc
+x08 AND y08 -> cco
+y00 AND x00 -> idh
+x10 XOR y10 -> nnk
+y03 XOR x03 -> nwm
+gwk XOR fnd -> irk
+x07 AND y07 -> hoq
+slm AND fao -> mia
+kid OR irk -> gep
+ozu OR hio -> fxt
+y04 XOR x04 -> slm
+fwr OR mia -> gea
+idh AND cci -> fqd
+y00 XOR x00 -> z00
+lay XOR gea -> z05
+y08 XOR x08 -> jmo
+ick OR tzc -> z03
+y04 AND x04 -> fwr
+x02 AND y02 -> hio
+fnd AND gwk -> kid
+fao XOR slm -> z04
+gea AND lay -> kgd
+x09 XOR y09 -> fnd
+y03 AND x03 -> tzc
+y05 XOR x05 -> auk
+luc AND kil -> ozu
+cci XOR idh -> z01
+nhz XOR uki -> whc
+y05 AND x05 -> lay
+jmo AND cew -> sep
+nnk XOR gep -> z10
+y01 AND x01 -> ifn
+hoq OR whc -> cew
+qll OR scr -> z11
+nhz AND uki -> z07
+y07 XOR x07 -> nhz
+x10 AND y10 -> scr
+auk OR kgd -> hbj
+fxt AND nwm -> ick
+x06 XOR y06 -> ldr
+    </script>
+
     <script>
     (() => {
         "use strict";
 
         const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         const COLORS = {};
-        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "gold-faint", "wall", "trail", "trail-faint", "bar", "box", "accent", "text-primary", "text-muted", "border-strong", "bg-primary"]) {
+        for (const name of ["floor", "tile", "tile-off", "robot", "robot-off", "gold", "gold-faint", "wall", "trail", "trail-faint", "bar", "box", "accent", "text-primary", "text-secondary", "text-muted", "border-strong", "bg-primary"]) {
             COLORS[name] = css("--" + name);
         }
 
@@ -1083,6 +1162,34 @@ sm-rl
                 points.forEach(([x, y], i) => (i ? ctx.lineTo(x * c + c / 2, y * c + c / 2) : ctx.moveTo(x * c + c / 2, y * c + c / 2)));
                 ctx.closePath();
                 ctx.fill();
+            },
+
+            // A line from one cell centre to another, bent towards `via` (a quadratic curve): a wire around a gate.
+            curve(from, via, to, color, width) {
+                const c = this.cell, ctx = this.ctx, p = ([x, y]) => [x * c + c / 2, y * c + c / 2];
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(...p(from));
+                ctx.quadraticCurveTo(...p(via), ...p(to));
+                ctx.stroke();
+            },
+
+            // A rounded box w × h px around (x, y), with an optional ring: a gate or a wire on Day 24.
+            pill(x, y, w, h, fill, ring = null, width = 1, dash = null, radius = Math.min(h / 2, 6)) {
+                const c = this.cell, ctx = this.ctx, cx = x * c + c / 2, cy = y * c + c / 2;
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(cx - w / 2, cy - h / 2, w, h, radius);
+                else ctx.rect(cx - w / 2, cy - h / 2, w, h);
+                if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+                if (ring) {
+                    ctx.strokeStyle = ring;
+                    ctx.lineWidth = width;
+                    ctx.setLineDash(dash || []);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
             },
         };
 
@@ -2430,6 +2537,546 @@ td-yn`;
             };
         }
 
+        /* ---------- Day 24: Crossed Wires ---------- */
+
+        const EXAMPLE_24 = `
+x00: 1
+x01: 0
+x02: 1
+x03: 1
+x04: 0
+y00: 1
+y01: 1
+y02: 1
+y03: 1
+y04: 1
+
+ntg XOR fgs -> mjb
+y02 OR x01 -> tnw
+kwq OR kpj -> z05
+x00 OR x03 -> fst
+tgd XOR rvg -> z01
+vdt OR tnw -> bfw
+bfw AND frj -> z10
+ffh OR nrd -> bqk
+y00 AND y03 -> djm
+y03 OR y00 -> psh
+bqk OR frj -> z08
+tnw OR fst -> frj
+gnj AND tgd -> z11
+bfw XOR mjb -> z00
+x03 OR x00 -> vdt
+gnj AND wpb -> z02
+x04 AND y00 -> kjc
+djm OR pbm -> qhw
+nrd AND vdt -> hwm
+kjc AND fst -> rvg
+y04 OR y02 -> fgs
+y01 AND x02 -> pbm
+ntg OR kjc -> kwq
+psh XOR fgs -> tgd
+qhw XOR tgd -> z09
+pbm OR djm -> kpj
+x03 XOR y03 -> ffh
+x00 XOR y04 -> ntg
+bfw OR bqk -> z06
+nrd XOR fgs -> wpb
+frj XOR qhw -> z04
+bqk OR frj -> z07
+y03 OR x01 -> nrd
+hwm AND bqk -> z03
+tgd XOR rvg -> z12
+tnw OR pbm -> gnj`;
+
+        const MADE_UP_24 = () => document.getElementById("day24-made-up").textContent;
+
+        function parseCircuit(text) {
+            const [top, bottom] = text.trim().split(/\n\s*\n/);
+            const inputs = top.trim().split("\n").map(line => {
+                const [name, value] = line.split(":").map(s => s.trim());
+                return { name, value: Number(value) };
+            });
+            const gates = bottom.trim().split("\n").map(line => {
+                const [a, op, b, , out] = line.trim().split(/\s+/);
+                return { a, op, b, out };
+            });
+            return { inputs, gates };
+        }
+
+        const gateValue = (op, a, b) => (op === "AND" ? a & b : op === "OR" ? a | b : a ^ b);
+        const isXY = w => w[0] === "x" || w[0] === "y";
+        const bitNo = w => Number(w.slice(1));
+
+        // Part 1, the way my code goes: down the list of gates, again and again. A gate whose two inputs
+        // both have a value works out its own (every pass, even when it has one already); the others wait.
+        // It stops after a pass where no gate had to wait. firstAt: the check, counted from the very
+        // start, where each gate first got its value.
+        function gatePasses({ inputs, gates }) {
+            const value = new Map(inputs.map(w => [w.name, w.value]));
+            const G = gates.length, firstAt = new Array(G).fill(Infinity), waiting = [];
+            for (let p = 0; p <= G; p++) {
+                let waits = 0;
+                gates.forEach((g, i) => {
+                    if (value.has(g.a) && value.has(g.b)) {
+                        value.set(g.out, gateValue(g.op, value.get(g.a), value.get(g.b)));
+                        if (firstAt[i] === Infinity) firstAt[i] = p * G + i;
+                    } else waits++;
+                });
+                waiting.push(waits);
+                if (!waits) break;
+            }
+            return { value, firstAt, waiting, passes: waiting.length };
+        }
+
+        // The value on every wire when gate i writes to outs[i].
+        function wireValues({ inputs, gates }, outs) {
+            const value = new Map(inputs.map(w => [w.name, w.value]));
+            const from = new Map(outs.map((w, i) => [w, i]));
+            const get = (w, depth) => {
+                if (value.has(w)) return value.get(w);
+                const i = from.get(w);
+                if (i === undefined || depth > gates.length) return 0;
+                const v = gateValue(gates[i].op, get(gates[i].a, depth + 1), get(gates[i].b, depth + 1));
+                value.set(w, v);
+                return v;
+            };
+            outs.forEach(w => get(w, 0));
+            return value;
+        }
+
+        // Where each gate sits in an adder: a band per bit with x and y, then x XOR y and x AND y, the
+        // carry OR, the XOR and AND that take the carry in, and the z wire, as [along the bits, across].
+        // A gate's bit is the highest x or y bit it hears from; its kind comes from its type and from
+        // whether its inputs are x and y, so a swapped output wire doesn't move it.
+        function adderSpots({ inputs, gates }) {
+            const from = new Map(gates.map((g, i) => [g.out, i]));
+            const bit = new Array(gates.length).fill(-1);
+            const bitOfWire = w => (isXY(w) ? bitNo(w) : from.has(w) ? bitOfGate(from.get(w)) : 0);
+            const bitOfGate = i => {
+                if (bit[i] < 0) { bit[i] = 0; bit[i] = Math.max(bitOfWire(gates[i].a), bitOfWire(gates[i].b)); }
+                return bit[i];
+            };
+            const kind = gates.map(g => (g.op === "OR" ? "or" : g.op.toLowerCase() + (isXY(g.a) && isXY(g.b) ? "1" : "2")));
+            const SPOT = { xor1: [0, 1], and1: [1, 1], or: [1.4, 2], xor2: [0, 3], and2: [1, 3] };
+            const gateSpots = gates.map((_, i) => [2 * bitOfGate(i) + SPOT[kind[i]][0], SPOT[kind[i]][1]]);
+            const inputSpots = inputs.map(w => [2 * bitNo(w.name) + (w.name[0] === "y" ? 1 : 0), 0]);
+            return { bit, kind, gateSpots, inputSpots, bits: Math.ceil(inputs.length / 2) };
+        }
+
+        // A circuit that isn't an adder, in columns: x and y, then each gate one column right of its latest
+        // input, then the gates that write a z wire, then the z wires. A few times over, the gates in a column
+        // are sorted by where their wires go, so fewer lines cross. Gives [column, share of the height].
+        function layerSpots({ inputs, gates }, zs) {
+            const I = inputs.length, G = gates.length;
+            const from = new Map(gates.map((g, i) => [g.out, i]));
+            const depth = new Array(G).fill(-1);
+            const wireDepth = w => (from.has(w) ? gateDepth(from.get(w)) : 0);
+            const gateDepth = i => {
+                if (depth[i] < 0) { depth[i] = 0; depth[i] = 1 + Math.max(wireDepth(gates[i].a), wireDepth(gates[i].b)); }
+                return depth[i];
+            };
+            const writesZ = i => gates[i].out[0] === "z";
+            let D = 1;
+            gates.forEach((_, i) => { gateDepth(i); if (!writesZ(i)) D = Math.max(D, depth[i]); });
+
+            const cols = Array.from({ length: D + 3 }, () => []);
+            cols[0] = inputs.map((_, i) => i).sort((p, q) => bitNo(inputs[p].name) - bitNo(inputs[q].name) || (inputs[p].name < inputs[q].name ? -1 : 1));
+            gates.forEach((_, i) => { if (!writesZ(i)) cols[depth[i]].push(I + i); });
+            cols[D + 1] = zs.map(z => I + from.get(z));
+            cols[D + 2] = zs.map((_, k) => I + G + k);
+
+            const inputAt = new Map(inputs.map((w, i) => [w.name, i]));
+            const near = Array.from({ length: I + G + zs.length }, () => []);
+            gates.forEach((g, i) => {
+                for (const w of [g.a, g.b]) {
+                    const u = inputAt.has(w) ? inputAt.get(w) : from.has(w) ? I + from.get(w) : -1;
+                    if (u >= 0) { near[u].push(I + i); near[I + i].push(u); }
+                }
+            });
+            const spot = [];
+            const place = () => cols.forEach((col, c) => col.forEach((u, j) => { spot[u] = [c, (j + 0.5) / col.length]; }));
+            const mean = u => near[u].reduce((s, v) => s + spot[v][1], 0) / (near[u].length || 1);
+            place();
+            for (let round = 0; round < 6; round++) {
+                for (let c = 1; c <= D; c++) {
+                    const at = new Map(cols[c].map(u => [u, mean(u)]));
+                    cols[c].sort((p, q) => at.get(p) - at.get(q));
+                    place();
+                }
+            }
+            return { spot, columns: cols.length, rows: Math.max(...cols.map(col => col.length)) };
+        }
+
+        function day24(text, part, { speeds, speed, adder }) {
+            const circuit = parseCircuit(text);
+            const { inputs, gates } = circuit;
+            const I = inputs.length, G = gates.length;
+            const zs = gates.map(g => g.out).filter(w => w[0] === "z").sort();
+            const Z = zs.length, N = I + G + Z;      // nodes: the inputs, then the gates, then the z wires
+            const inputAt = new Map(inputs.map((w, i) => [w.name, i]));
+            const edges = [];
+            gates.forEach((g, i) => edges.push({ wire: g.a, to: I + i }, { wire: g.b, to: I + i }));
+            zs.forEach((z, k) => edges.push({ wire: z, to: I + G + k }));
+            const label = u => (u < I ? inputs[u].name : u < I + G ? gates[u - I].op : zs[u - I - G]);
+            const shape = adder ? adderSpots(circuit) : layerSpots(circuit, zs);
+            const valueFill = v => (v ? COLORS.accent : COLORS.wall);
+            const valueText = v => (v ? COLORS["bg-primary"] : COLORS["text-primary"]);
+            const PAD = 8;
+
+            // Pixel spots, worked out for the room there is: an adder runs its bits across a wide
+            // screen and down a phone. Part 1 adds the list of gates under the circuit.
+            let X = [], Y = [], pw = 40, ph = 18, font = 10, strip = null;
+            const layout = () => {
+                const room = grid.width();
+                let W, H, spotOf;
+                if (adder) {
+                    const n = shape.bits;
+                    if (room >= 640) {
+                        W = Math.floor(Math.min(room, 860) / 4) * 4;
+                        const along = (W - 2 * PAD) / (2 * n + 1), across = 62;
+                        pw = Math.min(46, along * 0.84);
+                        ph = 18;
+                        spotOf = ([a, c]) => [PAD + along / 2 + a * along, PAD + 3 + ph / 2 + c * across];
+                        H = 2 * PAD + 6 + ph + 4 * across;
+                    } else {
+                        W = Math.floor(Math.min(room, 460) / 4) * 4;
+                        const along = 24;
+                        pw = Math.min(46, ((W - 2 * PAD) / 5) * 0.8);
+                        ph = 17;
+                        const across = (W - 2 * PAD - 6 - pw) / 4;
+                        spotOf = ([a, c]) => [PAD + 3 + pw / 2 + c * across, PAD + 3 + ph / 2 + a * along];
+                        H = 2 * PAD + 6 + ph + 2 * n * along;
+                    }
+                } else {
+                    W = Math.floor(Math.min(room, 600) / 4) * 4;
+                    const C = shape.columns, R = shape.rows, row = 30;
+                    pw = Math.max(30, Math.min(46, ((W - 2 * PAD) / C) * (W < 500 ? 0.62 : 0.74)));
+                    ph = Math.min(18, row * 0.7);
+                    const step = (W - 2 * PAD - 6 - pw) / (C - 1);
+                    spotOf = ([c, share]) => [PAD + 3 + pw / 2 + c * step, PAD + 3 + share * R * row];
+                    H = 2 * PAD + 6 + R * row;
+                }
+                font = Math.min(11, ph * 0.62, pw / 2.7);
+
+                const spots = adder
+                    ? [...shape.inputSpots, ...shape.gateSpots, ...zs.map(z => [2 * bitNo(z), 4])]
+                    : shape.spot;
+                if (part === 1) {
+                    const across = W - 2 * PAD, perRow = across / G >= 9 ? G : Math.ceil(G / 2);
+                    const cs = Math.min(14, Math.floor(across / perRow)), rows = Math.ceil(G / perRow);
+                    strip = { cs, perRow, left: (W - perRow * cs) / 2, top: H + 4 };
+                    H = strip.top + rows * cs + (rows - 1) * 4 + PAD;
+                }
+                const cols = W / 4, rows = Math.ceil(H / 4);
+                grid.size(cols, rows, 4, rows * 4);
+                const c = grid.cell;
+                X = []; Y = [];
+                bends = new Map();
+                spots.forEach((s, u) => {
+                    const [x, y] = spotOf(s);
+                    X[u] = x / c - 0.5;
+                    Y[u] = y / c - 0.5;
+                });
+            };
+
+            // A wire that would run behind another gate bends around it, worked out once per pair of spots.
+            // With no room to bend, an adder's wire is drawn over the gates instead, so a swapped wire never
+            // looks like it goes into the gate it passes.
+            let bends = new Map(), later = [];
+            const bendFor = (u, v) => {
+                const key = u * N + v;
+                if (bends.has(key)) return bends.get(key);
+                const c = grid.cell, ax = X[u], ay = Y[u], bx = X[v], by = Y[v];
+                const len = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / len, ny = (bx - ax) / len;
+                const hw = pw / 2 / c, hh = (ph / 2 - 2) / c;
+                const hits = off => {
+                    const cx = (ax + bx) / 2 + nx * off, cy = (ay + by) / 2 + ny * off;
+                    for (let s = 0.05; s < 0.96; s += 0.015) {
+                        const x = (1 - s) * (1 - s) * ax + 2 * (1 - s) * s * cx + s * s * bx;
+                        const y = (1 - s) * (1 - s) * ay + 2 * (1 - s) * s * cy + s * s * by;
+                        for (let q = 0; q < N; q++) if (q !== u && q !== v && Math.abs(x - X[q]) < hw && Math.abs(y - Y[q]) < hh) return true;
+                    }
+                    return false;
+                };
+                let bend = { via: null, over: false };
+                if (hits(0)) {
+                    bend.over = adder;
+                    for (const k of [1, -1, 1.6, -1.6, 2.2, -2.2, 3, -3, 4, -4]) {
+                        const off = (k * ph) / c;
+                        if (!hits(off)) { bend = { via: [(ax + bx) / 2 + nx * off, (ay + by) / 2 + ny * off], over: false }; break; }
+                    }
+                }
+                bends.set(key, bend);
+                return bend;
+            };
+            const wire = (u, v, color, width) => {
+                const { via, over } = bendFor(u, v);
+                if (over) later.push([[X[u], Y[u]], [X[v], Y[v]], color, width]);
+                else if (via) grid.curve([X[u], Y[u]], via, [X[v], Y[v]], color, width);
+                else grid.line([[X[u], Y[u]], [X[v], Y[v]]], color, width);
+            };
+            const wiresOver = () => {
+                // from the edge of one pill to the edge of the other, so it never crosses their names
+                const c = grid.cell, hw = (pw / 2 + 1) / c, hh = (ph / 2 + 1) / c;
+                for (const [[ax, ay], [bx, by], color, width] of later) {
+                    const dx = bx - ax, dy = by - ay, end = Math.min(Math.abs(dx) > 1e-9 ? hw / Math.abs(dx) : 1, Math.abs(dy) > 1e-9 ? hh / Math.abs(dy) : 1);
+                    if (end < 0.5) grid.line([[ax + dx * end, ay + dy * end], [bx - dx * end, by - dy * end]], color, width);
+                }
+                later = [];
+            };
+            const ring = (u, color, dash = null, width = 2) => grid.pill(X[u], Y[u], pw + 8, ph + 8, null, color, width, dash, Math.min((ph + 8) / 2, 8));
+            const pillText = (u, text, color) => grid.text(X[u], Y[u], text, color, font / grid.cell);
+
+            if (part === 1) {
+                const { value, firstAt, waiting, passes: P } = gatePasses(circuit);
+                const fromGate = new Map(gates.map((g, i) => [g.out, i]));
+                const knownBy = w => (inputAt.has(w) ? 0 : fromGate.has(w) ? firstAt[fromGate.get(w)] + 1 : Infinity);
+                const nodeOf = w => (inputAt.has(w) ? inputAt.get(w) : I + fromGate.get(w));
+                const wireOf = u => (u < I ? inputs[u].name : u < I + G ? gates[u - I].out : zs[u - I - G]);
+                const zKnown = Math.max(...zs.map(knownBy));
+                const output = parseInt(zs.map(z => value.get(z)).reverse().join(""), 2);
+
+                // At time t: pass p, gate c of it being checked (cur, or -1 between passes), K checks done.
+                const now = t => {
+                    const p = Math.min(Math.floor(t), P), into = p < P ? t - p : 0, c = Math.min(G - 1, Math.floor(into * G));
+                    return into > 0 ? { p, c, K: p * G + c, cur: c } : { p, c: 0, K: p * G, cur: -1 };
+                };
+                const clock = t => {
+                    const { p, c, cur } = now(t);
+                    if (cur >= 0) return `Pass ${p + 1} of ${P} · gate ${c + 1} of ${G}`;
+                    if (p === 0) return "Start";
+                    return `Pass ${p} of ${P} · ${waiting[p - 1] ? `${waiting[p - 1]} waiting` : "none waiting"}`;
+                };
+                const answer = t => (now(t).K >= zKnown ? `Output ${num(output)}` : "Output —");
+
+                return {
+                    line: "A gate needs a value on both its inputs before it can work. My code goes down the list of gates (the strip below) again and again: each gate whose inputs are set works out its value, and the rest wait for the next pass. It stops after a pass where none had to wait, then reads the z wires as one binary number.",
+                    sizeLabel: `${I} inputs · ${G} gates`,
+                    max: P, speeds, speed, smooth: true,
+                    start: 0,
+                    layout,
+
+                    draw(t) {
+                        const { K, cur } = now(t);
+                        const has = w => knownBy(w) <= K;
+                        grid.clear(COLORS.floor);
+
+                        // wires: no value yet, then 0s, then 1s on top
+                        const look = [[COLORS["border-strong"], 1], [COLORS["text-muted"], 1.5], [COLORS.accent, 2]];
+                        for (let pass = 0; pass < 3; pass++) {
+                            for (const e of edges) {
+                                const k = has(e.wire) ? 1 + value.get(e.wire) : 0;
+                                if (k !== pass) continue;
+                                wire(nodeOf(e.wire), e.to, ...look[k]);
+                            }
+                        }
+                        for (let u = 0; u < N; u++) {
+                            const w = wireOf(u);
+                            if (has(w)) {
+                                grid.pill(X[u], Y[u], pw, ph, valueFill(value.get(w)));
+                                pillText(u, label(u), valueText(value.get(w)));
+                            } else {
+                                grid.pill(X[u], Y[u], pw, ph, COLORS.tile, COLORS["border-strong"]);
+                                pillText(u, label(u), COLORS["text-muted"]);
+                            }
+                        }
+                        wiresOver();
+
+                        // the gate being checked: solid when both inputs are set, dashed when it has to wait
+                        if (cur >= 0) {
+                            const g = gates[cur];
+                            ring(I + cur, COLORS.gold, has(g.a) && has(g.b) ? null : [3, 3]);
+                        }
+
+                        // the list of gates, in the order my code goes through them
+                        const { cs, perRow, left, top } = strip, c = grid.cell;
+                        for (let i = 0; i < G; i++) {
+                            const x = (left + (i % perRow) * cs + cs / 2) / c - 0.5, y = (top + Math.floor(i / perRow) * (cs + 4) + cs / 2) / c - 0.5;
+                            const on = firstAt[i] < K, size = cs - 2;
+                            grid.pill(x, y, size, size, on ? valueFill(value.get(gates[i].out)) : COLORS.tile, on ? null : COLORS["border-strong"], 1, null, Math.min(2, size / 3));
+                            if (i === cur) grid.pill(x, y, size + 5, size + 5, null, COLORS.gold, 2, null, 2);
+                        }
+                    },
+
+                    clock,
+
+                    readout(t) {
+                        return { text: answer(t), hit: Math.floor(t) === P };
+                    },
+
+                    describe(t) {
+                        return `${clock(t)}. ${answer(t)}.`;
+                    },
+                };
+            }
+
+            // Part 2, the way I did it by hand from the graphviz drawing: every z wire comes out of an XOR
+            // (all but the last, the final carry), so a z from anything else swaps with the output of the
+            // XOR in its bit that takes the carry in. Then one x XOR y feeds an OR, where its x AND y should:
+            // swap those two. Then x + y = z.
+            const { kind, bit } = shape;
+            const states = [gates.map(g => g.out)], steps = [];
+            const feeds = (outs, i) => gates.flatMap((g, j) => (g.a === outs[i] || g.b === outs[i] ? [j] : []));
+            const swap = (i, j) => {
+                const outs = states[states.length - 1].slice();
+                steps.push({ kind: "swap", i, j, names: [outs[i], outs[j]] });
+                [outs[i], outs[j]] = [outs[j], outs[i]];
+                states.push(outs);
+            };
+            zs.forEach((z, k) => {
+                const outs = states[states.length - 1], src = outs.indexOf(z);
+                const ok = gates[src].op === (k === Z - 1 ? "OR" : "XOR");
+                steps.push({ kind: "check", k, src, ok });
+                if (!ok) {
+                    const partner = gates.findIndex((g, i) => kind[i] === "xor2" && bit[i] === bitNo(z) && outs[i][0] !== "z");
+                    if (partner >= 0) swap(src, partner);
+                }
+            });
+            const outsNow = states[states.length - 1];
+            const odd = gates.findIndex((g, i) => kind[i] === "xor1" && bit[i] > 0 && feeds(outsNow, i).some(j => gates[j].op === "OR"));
+            if (odd >= 0) {
+                steps.push({ kind: "odd", i: odd, to: feeds(outsNow, odd).filter(j => gates[j].op === "OR") });
+                const partner = gates.findIndex((g, i) => kind[i] === "and1" && bit[i] === bit[odd]);
+                if (partner >= 0) swap(odd, partner);
+            }
+            steps.push({ kind: "add" });
+            const last = steps.length;
+
+            const number = letter => inputs.reduce((s, w) => (w.name[0] === letter ? s + w.value * 2 ** bitNo(w.name) : s), 0);
+            const sum = number("x") + number("y");
+            const values = states.map(outs => wireValues(circuit, outs));
+            const wrong = values.map(v => zs.map((z, k) => v.get(z) !== Math.floor(sum / 2 ** k) % 2));
+            const swapsBefore = [0];
+            steps.forEach((s, j) => swapsBefore.push(swapsBefore[j] + (s.kind === "swap" ? 1 : 0)));
+            const swapSteps = steps.filter(s => s.kind === "swap");
+            const namesAfter = s => swapSteps.slice(0, s).flatMap(x => x.names).sort();
+            const SHOW = 0.3;     // a swap shows the two wires first, then moves them
+
+            const onScreen = t => {
+                const k = Math.floor(t), moving = t - k > 0 && k < last;
+                return { k, j: moving ? k : k - 1, f: moving ? t - k : 1, moving };
+            };
+            const clock = t => {
+                const { j } = onScreen(t);
+                if (j < 0) return "Start";
+                const s = steps[j];
+                if (s.kind === "check") return `${zs[s.k]} from ${gates[s.src].op}`;
+                if (s.kind === "swap") return `Swap ${s.names.slice().sort().join(" and ")}`;
+                if (s.kind === "odd") return `${[gates[s.i].a, gates[s.i].b].sort().join(" XOR ")} feeds an OR`;
+                return "Addition Successful!";
+            };
+            const answer = t => {
+                const names = namesAfter(swapsBefore[onScreen(t).k]);
+                return names.length ? `Wires ${names.join(",")}` : "Wires —";
+            };
+
+            return {
+                line: "The gates should add x and y, but four pairs of gates have their output wires swapped. I drew the circuit with graphviz and looked: every z wire should come out of an XOR (the last one is the final carry), which finds three pairs, and one x XOR y feeding an OR gives away the fourth. Swapped back, x + y = z.",
+                sizeLabel: `${I} inputs · ${G} gates`,
+                max: last, speeds, speed, smooth: true,
+                start: 0,
+                layout,
+
+                draw(t) {
+                    const { k, j, f, moving } = onScreen(t);
+                    const s = swapsBefore[k], outs = states[s], value = values[s];
+                    const step = j >= 0 ? steps[j] : null;
+                    const swapping = step && step.kind === "swap" && moving ? step : null;
+                    const p = swapping ? smooth(Math.max(0, (f - SHOW) / (1 - SHOW))) : 0;
+                    const from = new Map(outs.map((w, i) => [w, I + i]));
+                    // from gate u to gate v on a small bow, so the two names pass side by side
+                    const mix = (u, v, q) => {
+                        const dx = X[v] - X[u], dy = Y[v] - Y[u], len = Math.hypot(dx, dy) || 1, bow = (Math.sin(Math.PI * q) * ph * 1.1) / grid.cell;
+                        return [X[u] + dx * q - (dy / len) * bow, Y[u] + dy * q + (dx / len) * bow];
+                    };
+                    const source = w => {
+                        if (inputAt.has(w)) return [X[inputAt.get(w)], Y[inputAt.get(w)]];
+                        const u = from.get(w);
+                        if (swapping) {
+                            const a = I + swapping.i, b = I + swapping.j;
+                            if (u === a) return mix(a, b, p);
+                            if (u === b) return mix(b, a, p);
+                        }
+                        return [X[u], Y[u]];
+                    };
+                    grid.clear(COLORS.floor);
+
+                    // which wires stand out: the z being checked, the odd x XOR y, or the two being swapped
+                    const gold = new Set(), white = new Set();
+                    if (step && step.kind === "check") (step.ok ? white : gold).add(zs[step.k]);
+                    if (step && step.kind === "odd") gold.add(outs[step.i]);
+                    if (swapping) swapping.names.forEach(w => gold.add(w));
+                    // a wire on the move runs straight from where its gate is now
+                    const edge = (e, color, width) => {
+                        if (swapping && swapping.names.includes(e.wire)) later.push([source(e.wire), [X[e.to], Y[e.to]], color, width]);
+                        else wire(inputAt.has(e.wire) ? inputAt.get(e.wire) : from.get(e.wire), e.to, color, width);
+                    };
+                    for (const e of edges) if (!gold.has(e.wire) && !white.has(e.wire)) edge(e, COLORS["border-strong"], 1.25);
+                    for (const e of edges) {
+                        if (white.has(e.wire)) edge(e, COLORS["text-primary"], 2.5);
+                        if (gold.has(e.wire)) edge(e, COLORS.gold, 2.5);
+                    }
+
+                    // x and y with their bits, the gates, and z with its bits (a dashed gold ring: not x + y's bit)
+                    for (let u = 0; u < I; u++) {
+                        const v = inputs[u].value;
+                        grid.pill(X[u], Y[u], pw, ph, valueFill(v));
+                        pillText(u, label(u), valueText(v));
+                    }
+                    const found = new Set(swapSteps.slice(0, s).flatMap(x => [x.i, x.j]));
+                    for (let i = 0; i < G; i++) {
+                        const u = I + i;
+                        if (swapping && (i === swapping.i || i === swapping.j)) grid.pill(X[u], Y[u], pw, ph, COLORS["gold-faint"], COLORS.gold, 1);
+                        else if (found.has(i)) {
+                            grid.pill(X[u], Y[u], pw, ph, COLORS.gold);
+                            pillText(u, outs[i], COLORS["bg-primary"]);
+                        } else {
+                            grid.pill(X[u], Y[u], pw, ph, COLORS.tile, COLORS["border-strong"]);
+                            pillText(u, label(u), COLORS["text-secondary"]);
+                        }
+                    }
+                    zs.forEach((z, q) => {
+                        const u = I + G + q, v = value.get(z);
+                        grid.pill(X[u], Y[u], pw, ph, valueFill(v));
+                        pillText(u, z, valueText(v));
+                        if (wrong[s][q]) ring(u, COLORS.gold, [3, 3], 1.5);
+                    });
+
+                    wiresOver();
+
+                    // the two wire names on their way from one gate to the other
+                    if (swapping) {
+                        const a = I + swapping.i, b = I + swapping.j;
+                        [[a, b, swapping.names[0]], [b, a, swapping.names[1]]].forEach(([u, v, name]) => {
+                            const [x, y] = mix(u, v, p);
+                            grid.pill(x, y, pw, ph, COLORS.gold);
+                            grid.text(x, y, name, COLORS["bg-primary"], font / grid.cell);
+                        });
+                    }
+
+                    if (step && step.kind === "check") {
+                        const color = step.ok ? COLORS["text-primary"] : COLORS.gold;
+                        ring(I + step.src, color);
+                        ring(I + G + step.k, color);
+                    }
+                    if (step && step.kind === "odd") {
+                        ring(I + step.i, COLORS.gold);
+                        for (const q of step.to) ring(I + q, COLORS.gold, [3, 3]);
+                    }
+                },
+
+                clock,
+
+                readout(t) {
+                    return { text: answer(t), hit: Math.floor(t) === last };
+                },
+
+                describe(t) {
+                    return `${clock(t)}. ${answer(t)}.`;
+                },
+            };
+        }
+
         /* ---------- the days ---------- */
 
         // Each part has one or more inputs; each input makes its scene the first time it's opened.
@@ -2509,6 +3156,19 @@ td-yn`;
                     { inputs: [
                         { name: "Example", make: () => day23(EXAMPLE_23, 2, { speeds: [0.5, 1, 2], speed: 1, maxSide: 456, nodeShare: 0.042, minR: 12, maxR: 19 }) },
                         { name: "Made-up", make: () => day23(MADE_UP_23(), 2, { speeds: [1, 2, 4], speed: 2, maxSide: 528, nodeShare: 0.027, minR: 8.5, maxR: 14 }) },
+                    ] },
+                ],
+            },
+            {
+                day: 24,
+                title: "Crossed Wires",
+                parts: [
+                    { inputs: [
+                        { name: "Example", make: () => day24(EXAMPLE_24, 1, { speeds: [0.1, 0.2, 0.4], speed: 0.2 }) },
+                        { name: "Made-up", make: () => day24(MADE_UP_24(), 1, { speeds: [0.25, 0.5, 1], speed: 0.5, adder: true }) },
+                    ] },
+                    { inputs: [
+                        { name: "Made-up", make: () => day24(MADE_UP_24(), 2, { speeds: [0.5, 1, 2], speed: 1, adder: true }) },
                     ] },
                 ],
             },
