@@ -301,3 +301,98 @@ class Solution:
             return ""
         return s[start:start + size]
 ```
+
+# Sliding Window Maximum
+
+- Level: Hard
+- Pattern: Sliding window
+- LeetCode: 239
+- Link: https://leetcode.com/problems/sliding-window-maximum/
+
+## Problem
+
+You get a list of whole numbers and a number k. Picture a frame that covers k numbers side by side. It starts over the first k numbers, then moves right one place at a time until it covers the last k. Each time it stops, note the biggest number inside it. Return all of those, in order.
+
+k is always at least 1 and never more than the length of the list. The list can hold 100,000 numbers and k can be nearly as big, so looking through every frame from scratch is far too slow. Aim for **O(n)** time, where n is the list's length: the work grows in step with the list, so twice the numbers means about twice the work.
+
+`[1, 3, -1, -3, 5, 3, 6, 7], k = 3` → `[3, 3, 5, 5, 6, 7]`. The first frame holds 1, 3 and −1, so 3. The next holds 3, −1 and −3, so 3 again. Then −1, −3 and 5 give 5, and so on.
+
+## Concept
+
+**Sliding window.** A window is a stretch of items that sit next to each other in a list, like the frame in this problem. Sliding it means moving it one place to the right: one new item comes in on the right, one old item drops off on the left, and the rest stay. Think of a train window that shows three houses at a time. Each time the train moves on by one house, one house appears, one disappears, and the other two are the same as before. So instead of looking at the whole stretch again, you only deal with what changed.
+
+A tiny case: add up every 3 numbers in a row in `[2, 5, 1, 4, 3]`. The first window, 2, 5, 1, adds to 8. Slide: 4 comes in and 2 drops off, so 8 + 4 − 2 = 10. Slide again: 3 comes in and 5 drops off, so 10 + 3 − 5 = 8. Each slide costs one add and one take-away, however wide the window is. It suits questions about "every stretch of k items in a row", or "the longest stretch that follows some rule".
+
+On top of that, one trick: **keep a line of candidates, biggest at the front, falling towards the back.** A sum is easy to update, because you can take away the number that drops off. The biggest number isn't: when it drops off, you can't know the next biggest without looking through the whole window again. So keep a short line of the numbers that could still become the biggest, ready to take over.
+
+Why can numbers be thrown out of that line? Picture finding the tallest person in a room, where people leave in the same order they came in. If someone taller walks in after you, you'll never be the tallest again: they stay in the room as long as you do, and longer. Numbers in the window work the same way, because they drop off in the order they came in. So when a new number arrives, every number before it that's smaller or equal can go for good.
+
+That gives the rule: when a number arrives, remove numbers from the back of the line while they're not bigger than it, then add it at the back. Say the window is 3 wide and 4, 2, 3 come in. 4 joins. 2 is smaller, so it waits behind: 4, 2. 3 removes the 2 and stops at the bigger 4: 4, 3. The front, 4, is the biggest. Next 1 arrives and the 4 slides out of the window, so 4 leaves the front and 1 joins the back: 3, 1. The front, 3, is the biggest of 2, 3, 1. The line always falls from front to back, so the front is always the biggest. It's also in arrival order, so whatever slides out of the window can only be at the front.
+
+That line needs adding and removing at both ends, which is what a **deque** does (said "deck", short for double-ended queue): a line you can add to or remove from at either end, each in one quick step. Python has one called `deque`. Our line holds each number's **index**, its position in the list counting from 0, rather than the number itself. That way you can tell when the front has slid out of the window.
+
+## Why it fits
+
+- The obvious way: for every window, look through its k numbers for the biggest. There are about n windows and each costs k steps, so that's O(n × k): the work grows with the list's length times the window's width. With 100,000 numbers and k = 50,000, that's billions of steps.
+- Sliding alone isn't enough. Taking in the new number is easy, but when the biggest drops off the left, you'd have to look through the whole window again to find the next biggest.
+- What you really need is the next biggest already waiting, every time the biggest leaves. The line of candidates is exactly that: the front is the biggest now, the one behind it takes over when the front leaves, and so on.
+- It stays fast because each index joins the line once and leaves it at most once. One step might clear out many, but over the whole list that adds up to at most n removals.
+- Trap: store indexes, not the numbers. With just the numbers, you can't tell whether the front has slid out of the window.
+
+## Steps
+
+1. Make an empty deque for the candidates' indexes, and an empty answer list.
+2. Walk through the list from left to right. Call the current index i and its number x. Do steps 3 to 5 for each one.
+3. **Drop the one that left.** The window now covers indexes i − k + 1 to i, so index i − k has just slid off the left. If the front of the deque is i − k, remove it. Only the front can be that old, because the deque keeps indexes in the order they came in. Early on, i − k is below 0, so nothing leaves.
+4. **Clear out the losers.** While the number at the back of the deque is smaller than or equal to x, remove it. It came in before x and isn't bigger, so x outlasts it and it can never be the biggest again. Then add i at the back.
+5. **Note the biggest.** Once i reaches k − 1, the window is full for the first time, and it stays full from then on. The front of the deque is the biggest number in it, so add that number to the answer.
+6. Return the answer list.
+
+Why step 4 removes equal numbers too: two equal numbers give the same answer, and the newer one stays longer, so the older one is never needed.
+
+Why the front is always the biggest: step 4 keeps the numbers in the deque falling from front to back, and step 3 makes sure every index in it is still inside the window.
+
+**Time:** O(n). Each index goes into the deque once and comes out at most once, so all the removals together add up to at most n, however many happen in a single step. **Space:** O(k). The deque only holds indexes inside the window, so never more than k of them (not counting the answer list).
+
+## Try by hand
+
+For each new number, write down what leaves the front, what gets cleared off the back, the deque afterwards (as numbers, remembering their indexes), and the biggest once the window is full. Count indexes from 0.
+
+1. `[1, 3, 1, 2, 0, 5], k = 3`
+2. `[9, 7, 5, 3, 1], k = 2`
+3. `[4, -2, 4, 4], k = 3`
+4. `[2, -4, 3], k = 1`
+
+## Answers
+
+1. **[3, 3, 2, 5].** Index 1: the 3 clears the 1 before it, so the deque is 3. Index 2: the next 1 is smaller, so it waits: 3, 1. The window is full, so note 3. Index 3: the 2 clears the 1: 3, 2, note 3. Index 4: index 1 slides off the left, so the 3 leaves the front. The 0 waits behind: 2, 0, note 2. Index 5: the 5 clears both: 5, note 5.
+2. **[9, 7, 5, 3].** The list only falls, so nothing is ever cleared off the back: each number waits behind the last. Instead the front leaves at every step from index 2 on. The deque goes 9, 7 (note 9), then 7, 5 (note 7), then 5, 3 (note 5), then 3, 1 (note 3). The waiting numbers are exactly the next biggest, ready to take over.
+3. **[4, 4].** Index 1: −2 is smaller than 4, so it waits: 4, −2. Index 2: the new 4 clears the −2, and the old 4 too, because equal isn't bigger. The deque is just the 4 at index 2, note 4. Index 3: the last 4 clears that one, note 4. Nothing was lost: the old 4 at index 0 would have slid out at index 3 anyway, and a newer 4 is still there.
+4. **[2, −4, 3].** With k = 1, each window is a single number, so the answer is the list itself. In the deque, the front leaves at every step from index 1 on, so it never holds more than one index.
+
+## Key idea
+
+Keep only the numbers that could still win: a newer, bigger one knocks out every smaller one before it.
+
+## Code
+
+```python
+class Solution:
+    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:
+        a = nums
+        # indexes, biggest first
+        q = deque()
+        out = []
+        for i, x in enumerate(a):
+            # front left the window
+            if q and q[0] == i - k:
+                q.popleft()
+            # clear out the losers
+            while q and a[q[-1]] <= x:
+                q.pop()
+            q.append(i)
+            # window full: note front
+            if i >= k - 1:
+                out.append(a[q[0]])
+        return out
+```
