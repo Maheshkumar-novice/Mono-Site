@@ -490,3 +490,133 @@ class Solution:
             stack.append((start, h))
         return best
 ```
+
+# Median of Two Sorted Arrays
+
+- Level: Hard
+- Pattern: Binary search
+- LeetCode: 4
+- Link: https://leetcode.com/problems/median-of-two-sorted-arrays/
+
+## Problem
+
+You get two lists of whole numbers. Each list is already **sorted**: its numbers go from smallest to largest. One list may be empty, but not both. Find the **median** of all the numbers together.
+
+The median is the middle number once every number stands in one sorted line. If the count is even, there are two middle numbers, and the median is their average: for 1, 2, 3, 4 it's (2 + 3) / 2 = 2.5. Return it as a decimal number.
+
+Your answer has to run in **O(log(m + n))** time, where m and n are the two lengths. Big-O says how the work grows as the input grows, and log means that doubling the input adds only about one more step. That's so fast you can't even look at every number.
+
+`nums1 = [1, 3, 8], nums2 = [2, 7]` → `3.0`, because together they make 1, 2, 3, 7, 8, and 3 is in the middle.
+
+## Concept
+
+**Binary search: halve what's left with every guess.** Think of the game "I'm thinking of a number from 1 to 100", where each guess gets the answer "higher" or "lower". The smart first guess is 50. If you hear "lower", the number is between 1 and 49, so guess 25 next. Each guess throws away half of what's left, so 7 guesses always do it. Looking up a word in a paper dictionary works the same way: open it in the middle, see whether your word comes before or after that page, and keep only that half.
+
+A tiny case: find 23 in the sorted list [2, 5, 8, 12, 16, 23, 38]. The middle is 12, and 23 is bigger, so keep only [16, 23, 38]. Its middle is 23. Found in two looks, not six.
+
+This halving is what **O(log n)** means: double the size, and you need just one more step. A thousand items take about 10 steps, a million about 20. Binary search works whenever one look tells you which way to go. What you search doesn't even have to be a list. It can be a choice, like "how many to take", as long as a test can answer "too many" or "too few", and everything past a "too many" is too many as well.
+
+On top of that, one trick: **cut both lists so the left parts together hold half the numbers.** The median splits the sorted numbers into a smaller half and a bigger half, so you don't need the merged line at all. You only need to find where that split falls. Picture each list on its own row, with one cut through each. Everything left of the cuts is the left side, and everything right of them is the right side. Take A = [1, 5, 8] and B = [2, 3, 9]. That's six numbers, so the left side holds 3:
+
+- `A: 1 | 5 8`
+- `B: 2 3 | 9`
+
+The left side is 1, 2, 3 and the right side is 5, 8, 9. Every left number is smaller than every right number, so this is the true split. The median is the biggest left number and the smallest right number, averaged: (3 + 5) / 2 = 4.
+
+Why checking a cut is quick: each list is sorted, so inside A the left part is already no bigger than the right part, and the same goes for B. The only way to go wrong is across the lists. A's last left number is the biggest of A's left part, and B's first right number is the smallest of B's right part. So comparing just those two checks every pair between them. Do the same with B's last left and A's first right, and you've checked everything. Here is a bad cut:
+
+- `A: 1 5 | 8`
+- `B: 2 | 3 9`
+
+5 is on the left but 3 is on the right. A gave too many numbers, so its cut must move left. The opposite failure means A gave too few, so its cut must move right. That's your "lower" and "higher". And once A's cut is chosen, B's is forced, because the two counts must add up to half. So there's only one thing to search for: where to cut A.
+
+## Why it fits
+
+- The obvious way is to merge the two lists into one sorted line and take the middle. Merging walks both lists with a finger each, always taking the smaller number, so it reads every number: O(m + n). The problem asks for O(log(m + n)).
+- You don't need the merged line, only where its halfway split falls. Once you pick how many numbers A puts on the left, B's count is forced. So the whole problem is one choice: where to cut A.
+- Binary search can make that choice, because the cut test points the way. Say A's last left is bigger than B's first right. Taking even more from A only makes A's last left bigger and B's first right smaller. So every cut further right fails too, and you can throw that whole half away. The other failure works the same way, in the other direction.
+- Trap: search the **shorter** list. Then B's cut always lands inside B, never before its start or past its end. Searching the longer list could ask B for more numbers than it has. It's faster too: log of the shorter length.
+
+## Steps
+
+1. Call the shorter list A and the longer one B, swapping them if needed. Say A has m numbers and B has n.
+2. Work out half: how many numbers the left side must hold. It's m + n + 1, divided by 2 and rounded down, so 5 numbers give 3 and 6 numbers give 3. The + 1 puts the extra number on the left when the total is odd. Then the median is simply the biggest number on the left.
+3. A's cut can be anywhere from 0 (take nothing from A) to m (take all of A). Keep that range as low = 0 and high = m.
+4. Try the middle of the range: take i numbers from A, where i is halfway between low and high (rounded down). Take j = half − i numbers from B, so the left side holds exactly half.
+5. Read the four numbers that touch the cuts: A's last left, A's first right, B's last left and B's first right. If a cut sits at the very start of a list, there's no "last left", so use minus infinity: a stand-in smaller than every number. If a cut sits at the very end, there's no "first right", so use plus infinity. That way an empty side can never make the test fail.
+6. If A's last left is bigger than B's first right, A gave too many. Taking more from A would only make it worse, so set high = i − 1.
+7. If B's last left is bigger than A's first right, A gave too few. Taking fewer from A would only make it worse, so set low = i + 1.
+8. If neither is true, the cut is right. The biggest left number is the bigger of the two "last left" numbers. With an odd total, that's the median. With an even total, add the smaller of the two "first right" numbers and divide by 2.
+
+Why the loop always ends: a right cut always exists, because the real sorted line has a halfway point, and it splits A somewhere. Each wrong try only throws away cuts that can't be right, so the range never loses it.
+
+Why the tests say "bigger than", not "bigger or equal": equal numbers can sit on either side of the split, and the median comes out the same.
+
+**Time:** O(log(min(m, n))), where min(m, n) is the shorter length. Each try halves the range of cuts in the shorter list, and that fits inside the O(log(m + n)) the problem asks for. **Space:** O(1). Just a few numbers, however long the lists.
+
+## Try by hand
+
+For each pair, write down low, high, the cuts i and j, the four numbers by the cuts, and which way the test sends you.
+
+1. `[6, 12, 14, 22]` and `[2, 3, 7, 10, 20]`
+2. `[5, 6, 7]` and `[1, 2]`
+3. `[-3, -1, 4, 4]` and `[4, 4]`
+4. `[]` and `[2, 3]`
+
+## Answers
+
+1. **10.0.** Nine numbers, so the left side holds 5. A = [6, 12, 14, 22] is already the shorter list, so low = 0 and high = 4. Try i = 2, j = 3: A's last left is 12 and B's first right is 10. 12 is bigger, so A gave too many: high = 1. Try i = 0, j = 5: A's last left is minus infinity, A's first right is 6, B's last left is 20 and B's first right is plus infinity. 20 is bigger than 6, so A gave too few: low = 1. Try i = 1, j = 4: the left side is 6 and 2, 3, 7, 10; the right side is 12, 14, 22 and 20. 6 is not bigger than 20, and 10 is not bigger than 12, so the cut is right. The total is odd, so the median is the bigger last left: 10.
+2. **5.0.** [1, 2] is shorter, so it becomes A and [5, 6, 7] becomes B. Five numbers, so the left side holds 3; low = 0, high = 2. Try i = 1, j = 2: B's last left is 6 and A's first right is 2. 6 is bigger, so A gave too few: low = 2. Try i = 2, j = 1: all of A is on the left, so A's first right is plus infinity. A's last left 2 is not bigger than B's first right 6, and B's last left 5 is not bigger than plus infinity. The cut is right, and the median is the bigger last left: 5.
+3. **4.0.** [4, 4] is shorter, so it becomes A. Six numbers, so the left side holds 3; low = 0, high = 2. Try i = 1, j = 2: A's last left is 4, A's first right is 4, B's last left is −1 and B's first right is 4. 4 is not bigger than 4, and −1 is not bigger than 4, so the cut is right on the first try. The total is even: the bigger last left is 4, the smaller first right is 4, and (4 + 4) / 2 = 4. The tie is fine.
+4. **2.5.** A is empty, so low = high = 0, and the only cut is i = 0, j = 1. A's last left is minus infinity and its first right is plus infinity, so neither test can fail. The total is even: the bigger last left is 2, the smaller first right is 3, and (2 + 3) / 2 = 2.5.
+
+## Key idea
+
+Cut both lists so the left parts hold half the numbers, and binary search where to cut the shorter one.
+
+## Code
+
+```python
+class Solution:
+    def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
+        a, b = nums1, nums2
+        # search the shorter list
+        if len(a) > len(b):
+            a, b = b, a
+        m, n = len(a), len(b)
+        # how many the left side holds
+        half = (m + n + 1) // 2
+        INF = float("inf")
+
+        def at(x, k):
+            # past an end: infinity
+            if k < 0:
+                return -INF
+            if k >= len(x):
+                return INF
+            return x[k]
+
+        lo, hi = 0, m
+        while True:
+            # take i from a, j from b
+            i = (lo + hi) // 2
+            j = half - i
+            a_left = at(a, i - 1)
+            a_right = at(a, i)
+            b_left = at(b, j - 1)
+            b_right = at(b, j)
+            if a_left > b_right:
+                # too many from a
+                hi = i - 1
+            elif b_left > a_right:
+                # too few from a
+                lo = i + 1
+            else:
+                break
+
+        left = max(a_left, b_left)
+        if (m + n) % 2:
+            return float(left)
+        right = min(a_right, b_right)
+        return (left + right) / 2
+```
