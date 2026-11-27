@@ -1902,8 +1902,8 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
 
             return {
                 line: part === 1
-                    ? "The robot follows its list of moves. Walking into a box, it looks down the line of boxes: a gap means they all shift one step, a wall means nothing moves. Then add up 100 × row + column for every box."
-                    : "Now everything is twice as wide, so one box can push two. The robot first gathers every box the push reaches, then moves them all, but only if none of them would hit a wall.",
+                    ? "The robot follows its moves, pushing a line of boxes when there's a gap behind it. Then add up 100 × row + column for every box."
+                    : "Now everything is twice as wide, so one box can push two. A push moves every box it reaches, or none if one would hit a wall.",
                 sizeLabel: `${cols} × ${rows} · ${map.boxes} boxes · ${num(last)} moves`,
                 max: last, speeds, speed, smooth: true,
                 start: 0,
@@ -2147,8 +2147,8 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^`;
 
             return {
                 line: part === 1
-                    ? "A step costs 1 and a turn costs 1000: find the cheapest way from S to E. Each round, every reindeer in my queue steps or turns, one that reaches a spot for more than before is dropped (grey), and tiles go bluer with every turn taken."
-                    : "Now count the tiles on any cheapest path. Every reindeer in my queue carries its whole path, and each one that reaches E adds its tiles to a pile for its score. The answer is the pile for the lowest score.",
+                    ? "A step costs 1 and a turn costs 1000. My queue spreads out from S, tiles going bluer with each turn, to find the cheapest way to E."
+                    : "Now count the tiles on any cheapest path. Each reindeer carries its path, and the ones reaching E for the lowest score pile up their tiles.",
                 sizeLabel: `${cols} × ${rows} · ${num(m.open)} open tiles`,
                 max: last, speeds, speed, smooth: true,
                 start: 0,
@@ -2455,8 +2455,8 @@ td-yn`;
 
             return {
                 line: part === 1
-                    ? "networkx lists every group of computers that all link to each other, smallest first, each one an earlier group plus one more computer (dashed: who could join next). My code counts the groups of three with a name starting with t."
-                    : "Now the biggest group where everyone links to everyone. networkx grows groups one computer at a time and notes each one that nothing more can join. My code sorts those by size and takes the last: its names in order are the password.",
+                    ? "networkx lists every group where all the computers link to each other, smallest first. My code counts the groups of three with a t name."
+                    : "Now the biggest group where everyone links to everyone. Its names, in order, are the password.",
                 sizeLabel: `${n} computers · ${links.length} links`,
                 max: last, speeds, speed, smooth: true,
                 start: 0,
@@ -2850,7 +2850,7 @@ tnw OR pbm -> gnj`;
                 const answer = t => (now(t).K >= zKnown ? `Output ${num(output)}` : "Output —");
 
                 return {
-                    line: "A gate needs a value on both its inputs before it can work. My code goes down the list of gates (the strip below) again and again: each gate whose inputs are set works out its value, and the rest wait for the next pass. It stops after a pass where none had to wait, then reads the z wires as one binary number.",
+                    line: "My code goes down the gate list (the strip below) again and again, and a gate works once both its inputs are set. Then the z wires make one binary number.",
                     sizeLabel: `${I} inputs · ${G} gates`,
                     max: P, speeds, speed, smooth: true,
                     start: 0,
@@ -2971,7 +2971,7 @@ tnw OR pbm -> gnj`;
             };
 
             return {
-                line: "The gates should add x and y, but four pairs of gates have their output wires swapped. I drew the circuit with graphviz and looked: every z wire should come out of an XOR (the last one is the final carry), which finds three pairs, and one x XOR y feeding an OR gives away the fourth. Swapped back, x + y = z.",
+                line: "Four pairs of outputs are swapped. Every z but the last should come from an XOR, which finds three pairs; an x XOR y feeding an OR gives away the fourth.",
                 sizeLabel: `${I} inputs · ${G} gates`,
                 max: last, speeds, speed, smooth: true,
                 start: 0,
