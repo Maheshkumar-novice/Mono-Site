@@ -620,3 +620,108 @@ class Solution:
         right = min(a_right, b_right)
         return (left + right) / 2
 ```
+
+# Merge k Sorted Lists
+
+- Level: Hard
+- Pattern: Linked list
+- LeetCode: 23
+- Link: https://leetcode.com/problems/merge-k-sorted-lists/
+
+## Problem
+
+You get k lists of whole numbers, and each one is already sorted from small to big. Each list is built as a chain: every item holds one number and a link to the next item, and the last item links to nothing. For each chain, you're handed its first item.
+
+Join all the items into one chain, still sorted from small to big, and return its first item. Any chain can be empty, and so can the whole input. There can be up to 10,000 chains and up to 10,000 items in all. Aim for **O(N log k)** time, where N is the number of items across all the chains.
+
+`[[1, 4, 5], [1, 3, 4], [2, 6]]` → `[1, 1, 2, 3, 4, 4, 5, 6]`, because those are all eight numbers in order. Each inner list stands for one chain.
+
+## Concept
+
+**Linked list: a chain of boxes.** A linked list keeps its items in a chain instead of in numbered slots. Each box in the chain is called a **node**. A node holds one value and a link, called `next`, to the node after it. The first node is the **head**, and the last node's `next` is `None`, meaning "nothing after me". Think of a treasure hunt: each clue tells you where the next clue is hidden. To reach the fifth clue, you start at the first and follow the links.
+
+The upside is that changing the order is cheap: you just repoint a link, with no copying or shifting. To build a new chain, keep a **tail**, the last node so far, and hook each new node on behind it with `tail.next = node`. One snag: at the very start there's no tail to hook onto. The usual fix is a **dummy node**, a fake node the chain starts with. Every real node hooks on behind it, and at the end the real chain starts at `dummy.next`.
+
+On top of that, one trick: **keep the front node of every list in a min-heap, and always take the smallest.** Picture k queues at k bank counters. In each queue, people stand in token order, lowest at the front. You have to call everyone in one single token order. The next token to call is always at the *front* of some queue, never further back, because each queue is sorted. So you only ever compare the k people at the fronts. Call the lowest, and the next person in that queue steps up.
+
+A tiny case, with queues [1, 4], [2, 3] and [5]. The fronts are 1, 2, 5: call 1, and 4 steps up. Fronts 4, 2, 5: call 2, and 3 steps up. Fronts 4, 3, 5: call 3, and that queue is now empty. Fronts 4, 5: call 4, then 5. Out comes 1, 2, 3, 4, 5.
+
+Comparing all k fronts every time is slow when k is big. A **min-heap** is a box of items that hands you the smallest one quickly, and takes in new items quickly. Inside, it's arranged like a family tree with one rule: every parent is no bigger than its two children. So the top is no bigger than its children, they're no bigger than theirs, and so on down: the top is always the smallest.
+
+It's quick because it never sorts everything. When the top leaves, the last item moves up to the top and sinks, swapping with its smaller child, until the rule holds again. A new item starts at the bottom and rises past any bigger parent. Either way, only one path from top to bottom gets touched. With k items, that path is about **log k** steps long: the number of times you can halve k before you reach 1. That's about 10 for 1,000 items and about 14 for 10,000. Python's `heapq` does all this on a plain list: `heappush` puts an item in, and `heappop` takes the smallest out.
+
+**Big-O** is a rough count of steps as the input grows. Checking all k fronts is O(k) per pick: about k steps. The heap is O(log k) per pick. So O(N log k) means about log k steps for each of the N items. Fronts in a min-heap is the standard way to merge any number of sorted streams into one, like log files sorted by time. A heap on its own fits any "keep taking the smallest from a group that keeps changing" job, like a to-do list ordered by priority.
+
+## Why it fits
+
+- The obvious way: put every number into one Python list, sort it, and build a new chain. It works, but it ignores that each list is already sorted, and it makes N new nodes.
+- Another obvious way: for each node you place, look at all k fronts and take the smallest. That's k steps per node, O(N × k) overall. With 10,000 lists and 10,000 nodes, that's up to 100 million steps.
+- What you really need, again and again, is the smallest of the k fronts. And only one front changes each time: the list you just took from.
+- A min-heap does exactly that: take out the smallest, put in one new item, each in about log k steps. Every node goes in once and comes out once.
+- Trap: Python compares two heap entries item by item, and moves on to the next item only when the first ones are equal. Store each entry as (value, list number, node). When two values tie, Python compares the list numbers, and those are all different, because each list has at most one node in the heap. So it never reaches the nodes. Nodes can't be compared at all, so without the list number the first tie crashes with a TypeError.
+
+## Steps
+
+1. Make an empty heap. For each list that isn't empty, put in three things together: its head's value, its list number, and the head node. The value comes first because that's what the heap sorts by. The list number settles ties, so Python never compares two nodes. Empty lists are skipped: they have no node to offer.
+2. Make a dummy node, and let the tail start there. The merged chain grows behind the dummy.
+3. While the heap isn't empty, take out its smallest entry. Its node is the smallest node not placed yet. Why: each list's smallest leftover node is its front, and every front is in the heap.
+4. Hook that node on: point the tail's next link at it, then make it the new tail. No new node is made. You only repoint links.
+5. If that node has a next node in its own list, put that next node into the heap, with its value and the same list number. That list has a new front, so it joins the race. No other list changed, so nothing else needs adding.
+6. When the heap is empty, every node is placed. Return the node right after the dummy: the real head. If every list was empty, there's nothing after the dummy, which is the right answer.
+
+Why step 4 loses nothing: the node's old next link is still there when step 5 reads it. It only gets overwritten on the next round, when the next smallest node is hooked on behind it.
+
+Why the chain ends cleanly: the last node out had no next node, or that next node would still be in the heap. So its link already points to nothing.
+
+**Time:** O(N log k). Each of the N nodes goes into the heap once and comes out once. The heap never holds more than k entries, so each of those moves costs about log k steps. **Space:** O(k) for the heap: at most one entry per list. The merged chain reuses the original nodes, so the only new node is the dummy.
+
+## Try by hand
+
+For each input, write down the values in the heap, which node comes out, and the chain so far. Count lists from 0.
+
+1. `[[2, 6, 8], [3, 6, 7], [1, 3, 4]]`
+2. `[[], [5], []]`
+3. `[[1, 1], [1]]`
+4. `[]`
+
+## Answers
+
+1. **[1, 2, 3, 3, 4, 6, 6, 7, 8].** The heap starts with 2, 3, 1. The 1 (list 2) comes out first, and list 2's 3 goes in. Then the 2 (list 0) comes out, and its 6 goes in. Now there are two 3s: list 1's wins the tie because 1 is smaller than 2, and list 1's 6 goes in. Then list 2's 3, and its 4. When the 4 comes out, list 2 is used up, so nothing goes in. The two 6s tie, and list 0's goes first, bringing in its 8. Then list 1's 6 brings in its 7. The 7 and the 8 come out last.
+2. **[5].** Lists 0 and 2 are empty, so they're skipped. The heap holds only the 5. It comes out and hooks on behind the dummy. It has no next node, so the heap is empty, and the answer is the chain 5.
+3. **[1, 1, 1].** The heap starts with list 0's 1 and list 1's 1. The values tie, so the list numbers decide: list 0 first. Its second 1 goes in and ties with list 1's 1 again, and list 0 wins again. Then list 1's 1. Without the list numbers, Python would try to compare two nodes on the first tie and crash.
+4. **[], an empty chain, so you return `None`.** There are no lists, so the heap stays empty and the loop never runs. Nothing is hooked on behind the dummy, so the node after it is `None`.
+
+## Key idea
+
+Keep each list's front node in a min-heap: the smallest front is always the next node.
+
+## Code
+
+```python
+class Solution:
+    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
+        heap = []
+
+        def add(i, node):
+            # no node: nothing to add
+            if not node:
+                return
+            # i breaks ties on value
+            item = (node.val, i, node)
+            heapq.heappush(heap, item)
+
+        # each list's head goes in
+        for i in range(len(lists)):
+            add(i, lists[i])
+
+        dummy = tail = ListNode()
+        while heap:
+            # the smallest front node
+            top = heapq.heappop(heap)
+            _, i, node = top
+            tail.next = node
+            tail = node
+            # its next node steps up
+            add(i, node.next)
+        return dummy.next
+```
