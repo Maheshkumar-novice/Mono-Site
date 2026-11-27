@@ -396,3 +396,97 @@ class Solution:
                 out.append(a[q[0]])
         return out
 ```
+
+# Largest Rectangle in Histogram
+
+- Level: Hard
+- Pattern: Stack
+- LeetCode: 84
+- Link: https://leetcode.com/problems/largest-rectangle-in-histogram/
+
+## Problem
+
+You get a list of whole numbers, none below zero. Each number is the height of a bar one unit wide, and the bars stand side by side with no gaps, like a bar chart (that's all a histogram is). Find the area of the biggest rectangle that fits completely inside the bars.
+
+The rectangle sits on the bottom line and covers a run of bars next to each other. It can't poke out above any of them. There's at least one bar and up to 100,000 of them, so aim for **O(n)** time: the work should grow in step with the number of bars, n.
+
+`[2, 1, 5, 6, 2, 3]` → `10`, because the 5 and the 6 together hold a rectangle 5 high and 2 wide.
+
+## Concept
+
+**Stack: a pile where you only touch the top.** Think of a stack of plates. You put a clean plate on top, and you take a plate off the top. You never pull one out of the middle. Putting an item on top is a **push**. Taking the top one off is a **pop**. So the last item in is always the first one out.
+
+A tiny case: push 3, push 7, push 1. The pile is 3, 7, 1, with 1 on top. Pop gives 1, then 7, then 3. In Python a plain list works as a stack: `append` pushes, `pop()` pops, and `stack[-1]` peeks at the top without taking it. Each of those takes the same tiny time, however big the stack gets. Stacks suit jobs where the newest unfinished thing gets dealt with first: matching brackets, an undo button, or finding the next smaller item for every item in a list.
+
+The trick on top: **keep the stack rising**, so heights only go up from bottom to top. People call this a **monotonic stack** ("monotonic" just means it only goes one way). Before you push a new bar, pop every bar on top that's as tall or taller. A popped bar has just met its **right wall**: the new bar is no taller, so a rectangle of the popped bar's full height can't reach past it. Each entry also carries a **start**, its left wall: the index (position in the list, counting from 0) where its rectangle can begin. When a new bar pops taller bars, it can reach back over all of them, so it takes the start of the last one it popped.
+
+Mini case: heights 2, 4, 3. Push 2, then push 4. The 3 arrives and the 4 is taller, so pop it: the 4's rectangle is 4 high and 1 wide, and it's measured now. The 3 can reach back over the 4, so it takes the 4's start, index 1, and is pushed. The stack holds 2 and 3, still rising.
+
+## Why it fits
+
+- The obvious way: try every run of bars next to each other, find its shortest bar, and multiply by the run's width. There are about n × n / 2 runs, so that's **O(n²)**: double the bars, four times the work. 100,000 bars means billions of steps.
+- Look at the biggest rectangle. Its top must touch the shortest bar under it; if it didn't, you could raise it and get more area. So the winner is always one bar's full height, stretched sideways as far as it goes: up to the first shorter bar on the left and the first shorter bar on the right.
+- So the real job is: for every bar, find the nearest shorter bar on each side. The rising stack does both in one pass. The bar that pops it is its right wall, and the start it carries is its left wall.
+- Each bar is pushed once and popped once, so the whole thing is O(n).
+- Trap: bars still on the stack at the end never met a shorter bar, so they'd never be popped or measured. That's why a 0-high bar goes on the end.
+
+## Steps
+
+1. Add a pretend bar of height 0 to the end of the list. Every real bar is at least 0 high, so this last bar pops whatever is left on the stack, and each of those gets measured. For them, the end of the list is the right wall.
+2. Start the stack with one pretend entry of height −1. Every bar is taller, so it's never popped. That way the stack is never empty, and you never have to check for that before peeking at the top.
+3. Each stack entry is a pair: a start index and a height.
+4. Go through the bars from left to right. Say the bar at index i has height h. Set its start to i for now.
+5. While the top entry's height is h or more, pop it. Bar i is its right wall, so its rectangle runs from its start up to i − 1. That's i − start wide. Work out height × width, and keep the biggest area seen.
+6. After each pop, move the new bar's start back to the popped entry's start. The popped bar was at least h tall, so a rectangle h high can stretch over its whole span too.
+7. Once the top is shorter than h, push (start, h). The stack still rises from bottom to top.
+8. After the pretend 0 bar, return the biggest area.
+
+Why the width in step 5 is right: every bar between the popped one and bar i arrived while it was still on the stack. Each new bar pops everything as tall or taller, and this one survived, so all those bars were taller. On its left, its start already covers the bars it reached back over in step 6.
+
+Why popping on a tie is fine: the popped bar's width comes out too short, because an equal bar doesn't really stop it. But the new bar has the same height, takes over its start, and measures the full width later.
+
+**Time:** O(n). Each bar is pushed once and popped at most once. The inner loop sits inside the outer one, but over the whole run it pops at most n times in total. **Space:** O(n). If the heights only rise, the stack holds every bar.
+
+## Try by hand
+
+For each list, add the 0 at the end. Write down the stack after each bar as start:height pairs (leave out the −1 entry), plus the area of each pop. Count indexes from 0.
+
+1. `[6, 2, 5, 4, 5, 1, 6]`
+2. `[1, 2, 3, 4, 5]`
+3. `[3, 3, 3]`
+4. `[2, 0, 2]`
+
+## Answers
+
+1. **12.** The 2 at index 1 pops the 6 (6 × 1 = 6) and takes start 0. The 4 at index 3 pops the 5 (5 × 1 = 5) and takes start 2. Then the 1 at index 5 pops three entries: the 5 at index 4 (5 × 1 = 5), the 4 with start 2 (4 × 3 = 12), and the 2 with start 0 (2 × 5 = 10). At the end, the pretend 0 pops the 6 (6 × 1 = 6) and the 1 with start 0 (1 × 7 = 7). The best is 12: the bars 5, 4, 5.
+2. **9.** The heights only rise, so nothing is popped until the pretend 0 at index 5. It then pops all five: 5 × 1, 4 × 2, 3 × 3, 2 × 4 and 1 × 5. The best is 3 × 3 = 9, the bars 3, 4, 5. Without the 0 bar, nothing would ever be measured and the answer would wrongly stay 0.
+3. **9.** Each new 3 pops the one before it, measures it short (3, then 6), and takes over its start 0. So the stack always holds just 0:3. The pretend 0 pops it with width 3 − 0 = 3, giving 9.
+4. **2.** The 0 at index 1 pops the first 2 (2 × 1 = 2) and is pushed as 0:0. The second 2 sits on top as 2:2. The pretend 0 pops it (2 × 1 = 2), then pops the real 0 too, since 0 is as tall as 0, but a 0-high rectangle adds nothing. No rectangle can cross a 0 bar.
+
+## Key idea
+
+Keep the stack rising: the bar that pops a bar is its right wall, and its start is its left wall.
+
+## Code
+
+```python
+class Solution:
+    def largestRectangleArea(self, heights: List[int]) -> int:
+        # a 0 bar at the end pops all
+        hs = heights + [0]
+        # (start, height) pairs
+        # the -1 entry never pops
+        stack = [(0, -1)]
+        best = 0
+        for i, h in enumerate(hs):
+            start = i
+            # pop taller or equal bars
+            while stack[-1][1] >= h:
+                s, top = stack.pop()
+                area = top * (i - s)
+                best = max(best, area)
+                # take over its start
+                start = s
+            stack.append((start, h))
+        return best
+```
